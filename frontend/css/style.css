@@ -1,0 +1,24 @@
+:root {
+--primary-color: #2D68FE;
+--success-color: #10B981;
+--danger-color: #EF4444;
+--bg-color: #F8FAFC;
+--card-bg: #FFFFFF;
+--text-main: #1E293B;
+--radius-md: 12px;
+--spacing-md: 16px;
+--shadow-card: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+body {
+background-color: var(--bg-color);
+color: var(--text-main);
+font-family: sans-serif;
+padding: 24px;
+}
+.card {
+background: var(--card-bg);
+border-radius: var(--radius-md);
+padding: var(--spacing-md);
+box-shadow: var(--shadow-card);
+margin-bottom: var(--spacing-md);
+}
