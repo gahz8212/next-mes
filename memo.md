@@ -23,3 +23,6 @@
   - 마우스 프리(Global Keydown) 바코드 스캔 로직 구현.
   - 작업 상태(PASS/FAIL)에 따른 화면 점멸 애니메이션 및 오디오 피드백 적용.
   - `update_process.php` 백엔드 API 연동 완료.
+- **통합 관제 대시보드 리뉴얼**: `frontend/dashboard.html` 전면 개편.
+  - SMT 및 DIP 라인 장비를 시각화한 미니어처 팩토리 라인 UI 적용.
+  - 데모 모드 탑재(가상 데이터 랜덤 발생) 및 백엔드 Polling 기능 적용.

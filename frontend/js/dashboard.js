@@ -1,161 +1,81 @@
-// frontend/js/dashboard.js
-import { sendProcessUpdate, fetchDashboardData } from './api.js';
+let totalCount = 0;
+let failCount = 0;
 
-// 상태 관리 변수
-let productionCount = 0;
-const GOAL_COUNT = 50; // 목표 수량
-let passCount = 0;
-let historyList = [];
-
-// DOM 요소 참조
-const countDisplay = document.getElementById('production-count');
-const progressDisplay = document.getElementById('production-progress');
-const yieldDisplay = document.getElementById('yield-rate');
-const tableBody = document.getElementById('history-table-body');
-const simulateBtn = document.getElementById('simulate-btn');
-
-/**
- * 화면 UI 렌더링 함수
- */
-function render() {
-    // 1. 총 생산량 & 프로그레스 바 갱신
-    countDisplay.innerHTML = `${productionCount} <span class="kpi-unit">EA</span>`;
-    const progressPercent = Math.min((productionCount / GOAL_COUNT) * 100, 100);
-    progressDisplay.style.width = `${progressPercent}%`;
+function addLog(process, status, dataStr) {
+    const logList = document.getElementById('log-list');
+    const li = document.createElement('li');
+    const time = new Date().toLocaleTimeString('ko-KR');
+    const statusClass = status === 'PASS' ? 'log-pass' : 'log-fail';
     
-    const progressText = progressDisplay.parentElement.nextElementSibling;
-    progressText.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
-        목표 대비 ${Math.round(progressPercent)}% 달성
-    `;
-
-    // 2. 수율 (Yield) 계산 및 갱신
-    let yieldRate = 100;
-    if (productionCount > 0) {
-        yieldRate = ((passCount / productionCount) * 100).toFixed(1);
-    }
-    yieldDisplay.innerHTML = `${yieldRate} <span class="kpi-unit">%</span>`;
-
-    // 3. 테이블 리스트 갱신
-    if (historyList.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="4" class="text-center text-muted" style="padding: 64px 0;">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 16px auto;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                    <p>아직 수신된 스캔 데이터가 없습니다.</p>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-
-    tableBody.innerHTML = historyList.map(item => `
-        <tr style="animation: fadeIn 0.3s ease-out;">
-            <td class="font-mono text-muted" style="font-size: 13px;">${item.created_at}</td>
-            <td>
-                <div style="font-family: monospace; font-weight: 700; color: var(--primary);">${item.barcode}</div>
-                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Feeder 01 / Reel A</div>
-            </td>
-            <td>
-                <span class="badge badge-outline">${item.process_name}</span>
-            </td>
-            <td>
-                <span class="badge ${item.result_status === 'PASS' ? 'badge-success' : 'badge-danger'}">
-                    ${item.result_status === 'PASS' ? '✅ PASS' : '🚨 FAIL'}
-                </span>
-            </td>
-        </tr>
-    `).join('');
+    li.innerHTML = `<span class="log-time">[${time}]</span> <span style="color:#38bdf8">[${process}]</span> <span class="${statusClass}">${status}</span> - ${dataStr}`;
+    logList.appendChild(li);
+    logList.scrollTop = logList.scrollHeight; // 자동 스크롤
 }
 
-/**
- * 시뮬레이션 버튼 클릭 이벤트 핸들러
- */
-simulateBtn.addEventListener('click', async () => {
-    // 버튼 클릭 효과 (로딩 상태)
-    const originalText = simulateBtn.innerHTML;
-    simulateBtn.innerHTML = '스캔 중...';
-    simulateBtn.style.opacity = '0.7';
-    simulateBtn.disabled = true;
+function updateMachine(processId, status, dataStr) {
+    const mac = document.getElementById(`mac-${processId}`);
+    const dataBox = document.getElementById(`data-${processId}`);
+    if (!mac || !dataBox) return;
 
-    const randomSeq = Math.floor(Math.random() * 1000).toString().padStart(4, '0');
-    const isPass = Math.random() > 0.15;
-    const payload = {
-        barcode: `WO-SMT-${randomSeq}`,
-        process_name: 'SMT_TOP',
-        result_status: isPass ? 'PASS' : 'FAIL'
-    };
+    // 클래스 초기화 후 상태 적용
+    mac.className = 'machine';
+    mac.classList.add(status === 'PASS' ? 'run' : 'error');
+    dataBox.innerText = dataStr;
 
-    setTimeout(async () => {
-        try {
-            let res;
-            try {
-                res = await sendProcessUpdate(payload);
-            } catch (e) {
-                res = { status: 'success', data: payload }; // Fallback
-            }
-            
-            if (res.status === 'success') {
-                productionCount++;
-                if (payload.result_status === 'PASS') passCount++;
-                
-                historyList.unshift({
-                    ...res.data,
-                    created_at: new Date().toLocaleTimeString('en-GB', { hour12: false, hour: "numeric", minute: "numeric", second: "numeric" })
-                });
-                if (historyList.length > 8) historyList.pop();
+    // 3초 뒤 다시 Wait 상태로 (시연용 효과)
+    setTimeout(() => {
+        mac.className = 'machine wait';
+        dataBox.innerText = '-';
+    }, 3000);
+}
 
-                render();
-            }
-        } catch (error) {
-            alert(`전송 실패: ${error.message}`);
-        } finally {
-            // 버튼 원상복구
-            simulateBtn.innerHTML = originalText;
-            simulateBtn.style.opacity = '1';
-            simulateBtn.disabled = false;
+function updateKPI(status) {
+    totalCount++;
+    if (status === 'FAIL') failCount++;
+    
+    const yieldRate = ((totalCount - failCount) / totalCount * 100).toFixed(1);
+    
+    document.getElementById('val-actual').innerText = totalCount;
+    document.getElementById('val-yield').innerText = `${yieldRate}%`;
+}
+
+// 백엔드 API에서 실시간으로 데이터를 가져오는 로직 (Polling)
+async function fetchDashboardData() {
+    try {
+        // 실제 백엔드 연동 시 아래 경로를 맞게 수정 (/api/get_dashboard.php 등)
+        const response = await fetch('../backend/api/get_dashboard_data.php');
+        
+        // 응답이 없거나 404면 시연용 가짜 데이터를 생성하도록 분기처리
+        if (!response.ok) throw new Error('API Not Ready');
+        
+        const result = await response.json();
+        if(result && result.length > 0) {
+            result.forEach(item => {
+                updateMachine(item.process, item.status, item.data);
+                addLog(item.process, item.status, JSON.stringify(item.data));
+                updateKPI(item.status);
+            });
         }
-    }, 400); // 400ms 지연으로 실제 네트워크/스캔 딜레이 연출
-});
-
-// 초기 렌더링
-render();
-
-// 실시간 데이터 자동 갱신 (Polling)
-
-async function startPolling() {
-    let lastCount = -1;
-
-    setInterval(async () => {
-        try {
-            const res = await fetchDashboardData();
-            if (res.status === 'success') {
-                const newTotal = res.data.total_count;
-                
-                // 데이터가 변경되었을 때만 화면을 다시 그리도록 처리 (깜빡임 방지)
-                if (newTotal !== lastCount) {
-                    productionCount = newTotal || productionCount;
-                    passCount = res.data.pass_count || passCount;
-                    if (res.data.history && res.data.history.length > 0) {
-                        historyList = res.data.history;
-                    }
-                    render();
-                    lastCount = newTotal;
-                }
-            }
-        } catch (error) {
-            console.warn("Polling 실패 (백엔드 미연결 상태일 수 있음):", error);
-        }
-    }, 2000); // 2초마다 갱신
+    } catch (e) {
+        // [데모 모드]: 백엔드 API가 아직 없어도 시연 화면이 작동하도록 가짜 데이터 발생
+        demoSimulation();
+    }
 }
 
-startPolling();
-// CSS Animations inject
-const style = document.createElement('style');
-style.innerHTML = `
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+// 시연(Demo)용 가상 데이터 생성 로직
+const processes = ['LASER', 'SPI', 'MOUNTER', 'REFLOW', 'DIP_AOI', 'WAVE'];
+function demoSimulation() {
+    if(Math.random() > 0.7) { // 30% 확률로 이벤트 발생
+        const proc = processes[Math.floor(Math.random() * processes.length)];
+        const isPass = Math.random() > 0.1 ? 'PASS' : 'FAIL'; // 10% 확률 불량
+        const mockData = proc === 'SPI' ? `체적: ${Math.floor(Math.random()*20 + 90)}%` : 
+                         proc === 'REFLOW' ? `Temp: 24${Math.floor(Math.random()*5)}℃` : `바코드 스캔 완료`;
+        
+        updateMachine(proc, isPass, mockData);
+        addLog(proc, isPass, mockData);
+        updateKPI(isPass);
+    }
 }
-`;
-document.head.appendChild(style);
+
+// 2초마다 갱신
+setInterval(fetchDashboardData, 2000);

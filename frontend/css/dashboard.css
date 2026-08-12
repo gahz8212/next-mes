@@ -1,0 +1,35 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #f8fafc; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+/* 헤더 & KPI */
+.kpi-header { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2rem; background-color: #1e293b; border-bottom: 1px solid #334155; }
+h1 { font-size: 1.5rem; font-weight: 600; display: inline-block; margin-right: 1rem; }
+.status-indicator { color: #22c55e; font-weight: bold; animation: blink 1.5s infinite; }
+.kpi-board { display: flex; gap: 1rem; }
+.kpi-box { background: #0f172a; padding: 0.5rem 1.5rem; border-radius: 8px; font-size: 1.2rem; color: #94a3b8; border: 1px solid #334155; }
+.kpi-box span { font-size: 1.8rem; font-weight: bold; color: #f8fafc; display: block; margin-top: 0.2rem; }
+.kpi-box.highlight span { color: #38bdf8; }
+
+/* 공정 라인 미니어처 */
+.factory-line { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; overflow-x: auto; gap: 1rem; }
+.machine { width: 160px; height: 160px; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; border: 2px solid; transition: all 0.3s ease; position: relative; }
+.mac-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 1rem; width: 100%; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.mac-data { font-size: 0.9rem; color: #cbd5e1; word-break: break-all; padding: 0 0.5rem; }
+.arrow { font-size: 1.5rem; color: #475569; }
+
+/* 장비 상태 색상 */
+.wait { border-color: #475569; background: #1e293b; }
+.run { border-color: #22c55e; background: rgba(34, 197, 94, 0.1); box-shadow: 0 0 15px rgba(34, 197, 94, 0.2); }
+.error { border-color: #ef4444; background: rgba(239, 68, 68, 0.2); box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); animation: error-blink 1s infinite; }
+
+/* 실시간 로그 터미널 */
+.terminal-log { height: 250px; background: #000; border-top: 2px solid #334155; display: flex; flex-direction: column; }
+.log-header { background: #1e293b; padding: 0.5rem 1rem; font-size: 0.9rem; font-weight: bold; color: #94a3b8; }
+#log-list { flex: 1; overflow-y: auto; padding: 1rem; list-style: none; font-family: monospace; font-size: 0.9rem; }
+#log-list li { margin-bottom: 0.3rem; border-bottom: 1px dashed #333; padding-bottom: 0.3rem; }
+.log-time { color: #fbbf24; margin-right: 1rem; }
+.log-pass { color: #22c55e; }
+.log-fail { color: #ef4444; }
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes error-blink { 0%, 100% { background: rgba(239, 68, 68, 0.1); } 50% { background: rgba(239, 68, 68, 0.4); } }
