@@ -26,3 +26,17 @@
 - **통합 관제 대시보드 리뉴얼**: `frontend/dashboard.html` 전면 개편.
   - SMT 및 DIP 라인 장비를 시각화한 미니어처 팩토리 라인 UI 적용.
   - 데모 모드 탑재(가상 데이터 랜덤 발생) 및 백엔드 Polling 기능 적용.
+
+## 5. 공정 무결성 및 실시간 동기화 고도화 (완료)
+- **백엔드 트랜잭션 및 라우팅 검증 (`update_process.php`)**: 
+  - `PDO::beginTransaction()` 및 `SELECT FOR UPDATE`를 활용하여 동시성 이슈를 방어.
+  - 거시적 공정이 아닌 실제 설비 단위(Micro Tracking - `LASER` ➡️ `SPI` ➡️ `MOUNTER` ➡️ `REFLOW` 등)로 포카요케(라우팅 검증) 로직 고도화.
+  - PHP `error_log`를 이용한 일일 파일 로깅 추가.
+- **프론트엔드 오프라인 큐 구현 (`pop.js`)**: 
+  - `navigator.onLine` 상태 감지 및 `localStorage`를 활용하여 네트워크 단절 시 스캔 데이터 유실을 방지하고 재연결 시 백그라운드 동기화(5초 주기) 로직 추가.
+  - `pop.html`의 텍스트를 `Laser Marker (각인)`으로 변경하여 설비 단위 추적 시연.
+- **대시보드 실시간 동기화 (`dashboard_sse.php`, `dashboard.js`)**: 
+  - 기존의 Polling 및 데모 시뮬레이션 코드를 걷어내고, 순수 PHP 기반의 **SSE(Server-Sent Events)** 스크립트를 작성하여 진정한 무새로고침 실시간 관제 대시보드 연동 완료.
+  - PHP 내장 웹 서버의 단일 스레드 병목(Time-out) 현상 원인을 파악하고 다중 워커(`PHP_CLI_SERVER_WORKERS=4`) 실행 방식으로 가이드 수정.
+- **제조 현장의 동기/비동기 흐름 정립**: 
+  - 장비 자동화 센서(동기) 데이터와 작업자 자재 셋업/POP 수동 스캔(비동기 블로킹) 데이터 간의 차이와 아키텍처적 분리 개념 확립.

@@ -39,43 +39,52 @@ function updateKPI(status) {
     document.getElementById('val-yield').innerText = `${yieldRate}%`;
 }
 
-// 백엔드 API에서 실시간으로 데이터를 가져오는 로직 (Polling)
-async function fetchDashboardData() {
-    try {
-        // 실제 백엔드 연동 시 아래 경로를 맞게 수정 (/api/get_dashboard.php 등)
-        const response = await fetch('../backend/api/get_dashboard_data.php');
-        
-        // 응답이 없거나 404면 시연용 가짜 데이터를 생성하도록 분기처리
-        if (!response.ok) throw new Error('API Not Ready');
-        
-        const result = await response.json();
-        if(result && result.length > 0) {
-            result.forEach(item => {
-                updateMachine(item.process, item.status, item.data);
-                addLog(item.process, item.status, JSON.stringify(item.data));
-                updateKPI(item.status);
-            });
+// [SSE 실시간 동기화 연동]
+function connectSSE() {
+    // EventSource 인스턴스 생성 (작성했던 dashboard_sse.php 연결)
+    const evtSource = new EventSource('../backend/api/dashboard_sse.php');
+    
+    // 최초 연결 시 로그 출력
+    evtSource.onopen = function() {
+        const logList = document.getElementById('log-list');
+        if(logList.innerHTML.includes('시스템 대기 중')) {
+            logList.innerHTML = ''; // 기본 메시지 삭제
         }
-    } catch (e) {
-        // [데모 모드]: 백엔드 API가 아직 없어도 시연 화면이 작동하도록 가짜 데이터 발생
-        demoSimulation();
-    }
+        addLog('SYSTEM', 'PASS', 'SSE 실시간 연결 성공');
+    };
+
+    // 서버에서 데이터(push)가 넘어왔을 때
+    evtSource.onmessage = function(event) {
+        try {
+            const item = JSON.parse(event.data);
+            
+            // DB의 process_name(예: SMT_TOP, MOUNTER 등)
+            const proc = item.process_name;
+            const isPass = item.result_status;
+            const barcode = item.barcode;
+            
+            // UI를 위한 매핑 처리 (필요에 따라 process_name 그대로 사용할 수도 있음)
+            // dashboard.html에는 LASER, SPI, MOUNTER, REFLOW, DIP_AOI, WAVE 가 있음.
+            // 만약 DB에서 들어온 proc이 위와 다르다면, 적절히 변환하거나 매칭되는 돔만 업데이트
+            
+            updateMachine(proc, isPass, `바코드: ${barcode}`);
+            addLog(proc, isPass, `상태: ${item.status}, 바코드: ${barcode}`);
+            
+            // SMT_TOP 등 생산 완료성 공정일 때만 카운트 올리기 위해 임시로 모두 올림
+            updateKPI(isPass);
+            
+        } catch(e) {
+            console.error("데이터 파싱 에러:", e);
+        }
+    };
+    
+    // 에러 발생 시 재연결 처리
+    evtSource.onerror = function() {
+        addLog('SYSTEM', 'FAIL', 'SSE 연결 끊어짐... 재연결 시도 중');
+        evtSource.close();
+        setTimeout(connectSSE, 5000); // 5초 뒤 재연결
+    };
 }
 
-// 시연(Demo)용 가상 데이터 생성 로직
-const processes = ['LASER', 'SPI', 'MOUNTER', 'REFLOW', 'DIP_AOI', 'WAVE'];
-function demoSimulation() {
-    if(Math.random() > 0.7) { // 30% 확률로 이벤트 발생
-        const proc = processes[Math.floor(Math.random() * processes.length)];
-        const isPass = Math.random() > 0.1 ? 'PASS' : 'FAIL'; // 10% 확률 불량
-        const mockData = proc === 'SPI' ? `체적: ${Math.floor(Math.random()*20 + 90)}%` : 
-                         proc === 'REFLOW' ? `Temp: 24${Math.floor(Math.random()*5)}℃` : `바코드 스캔 완료`;
-        
-        updateMachine(proc, isPass, mockData);
-        addLog(proc, isPass, mockData);
-        updateKPI(isPass);
-    }
-}
-
-// 2초마다 갱신
-setInterval(fetchDashboardData, 2000);
+// 스크립트 로드 시 SSE 연결 시작
+connectSSE();

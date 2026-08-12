@@ -53,15 +53,29 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+// [오프라인 큐]
+let offlineQueue = JSON.parse(localStorage.getItem('mes_offline_queue') || '[]');
+
 // 백엔드 API 연동
 async function processBarcode(barcode) {
     clearTimeout(resetTimeout); // 기존 복귀 타이머 초기화
     
+    // 대시보드의 'Laser Marker' 설비에 연동되도록 공정명을 'LASER'로 지정
+    const payload = { barcode: barcode, process_name: 'LASER', result_status: 'PASS' };
+
+    if (!navigator.onLine) {
+        // 오프라인 상태면 큐에 저장
+        offlineQueue.push(payload);
+        localStorage.setItem('mes_offline_queue', JSON.stringify(offlineQueue));
+        showResult('FAIL', barcode, '네트워크 오프라인: 로컬에 임시 저장되었습니다.');
+        return;
+    }
+
     try {
         const response = await fetch('../backend/api/update_process.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ barcode: barcode, process_name: 'MATERIAL_SETUP' })
+            body: JSON.stringify(payload)
         });
         
         const data = await response.json();
@@ -69,17 +83,44 @@ async function processBarcode(barcode) {
         if (response.ok && data.status === 'success') {
             const status = data.data?.result_status || 'PASS';
             if (status === 'PASS') {
-                showResult('PASS', barcode, '자재 세팅이 정상적으로 승인되었습니다.');
+                showResult('PASS', barcode, '공정 처리가 정상적으로 완료되었습니다.');
             } else {
-                showResult('FAIL', barcode, '유효기간 경과 또는 잘못된 자재입니다.');
+                showResult('FAIL', barcode, '처리 중 오류가 발생했습니다.');
             }
         } else {
-            showResult('FAIL', barcode, data.message || '검증 실패');
+            showResult('FAIL', barcode, data.message || '검증 실패 (순서 오류 등)');
         }
     } catch (err) {
-        showResult('FAIL', barcode, '서버 통신 오류가 발생했습니다.');
+        // 통신 에러 발생 시에도 큐에 저장
+        offlineQueue.push(payload);
+        localStorage.setItem('mes_offline_queue', JSON.stringify(offlineQueue));
+        showResult('FAIL', barcode, '서버 통신 오류: 로컬에 임시 저장되었습니다.');
     }
 }
+
+// 오프라인 큐 동기화 (5초마다 확인)
+setInterval(async () => {
+    if (navigator.onLine && offlineQueue.length > 0) {
+        const item = offlineQueue.shift(); // 첫 번째 항목 꺼내기
+        try {
+            const response = await fetch('../backend/api/update_process.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(item)
+            });
+            if (response.ok) {
+                // 성공 시 큐 갱신
+                localStorage.setItem('mes_offline_queue', JSON.stringify(offlineQueue));
+                console.log('오프라인 데이터 동기화 완료:', item.barcode);
+            } else {
+                // 실패 시 다시 큐 맨 앞에 넣음
+                offlineQueue.unshift(item);
+            }
+        } catch (e) {
+            offlineQueue.unshift(item);
+        }
+    }
+}, 5000);
 
 // 스캔 결과 화면 표시 및 3초 복귀
 function showResult(result, barcode, message) {
