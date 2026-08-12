@@ -14,6 +14,12 @@
 - **스마트 포카요케**: 자재 스캔 시 BOM 일치 여부와 MSL(Floor Life) 제한 시간을 검증하며 최초 스캔 시 자동 개봉 처리.
 
 ## 3. 향후 진행 목표
-- [ ] 메인 대시보드 UI 제작 (ORCA 스타일 적용)
-- [ ] BOM 업로드 및 작업 지시서 생성 페이지
-- [ ] 생산 라인(Node-RED 연동) 기반 SMT 실장 추적 및 엣지 통신 구현
+- [x] 메인 대시보드 UI 제작 (ORCA 스타일 적용)
+- [x] BOM 업로드 및 작업 지시서 생성 페이지
+- [x] 생산 라인(Node-RED 연동) 기반 SMT 실장 추적 및 엣지 통신 구현
+
+## 4. 추가 구현 사항
+- **POP(Point of Production) 단말 프론트엔드 구축 완료**: `frontend/pop.html`, `css/pop.css`, `js/pop.js` 생성.
+  - 마우스 프리(Global Keydown) 바코드 스캔 로직 구현.
+  - 작업 상태(PASS/FAIL)에 따른 화면 점멸 애니메이션 및 오디오 피드백 적용.
+  - `update_process.php` 백엔드 API 연동 완료.

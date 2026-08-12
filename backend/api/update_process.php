@@ -1,66 +1,66 @@
 <?php
-header('Content-Type: application/json; charset=utf-8');
-require_once '../config.php';
+// backend/api/update_process.php
+require_once __DIR__ . '/../config/db.php';
 
-$input = json_decode(file_get_contents('php://input'), true);
-$barcode = $input['barcode'] ?? '';
-$process_name = $input['process_name'] ?? ''; // 예: SMT_TOP, SMT_BOTTOM, ICT_TEST
-$result_status = $input['result_status'] ?? 'PASS'; // PASS 또는 FAIL
-
-if (!$barcode || !$process_name) {
-    echo json_encode(["status" => "error", "message" => "바코드 또는 공정명이 누락되었습니다."]);
-    exit;
+// POST 요청만 허용
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(["status" => "error", "message" => "허용되지 않는 메서드입니다."], JSON_UNESCAPED_UNICODE);
+    exit();
 }
 
 try {
-    $pdo->beginTransaction();
+    // 1. Raw JSON 데이터 수신
+    $jsonInput = file_get_contents('php://input');
+    $data = json_decode($jsonInput, true);
 
-    // 1. 바코드 존재 여부 및 현재 상태 확인
-    $stmt = $pdo->prepare("SELECT status FROM barcode_master WHERE barcode = ?");
-    $stmt->execute([$barcode]);
-    $target = $stmt->fetch();
-
-    if (!$target) {
-        throw new Exception("존재하지 않는 기판 바코드입니다.");
+    if (!$data) {
+        throw new Exception("잘못된 JSON 형식입니다.");
     }
 
-    // 2. 공정별 상태 전이(Transition) 규칙 정의
-    $new_status = $target['status'];
-    
-    if ($process_name === 'SMT_TOP' && $result_status === 'PASS') {
-        $new_status = 'TOP_DONE';
-    } else if ($process_name === 'SMT_BOTTOM' && $result_status === 'PASS') {
-        $new_status = 'BOTTOM_DONE';
-    } else if ($process_name === 'ICT_TEST') {
-        $new_status = ($result_status === 'PASS') ? 'TEST_PASS' : 'TEST_FAIL';
+    $barcode = $data['barcode'] ?? null;
+    $processName = $data['process_name'] ?? null;
+    $resultStatus = $data['result_status'] ?? null;
+
+    // 2. 포카요케 (필수 데이터 방어)
+    if (empty($barcode) || empty($processName) || empty($resultStatus)) {
+        http_response_code(400);
+        echo json_encode([
+            "status" => "error",
+            "message" => "필수 데이터(barcode, process_name, result_status)가 누락되었습니다."
+        ], JSON_UNESCAPED_UNICODE);
+        exit();
     }
 
-    // 3. barcode_master 상태 업데이트
-    $updateStmt = $pdo->prepare("UPDATE barcode_master SET status = ? WHERE barcode = ?");
-    $updateStmt->execute([$new_status, $barcode]);
-
-    // 4. [핵심 규칙] 상태 덮어쓰기 금지! barcode_history에 무조건 이력 기록
-    $historyStmt = $pdo->prepare("
-        INSERT INTO barcode_history (barcode, process_name, result_status) 
-        VALUES (?, ?, ?)
+    // 3. Prepared Statement를 통한 안전한 DB 삽입 (SQL Injection 방어)
+    $stmt = $pdo->prepare("
+        INSERT INTO barcode_history (barcode, process_name, result_status, created_at) 
+        VALUES (:barcode, :process_name, :result_status, NOW())
     ");
-    $historyStmt->execute([$barcode, $process_name, $result_status]);
+    
+    $stmt->execute([
+        ':barcode' => $barcode,
+        ':process_name' => $processName,
+        ':result_status' => $resultStatus
+    ]);
 
-    $pdo->commit();
-
+    // 4. 성공 응답 반환
+    http_response_code(200);
     echo json_encode([
         "status" => "success",
-        "message" => "공정 처리 완료",
-        "barcode" => $barcode,
-        "current_status" => $new_status,
-        "result" => $result_status
-    ]);
+        "message" => "공정 이력이 성공적으로 기록되었습니다.",
+        "data" => [
+            "barcode" => $barcode,
+            "process_name" => $processName,
+            "result_status" => $resultStatus
+        ]
+    ], JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {
-    $pdo->rollBack();
+    // 5. 전역 예외 처리
+    http_response_code(500);
     echo json_encode([
-        "status" => "fail",
-        "message" => $e->getMessage()
-    ]);
+        "status" => "error",
+        "message" => "서버 내부 오류: " . $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE);
 }
-?>

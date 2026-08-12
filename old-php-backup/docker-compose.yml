@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # 1. MySQL 데이터베이스
+  db:
+    image: mysql:8.0
+    container_name: smt_mes_db
+    restart: always
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: your_password_here
+      MYSQL_DATABASE: smt_mes_db
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/init:/docker-entrypoint-initdb.d
+
+  # # 2. Node-RED (설비 데이터 연동 엔진) - 추가됨!
+  # node-red:
+  #   image: nodered/node-red:latest
+  #   container_name: smt_mes_nodered
+  #   restart: always
+  #   ports:
+  #     - "1881:1880" # 기존 설치된 1880과 겹치지 않게 1881로 접속
+  #   volumes:
+  #     - nodered_data:/data
+
+volumes:
+  db_data:
+  # nodered_data:

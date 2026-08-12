@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POP 현장 단말기</title>
+    <link rel="stylesheet" href="css/pop.css">
+</head>
+<body>
+    <!-- [상단 헤더] -->
+    <header class="header">
+        <div class="header-left">
+            <span class="badge line-badge">SMT-LINE-01</span>
+            <h2 class="process-name">자재 셋업</h2>
+        </div>
+        <div class="header-right">
+            <span class="info">모델: <strong>BOARD-A1</strong></span>
+            <span class="info">작업자: <strong>성현 (OP-001)</strong></span>
+        </div>
+    </header>
+
+    <!-- [중앙 메인 패널] -->
+    <main class="main-panel" id="status-panel">
+        <h1 id="status-text">WAITING FOR SCAN</h1>
+        <p id="instruction-text">바코드를 스캔하세요</p>
+        <div id="barcode-buffer"></div>
+    </main>
+
+    <!-- [하단 이력 테이블] -->
+    <footer class="footer">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>스캔 시간</th>
+                    <th>바코드 번호</th>
+                    <th>판정 결과</th>
+                    <th>상세 메시지</th>
+                </tr>
+            </thead>
+            <tbody id="history-tbody">
+                <!-- 자바스크립트를 통해 스캔 이력이 여기에 동적으로 추가됩니다 -->
+            </tbody>
+        </table>
+    </footer>
+
+    <script src="js/pop.js"></script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+[
+    {
+        "id": "f6f2187d.f17ca8",
+        "type": "tab",
+        "label": "SMT Line Edge Gateway",
+        "disabled": false,
+        "info": "SMT 생산 라인의 바코드 스캐너 및 설비 데이터를 수집하여 PHP 백엔드(MES)로 전송하는 Node-RED 엣지 통신 플로우입니다."
+    },
+    {
+        "id": "inject_scan",
+        "type": "inject",
+        "z": "f6f2187d.f17ca8",
+        "name": "바코드 스캔 시뮬레이터 (1초마다)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 200,
+        "y": 140,
+        "wires": [
+            [
+                "func_generate_payload"
+            ]
+        ]
+    },
+    {
+        "id": "func_generate_payload",
+        "type": "function",
+        "z": "f6f2187d.f17ca8",
+        "name": "바코드 및 판정 데이터 생성",
+        "func": "const randomSeq = Math.floor(Math.random() * 1000).toString().padStart(4, '0');\nconst isPass = Math.random() > 0.15;\n\nmsg.payload = {\n    barcode: `WO-SMT-${randomSeq}`,\n    process_name: 'SMT_TOP',\n    result_status: isPass ? 'PASS' : 'FAIL'\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 460,
+        "y": 140,
+        "wires": [
+            [
+                "http_request_api",
+                "debug_output"
+            ]
+        ]
+    },
+    {
+        "id": "http_request_api",
+        "type": "http request",
+        "z": "f6f2187d.f17ca8",
+        "name": "PHP API 전송 (update_process.php)",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://host.docker.internal:8080/backend/api/update_process.php",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 750,
+        "y": 140,
+        "wires": [
+            [
+                "debug_response"
+            ]
+        ]
+    },
+    {
+        "id": "debug_output",
+        "type": "debug",
+        "z": "f6f2187d.f17ca8",
+        "name": "스캔 데이터 확인",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 710,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "debug_response",
+        "type": "debug",
+        "z": "f6f2187d.f17ca8",
+        "name": "API 응답 결과",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1000,
+        "y": 140,
+        "wires": []
+    }
+]

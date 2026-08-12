@@ -1,0 +1,149 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #121212;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* 상단 헤더 영역 */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 40px;
+    background-color: #1e1e1e;
+    border-bottom: 2px solid #333;
+}
+
+.header-left, .header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.badge {
+    background-color: #2D68FE;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 1.8rem;
+    font-weight: bold;
+}
+
+.process-name {
+    font-size: 2.2rem;
+    color: #e0e0e0;
+}
+
+.info {
+    font-size: 1.8rem;
+    color: #b0b0b0;
+}
+
+.info strong {
+    color: #ffffff;
+}
+
+/* 중앙 상태 패널 영역 */
+.main-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: 40px;
+    border: 8px solid #555;
+    border-radius: 24px;
+    background-color: #222;
+    transition: all 0.2s ease;
+}
+
+/* PASS / FAIL 점멸 애니메이션 */
+.main-panel.pass {
+    border-color: #28a745;
+    background-color: #154222;
+    animation: blink-green 0.8s infinite alternate;
+}
+
+.main-panel.fail {
+    border-color: #dc3545;
+    background-color: #4a151b;
+    animation: blink-red 0.8s infinite alternate;
+}
+
+@keyframes blink-green {
+    from { background-color: #154222; border-color: #28a745; }
+    to { background-color: #28a745; border-color: #5cf282; }
+}
+
+@keyframes blink-red {
+    from { background-color: #4a151b; border-color: #dc3545; }
+    to { background-color: #dc3545; border-color: #ff6b7b; }
+}
+
+#status-text {
+    font-size: 7rem;
+    font-weight: 900;
+    margin-bottom: 20px;
+    letter-spacing: 2px;
+}
+
+#instruction-text {
+    font-size: 2.5rem;
+    color: #999;
+}
+
+#barcode-buffer {
+    margin-top: 40px;
+    font-size: 3.5rem;
+    color: #ffc107;
+    font-family: monospace;
+    min-height: 60px;
+}
+
+/* 하단 테이블 영역 */
+.footer {
+    height: 320px;
+    background-color: #1a1a1a;
+    border-top: 2px solid #333;
+    padding: 24px;
+    overflow-y: hidden;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 1.6rem;
+}
+
+.history-table th {
+    background-color: #333;
+    color: #aaa;
+    padding: 18px;
+    text-align: left;
+    font-weight: normal;
+}
+
+.history-table td {
+    padding: 18px;
+    border-bottom: 1px solid #333;
+}
+
+.result-pass {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.result-fail {
+    color: #dc3545;
+    font-weight: bold;
+}

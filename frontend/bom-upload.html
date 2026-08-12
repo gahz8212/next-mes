@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart MES | BOM 업로드 및 작업 지시</title>
+    <!-- Web Font (Pretendard) -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                </div>
+                NextMES
+            </div>
+            <nav>
+                <ul class="nav-menu">
+                    <li><a href="dashboard.html" class="nav-item">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+                        대시보드
+                    </a></li>
+                    <li><a href="bom-upload.html" class="nav-item active">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        BOM 업로드
+                    </a></li>
+                    <li><a href="#" class="nav-item">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        설정
+                    </a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Topbar -->
+            <header class="topbar">
+                <div>
+                    <h1 class="page-title">BOM 업로드 및 작업 지시</h1>
+                    <p class="page-subtitle">신규 생산을 위한 제품의 BOM을 업로드하고 세부 지시를 하달합니다.</p>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Left: Upload & Form -->
+                <div style="display: flex; flex-direction: column; gap: 24px;">
+                    <div class="card">
+                        <div class="table-header">
+                            <h3 class="table-title">작업 지시 정보 입력</h3>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">제품명 (모델명)</label>
+                            <input type="text" id="model-name" class="form-control" placeholder="예: PCB-BOARD-V2.1">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="form-group">
+                                <label class="form-label">목표 생산 수량</label>
+                                <input type="number" id="target-qty" class="form-control" placeholder="0">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">할당 라인</label>
+                                <select id="line-select" class="form-control">
+                                    <option value="LINE-1">SMT 라인 #1</option>
+                                    <option value="LINE-2">SMT 라인 #2</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="table-header">
+                            <h3 class="table-title">BOM 파일(CSV) 업로드</h3>
+                        </div>
+                        <div class="drop-zone" id="drop-zone">
+                            <div class="drop-zone-icon">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            </div>
+                            <div class="drop-zone-text">CSV 파일을 드래그하여 놓거나 여기를 클릭하세요.</div>
+                            <div class="drop-zone-hint">최대 5MB, .csv 형식만 지원</div>
+                            <input type="file" id="file-input" class="file-input" accept=".csv">
+                        </div>
+                    </div>
+                    
+                    <button id="create-wo-btn" class="btn btn-primary" style="padding: 16px; font-size: 16px; width: 100%;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        작업 지시서 발행 및 라인 배포
+                    </button>
+                </div>
+
+                <!-- Right: Preview Table -->
+                <div class="card" style="display: flex; flex-direction: column;">
+                    <div class="table-header">
+                        <h3 class="table-title">업로드된 BOM 미리보기</h3>
+                        <span class="badge badge-primary" id="bom-status">대기중</span>
+                    </div>
+                    <div class="table-container" style="flex: 1;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Ref(위치)</th>
+                                    <th>자재 파트 번호</th>
+                                    <th>소요량</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bom-preview-body">
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted" style="padding: 64px 0;">
+                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 16px auto;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                        <p>파일을 업로드하면 이곳에 분석 결과가 표시됩니다.</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="./js/bom-upload.js"></script>
+</body>
+</html>
