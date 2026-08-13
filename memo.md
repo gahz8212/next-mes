@@ -100,8 +100,35 @@ WAIT → (자삽 시작)
 ### 작업지시 상태 흐름
 
 ```
-READY → IN_PROGRESS → SMT_DONE → DIP_IN_PROGRESS → DONE
+READY → IN_PROGRESS (SMT 진행) → SMT_DONE → DIP_IN_PROGRESS (수삽 진행) → DONE (전체 완료)
 ```
+
+---
+
+## 2026-08-14 작업 내역 (Phase 1 & Phase 2 완성)
+
+### 1. UI/UX 네비게이션 전면 리팩터링
+- `admin.html`을 좌측 고정 사이드바 + 상단 브레드크럼/탑바 + 콘텐츠 패널 구조로 개편
+- 모바일 반응형 사이드바 토글 지원
+- 공통 디자인 시스템 (다크 테마, 통일된 테이블, 카드, 모달, KPI 스트립)
+
+### 2. Phase 1 기능 완성
+- **🏢 거래처 관리**: CRUD, 업체별 WO/양품/수량 현황 집계, 실시간 검색 필터
+- **📦 품목 관리**: 품목코드/품목명/카테고리/단위 마스터 CRUD, 카테고리 셀렉트 필터
+- **🔬 불량 현황**: 기간별 불량률/합격수 KPI, 공정별/업체별 불량 바 차트, 최근 50건 이력 테이블
+- **📅 생산 계획**: 월별 작업지시 캘린더/테이블, D-Day 계산, 실시간 진행률 미니바
+
+### 3. Phase 2 기능 완성
+- **🏭 자재 입출고 관리**: 입고/출고 구분 등록, 파트번호 검색 및 기간 필터, 입출고량 KPI
+- **🚚 출하 관리**: 출하 지시/등록, 대기→출하완료/취소 상태 변경 및 work_order 연동
+- **👤 사용자/권한 관리**: Admin / Manager / Worker 역할 관리, 비밀번호 SHA256 암호화, 계정 활성화 토글
+- **✔️ 품질 검사 기준**: 공정별 검사 항목/기준값/단위 마스터 관리, 활성 기준 필터
+
+### 4. 신규 DB 스키마 & 마이그레이션
+- `database/phase1_migration.sql`
+- `database/phase2_migration.sql`
+- 생성 테이블: `item`, `material_inout`, `shipment`, `users`, `quality_standard`
+- 컬럼 추가: `company` (`tel`, `email`, `memo`, `created_at`)
 
 ---
 
