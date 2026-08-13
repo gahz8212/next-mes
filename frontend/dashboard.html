@@ -11,15 +11,25 @@
         <div>
             <h1>SMT / DIP 생산 라인 통합 관제</h1>
             <span class="status-indicator">● LIVE</span>
+            <button onclick="logout()" style="margin-left: 15px; padding: 5px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">로그아웃</button>
         </div>
         <div class="kpi-board">
-            <div class="kpi-box">목표: <span>1,000</span></div>
-            <div class="kpi-box">생산: <span id="val-actual">0</span></div>
+            <div class="kpi-box">목표: <span id="val-target">-</span></div>
+            <div class="kpi-box" title="총 투입/처리 수량">투입: <span id="val-actual">0</span></div>
+            <div class="kpi-box" style="color:#10b981;">양품: <span id="val-good">0</span></div>
+            <div class="kpi-box" style="color:#ef4444;">불량: <span id="val-fail">0</span></div>
             <div class="kpi-box highlight">수율: <span id="val-yield">100.0%</span></div>
         </div>
     </header>
 
-    <main class="factory-line">
+    <div class="dashboard-layout" style="display: flex; height: calc(100vh - 80px);">
+        <aside class="wo-sidebar" style="width: 300px; background: #1e293b; padding: 1rem; overflow-y: auto;">
+            <h2 style="color: #38bdf8; margin-top: 0; font-size: 1.2rem;">대기중인 작업지시</h2>
+            <div id="wo-list"></div>
+        </aside>
+        
+        <div class="main-content" style="flex: 1; display: flex; flex-direction: column;">
+            <main class="factory-line" style="flex: 1;">
         <!-- 자삽(SMT) 라인 -->
         <div class="machine wait" id="mac-LASER">
             <div class="mac-title">Laser Marker</div>
@@ -56,12 +66,116 @@
     </main>
 
     <footer class="terminal-log">
-        <div class="log-header">설비 실시간 수신 로그 (Node-RED)</div>
+        <div class="log-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>설비 실시간 수신 로그 (Node-RED)</span>
+            <div class="log-filters" style="display: flex; gap: 10px;">
+                <select id="filter-process" onchange="applyLogFilter()" style="padding: 2px 5px; background: #334155; color: white; border: 1px solid #475569; border-radius: 4px;">
+                    <option value="ALL">전체 공정</option>
+                    <option value="LASER">Laser Marker</option>
+                    <option value="SPI">SPI 검사</option>
+                    <option value="MOUNTER">고속 마운터</option>
+                    <option value="REFLOW">Reflow Oven</option>
+                    <option value="DIP_AOI">수삽 AOI</option>
+                    <option value="WAVE">Wave Soldering</option>
+                </select>
+                <select id="filter-status" onchange="applyLogFilter()" style="padding: 2px 5px; background: #334155; color: white; border: 1px solid #475569; border-radius: 4px;">
+                    <option value="ALL">전체 상태</option>
+                    <option value="PASS">PASS</option>
+                    <option value="FAIL">FAIL</option>
+                </select>
+            </div>
+        </div>
         <ul id="log-list">
             <li>시스템 대기 중... 데이터를 수신하세요.</li>
         </ul>
     </footer>
+        </div>
+    </div>
 
+    <script>
+        function logout() {
+            const role = localStorage.getItem('role');
+            if (role === 'admin') {
+                // admin은 세션 유지하고 관리자 화면으로 복귀
+                window.location.href = 'admin.html';
+            } else {
+                // worker는 세션 제거 후 로그인으로
+                localStorage.removeItem('role');
+                window.location.href = 'login.html';
+            }
+        }
+
+        // 권한 체크 (worker 또는 admin 허용)
+        const role = localStorage.getItem('role');
+        if (role !== 'worker' && role !== 'admin') {
+            alert("접근 권한이 없습니다.");
+            window.location.href = 'login.html';
+        }
+        
+        async function loadWOList() {
+            const res = await fetch('../backend/api/get_wo_list.php');
+            const data = await res.json();
+            const listDiv = document.getElementById('wo-list');
+            listDiv.innerHTML = '';
+            if(data.status === 'success' && data.data.length > 0) {
+                data.data.forEach(wo => {
+                    let btnHtml = '';
+                    if (wo.status === 'READY') {
+                        btnHtml = `<button onclick="startWO('${wo.wo_id}')" style="margin-top: 0.5rem; width: 100%; padding: 0.5rem; background: #0ea5e9; color: white; border: none; border-radius: 4px; cursor: pointer;">자삽 시작</button>`;
+                    } else if (wo.status === 'IN_PROGRESS') {
+                        btnHtml = `<button disabled style="margin-top: 0.5rem; width: 100%; padding: 0.5rem; background: #475569; color: #94a3b8; border: none; border-radius: 4px; cursor: not-allowed;">자삽 진행중</button>`;
+                    } else if (wo.status === 'SMT_DONE') {
+                        btnHtml = `<button onclick="startDip('${wo.wo_id}')" style="margin-top: 0.5rem; width: 100%; padding: 0.5rem; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">수삽 시작</button>`;
+                    } else if (wo.status === 'DIP_IN_PROGRESS') {
+                        btnHtml = `<button disabled style="margin-top: 0.5rem; width: 100%; padding: 0.5rem; background: #475569; color: #94a3b8; border: none; border-radius: 4px; cursor: not-allowed;">수삽 진행중</button>`;
+                    }
+
+                    listDiv.innerHTML += `
+                        <div style="background: #334155; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                            <div style="font-weight: bold; color: white;">${wo.wo_id}</div>
+                            <div style="font-size: 0.9rem; color: #cbd5e1;">수량: ${wo.target_qty} | 납기: ${wo.due_date || '-'}</div>
+                            ${btnHtml}
+                        </div>
+                    `;
+                });
+            } else {
+                listDiv.innerHTML = '<div style="color: #94a3b8;">대기중인 작업이 없습니다.</div>';
+            }
+        }
+
+        async function startWO(wo_id) {
+            const res = await fetch('../backend/api/start_wo.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ wo_id })
+            });
+            const data = await res.json();
+            if(data.status === 'success') {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        }
+
+        async function startDip(wo_id) {
+            const res = await fetch('../backend/api/start_dip_wo.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ wo_id })
+            });
+            const data = await res.json();
+            if(data.status === 'success') {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        }
+
+        loadWOList();
+        setInterval(loadWOList, 10000);
+    </script>
     <script src="js/dashboard.js"></script>
 </body>
 </html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MES Login</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #0f172a; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .login-box { background: #1e293b; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); text-align: center; width: 300px; }
+        h1 { margin-top: 0; color: #38bdf8; }
+        input { width: 100%; padding: 0.75rem; margin: 1rem 0; box-sizing: border-box; border: 1px solid #334155; border-radius: 4px; background: #0f172a; color: white; }
+        button { width: 100%; padding: 0.75rem; background: #0ea5e9; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0284c7; }
+        .error { color: #ef4444; margin-bottom: 1rem; font-size: 0.875rem; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h1>MES System</h1>
+        <p>비밀번호를 입력하세요</p>
+        <div id="error-msg" class="error"></div>
+        <input type="password" id="pwd" placeholder="비밀번호" onkeypress="if(event.key === 'Enter') login()">
+        <button onclick="login()">로그인</button>
+    </div>
+    <script>
+        function login() {
+            const pwd = document.getElementById('pwd').value;
+            if (pwd === 'admin') {
+                localStorage.setItem('role', 'admin');
+                window.location.href = 'admin.html';
+            } else if (pwd === 'worker') {
+                localStorage.setItem('role', 'worker');
+                window.location.href = 'dashboard.html';
+            } else {
+                document.getElementById('error-msg').innerText = '비밀번호가 틀렸습니다.';
+            }
+        }
+    </script>
+</body>
+</html>

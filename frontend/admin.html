@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MES Admin - 관리자 대시보드</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body { background-color: #0f172a; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding: 1rem 2rem; background-color: #0f172a; flex-shrink: 0; z-index: 100; }
+        h1, h2 { color: #38bdf8; margin: 0; }
+        .btn { padding: 0.5rem 1rem; background: #0ea5e9; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn:hover { background: #0284c7; }
+        .btn-outline { background: transparent; border: 1px solid #0ea5e9; color: #0ea5e9; }
+        
+        /* KPI Summary Row */
+        .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; padding: 1rem 2rem 0; flex-shrink: 0; }
+        .kpi-card { background: #1e293b; border-radius: 8px; padding: 0.9rem 1.2rem; display: flex; flex-direction: column; gap: 0.2rem; }
+        .kpi-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .kpi-value { font-size: 1.6rem; font-weight: 700; color: #f1f5f9; line-height: 1; }
+        .kpi-value.accent { color: #38bdf8; }
+        .kpi-value.warn   { color: #f59e0b; }
+        .kpi-value.danger { color: #ef4444; }
+        .kpi-value.good   { color: #22c55e; }
+
+        /* Main grid */
+        .grid-wrapper { flex: 1; overflow: hidden; padding: 1rem 2rem 2rem; min-height: 0; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; height: 100%; }
+        .card { background: #1e293b; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+        .card h2 { flex-shrink: 0; margin-bottom: 0; }
+        .card-body { flex: 1; overflow-y: auto; padding-top: 1rem; }
+        .list-item { background: #334155; padding: 1rem; margin-top: 1rem; border-radius: 4px; }
+        .list-item-row { display: flex; justify-content: space-between; align-items: flex-start; }
+        .wo-info { flex: 1; }
+
+        /* D-Day badge */
+        .dday { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px; margin-left: 0.4rem; vertical-align: middle; }
+        .dday-danger { background: #ef4444; color: white; }
+        .dday-warn   { background: #f59e0b; color: #0f172a; }
+        .dday-ok     { background: #22c55e; color: #0f172a; }
+        .dday-done   { background: #334155; color: #94a3b8; }
+
+        /* Progress bar */
+        .progress-wrap { margin-top: 0.6rem; }
+        .progress-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem; }
+        .progress-bar { height: 6px; background: #0f172a; border-radius: 3px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #38bdf8; border-radius: 3px; transition: width 0.4s ease; }
+        .progress-fill.done { background: #22c55e; }
+
+        /* Yield stats */
+        .yield-row { display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.8rem; }
+        .yield-item { color: #94a3b8; } 
+        .yield-item span { font-weight: 700; }
+        .yield-item span.good   { color: #22c55e; }
+        .yield-item span.fail   { color: #ef4444; }
+        .yield-item span.rate   { color: #38bdf8; }
+        
+        /* Modal Styles */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: #1e293b; padding: 2rem; border-radius: 8px; width: 500px; max-width: 90%; max-height: 90vh; overflow-y: auto; }
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: #cbd5e1; }
+        input, select, textarea { width: 100%; padding: 0.75rem; box-sizing: border-box; border: 1px solid #334155; border-radius: 4px; background: #0f172a; color: white; }
+        
+        /* BOM Mapping Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { border: 1px solid #334155; padding: 0.5rem; text-align: left; }
+        th select { padding: 0.25rem; }
+        
+        .close-btn { float: right; cursor: pointer; font-size: 1.5rem; color: #94a3b8; line-height: 1; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>관리자 대시보드</h1>
+        <div>
+            <button class="btn btn-primary" onclick="window.open('dashboard.html', '_blank')" style="margin-right: 10px;">실시간 생산현황(작업자) 모니터링</button>
+            <button class="btn" onclick="openWOModal()">+ 작업지시 등록</button>
+            <a href="#" onclick="localStorage.removeItem('role'); window.location.href='login.html';" style="margin-left: 1rem; color: #94a3b8; text-decoration: none;">로그아웃</a>
+        </div>
+    </div>
+
+    <!-- KPI 요약 카드 -->
+    <div class="kpi-row" id="kpi-row">
+        <div class="kpi-card">
+            <span class="kpi-label">진행 중인 작업</span>
+            <span class="kpi-value accent" id="kpi-inprogress">-</span>
+        </div>
+        <div class="kpi-card">
+            <span class="kpi-label">오늘 완료</span>
+            <span class="kpi-value good" id="kpi-today">-</span>
+        </div>
+        <div class="kpi-card">
+            <span class="kpi-label">누적 수율</span>
+            <span class="kpi-value" id="kpi-yield">-</span>
+        </div>
+        <div class="kpi-card">
+            <span class="kpi-label">납기 임박 (D-7)</span>
+            <span class="kpi-value danger" id="kpi-urgent">-</span>
+        </div>
+    </div>
+
+    <div class="grid-wrapper">
+        <div class="grid">
+            <div class="card">
+                <h2>대기중인 작업 (Ready / In Progress)</h2>
+                <div class="card-body" id="ready-list"></div>
+            </div>
+            <div class="card">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
+                    <h2 style="margin:0;">완료된 작업 (Done)</h2>
+                    <select id="completedCompanyFilter" onchange="renderCompletedList()" style="background:#1e293b; color:#e2e8f0; border:1px solid #334155; border-radius:4px; padding:4px 8px; font-size:0.85rem; max-width:120px;">
+                        <option value="">전체 업체</option>
+                    </select>
+                </div>
+                <div class="card-body" id="completed-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WO Registration Modal -->
+    <div id="woModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('woModal')">&times;</span>
+            <h2 style="margin-bottom: 1.5rem;">작업지시(WO) 등록</h2>
+            
+            <div class="form-group">
+                <label>업체 선택</label>
+                <select id="companySelect" onchange="handleCompanyChange()" onkeydown="if(event.key==='Enter') { event.preventDefault(); if(this.value==='NEW') document.getElementById('newCompanyName').focus(); else document.getElementById('target_qty').focus(); }">
+                    <option value="">-- 선택하세요 --</option>
+                    <option value="NEW">+ 새 업체 추가</option>
+                </select>
+            </div>
+            
+            <div class="form-group" id="newCompanyDiv" style="display: none; background: #0f172a; padding: 1rem; border-radius: 4px; border: 1px dashed #334155;">
+                <label>새 업체명</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="newCompanyName" placeholder="예: 삼성전자" onkeydown="if(event.key==='Enter') { event.preventDefault(); document.getElementById('btnRegisterCompany').focus(); }">
+                    <button id="btnRegisterCompany" class="btn btn-outline" onclick="registerCompany()" style="white-space: nowrap;">등록</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>작업지시 번호 (자동 생성)</label>
+                <input type="text" id="wo_id" readonly style="background: #334155;">
+            </div>
+            
+            <div class="form-group">
+                <label>작업 수량</label>
+                <input type="number" id="target_qty" placeholder="예: 1000" onkeydown="if(event.key==='Enter') { event.preventDefault(); document.getElementById('due_date').focus(); }">
+            </div>
+            
+            <div class="form-group">
+                <label>납기일</label>
+                <input type="date" id="due_date" onkeydown="if(event.key==='Enter') { event.preventDefault(); document.getElementById('submitWOBtn').focus(); }">
+            </div>
+            
+            <button id="submitWOBtn" class="btn" style="width: 100%; margin-top: 1rem;" onclick="createWO()">등록하기</button>
+        </div>
+    </div>
+
+    <!-- BOM Modal -->
+    <div id="bomModal" class="modal">
+        <div class="modal-content" style="width: 800px;">
+            <span class="close-btn" onclick="closeModal('bomModal')">&times;</span>
+            <h2 style="margin-bottom: 1.5rem;">BOM 엑셀 데이터 입력</h2>
+            <p style="color: #94a3b8; font-size: 0.9rem;">엑셀에서 데이터를 드래그하여 아래 창에 붙여넣으세요.</p>
+            
+            <input type="hidden" id="bom_wo_id">
+            <input type="hidden" id="bom_company_id">
+            <textarea id="bomPaste" rows="5" placeholder="여기에 붙여넣기..."></textarea>
+            <button class="btn" style="margin-top: 0.5rem;" onclick="parseExcel()">불러오기</button>
+            
+            <div id="bomTableContainer" style="display: none; margin-top: 1rem;">
+                <p style="color: #38bdf8; font-weight: bold;">각 열(Column)이 의미하는 항목을 선택해주세요.</p>
+                <div style="overflow-x: auto;">
+                    <table id="bomTable">
+                        <thead><tr id="bomHeaderRow"></tr></thead>
+                        <tbody id="bomBody"></tbody>
+                    </table>
+                </div>
+                <button class="btn" style="width: 100%; margin-top: 1rem;" onclick="saveBOM()">BOM 저장</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if(localStorage.getItem('role') !== 'admin') {
+            window.location.href = 'login.html';
+            throw new Error('Not authorized'); // stop script execution
+        }
+
+        let companies = [];
+        let bomParsedData = [];
+
+        async function init() {
+            await loadCompanies();
+            await loadWOList();
+            
+            // Set default due_date to today
+            document.getElementById('due_date').valueAsDate = new Date();
+
+            // Auto-refresh every 10 seconds
+            setInterval(loadWOList, 10000);
+        }
+
+        async function loadCompanies() {
+            const res = await fetch('../backend/api/get_companies.php');
+            const data = await res.json();
+            if(data.status === 'success') {
+                companies = data.data;
+                const sel = document.getElementById('companySelect');
+                sel.innerHTML = '<option value="">-- 선택하세요 --</option><option value="NEW">+ 새 업체 추가</option>';
+                companies.forEach(c => {
+                    sel.innerHTML += `<option value="${c.id}" data-code="${c.code}">${c.name}</option>`;
+                });
+            }
+        }
+
+        let completedWOData = [];
+
+        async function loadWOList() {
+            const res = await fetch('../backend/api/get_admin_wo_list.php');
+            const data = await res.json();
+            
+            const readyDiv = document.getElementById('ready-list');
+            const compDiv  = document.getElementById('completed-list');
+            readyDiv.innerHTML = ''; compDiv.innerHTML = '';
+            
+            if (data.status === 'success') {
+                // KPI 요약 카드 업데이트
+                const s = data.data.summary;
+                document.getElementById('kpi-inprogress').innerText = s.in_progress;
+                document.getElementById('kpi-today').innerText      = s.today_done;
+                const yieldEl = document.getElementById('kpi-yield');
+                if (s.overall_yield !== null) {
+                    yieldEl.innerText = s.overall_yield + '%';
+                    yieldEl.className = 'kpi-value ' + (s.overall_yield >= 95 ? 'good' : s.overall_yield >= 80 ? 'warn' : 'danger');
+                } else {
+                    yieldEl.innerText = '-';
+                    yieldEl.className = 'kpi-value';
+                }
+                const urgentEl = document.getElementById('kpi-urgent');
+                urgentEl.innerText = s.urgent;
+                urgentEl.className = 'kpi-value ' + (s.urgent > 0 ? 'danger' : 'good');
+
+                data.data.ready.forEach(wo => readyDiv.innerHTML += renderWO(wo, true));
+                if (data.data.ready.length === 0) readyDiv.innerHTML = '<p style="color:#94a3b8;">대기중인 작업이 없습니다.</p>';
+
+                // 업체 필터 옵션 업데이트
+                completedWOData = data.data.completed;
+                const filter = document.getElementById('completedCompanyFilter');
+                const prevVal = filter.value;
+                filter.innerHTML = '<option value="">전체 업체</option>';
+                const seen = new Set();
+                completedWOData.forEach(wo => {
+                    const name = wo.company_name || '미지정';
+                    if (!seen.has(name)) {
+                        seen.add(name);
+                        filter.innerHTML += `<option value="${name}" ${prevVal===name?'selected':''}>${name}</option>`;
+                    }
+                });
+                renderCompletedList();
+            }
+        }
+
+        function renderCompletedList() {
+            const filter = document.getElementById('completedCompanyFilter').value;
+            const compDiv = document.getElementById('completed-list');
+            let filtered = filter
+                ? completedWOData.filter(wo => (wo.company_name || '미지정') === filter)
+                : [...completedWOData];
+            // 최근 완료 내림차순
+            filtered.sort((a, b) => {
+                if (!a.completed_at && !b.completed_at) return 0;
+                if (!a.completed_at) return 1;
+                if (!b.completed_at) return -1;
+                return b.completed_at.localeCompare(a.completed_at);
+            });
+            compDiv.innerHTML = '';
+            filtered.forEach(wo => compDiv.innerHTML += renderWO(wo, false));
+            if (filtered.length === 0) compDiv.innerHTML = '<p style="color:#94a3b8;">완료된 작업이 없습니다.</p>';
+        }
+
+        function renderDDay(dday, isDone) {
+            if (dday === null || dday === undefined) return '';
+            if (isDone) return `<span class="dday dday-done">완료</span>`;
+            if (dday < 0)  return `<span class="dday dday-danger">D+${Math.abs(dday)} 초과</span>`;
+            if (dday === 0) return `<span class="dday dday-danger">D-Day</span>`;
+            if (dday <= 3)  return `<span class="dday dday-danger">D-${dday}</span>`;
+            if (dday <= 7)  return `<span class="dday dday-warn">D-${dday}</span>`;
+            return `<span class="dday dday-ok">D-${dday}</span>`;
+        }
+
+        function renderWO(wo, isReady) {
+            const bomIcon = wo.has_bom ? '<span title="BOM 등록됨" style="margin-left:5px; font-size:1.2rem;">📄</span>' : '';
+            const ddayBadge = renderDDay(wo.dday, !isReady);
+
+            let extra = '';
+            if (isReady) {
+                // 수삽 단계면 dip_qty 기준, 자삽 단계면 processed_qty 기준
+                const isDip = wo.status === 'DIP_IN_PROGRESS';
+                const currentQty = isDip ? parseInt(wo.dip_qty) : parseInt(wo.processed_qty);
+                const pct = wo.target_qty > 0 ? Math.min(100, Math.round(currentQty / wo.target_qty * 100)) : 0;
+                const fillClass = pct >= 100 ? 'done' : '';
+
+                let phaseLabel = '';
+                if (wo.status === 'IN_PROGRESS') {
+                    phaseLabel = '<span style="font-size:0.72rem; background:#0ea5e9; color:#fff; padding:1px 6px; border-radius:3px; margin-right:4px;">자삽(SMT)</span>';
+                } else if (wo.status === 'SMT_DONE') {
+                    phaseLabel = '<span style="font-size:0.72rem; background:#10b981; color:#fff; padding:1px 6px; border-radius:3px; margin-right:4px;">자삽완료 대기</span>';
+                } else if (wo.status === 'DIP_IN_PROGRESS') {
+                    phaseLabel = '<span style="font-size:0.72rem; background:#f59e0b; color:#0f172a; padding:1px 6px; border-radius:3px; margin-right:4px;">수삽(DIP)</span>';
+                }
+
+                extra = `
+                    <div class="progress-wrap">
+                        <div class="progress-label">
+                            <span>${phaseLabel}진행률</span>
+                            <span>${currentQty} / ${wo.target_qty} (${pct}%)</span>
+                        </div>
+                        <div class="progress-bar"><div class="progress-fill ${fillClass}" style="width:${pct}%"></div></div>
+                    </div>`;
+            } else {
+                // 수율 통계
+                const rate = wo.processed_qty > 0 ? (wo.good_qty / wo.processed_qty * 100).toFixed(1) : '-';
+                extra = `
+                    <div class="yield-row">
+                        <div class="yield-item">양품 <span class="good">${wo.good_qty}</span></div>
+                        <div class="yield-item">불량 <span class="fail">${wo.fail_qty}</span></div>
+                        <div class="yield-item">수율 <span class="rate">${rate !== '-' ? rate + '%' : '-'}</span></div>
+                    </div>`;
+            }
+
+            let buttons = '';
+            if (isReady) {
+                buttons = `
+                    <div style="display:flex; gap:0.4rem; flex-shrink:0; margin-left:0.5rem;">
+                        <button class="btn btn-outline" style="font-size:0.8rem;" onclick="openBOMModal('${wo.wo_id}', '${wo.company_id}')">BOM</button>
+                        <button class="btn btn-outline" style="font-size:0.8rem; background:#f59e0b; color:#0f172a; border-color:#f59e0b;" onclick="editWO('${wo.wo_id}', ${wo.target_qty}, '${wo.due_date}')">수정</button>
+                        <button class="btn btn-outline" style="font-size:0.8rem; background:#ef4444; color:white; border-color:#ef4444;" onclick="deleteWO('${wo.wo_id}')">삭제</button>
+                    </div>`;
+            } else {
+                const shipLabel = wo.shipped == 1
+                    ? `✅ 납품완료 <span style="font-size:0.75rem; color:#94a3b8;">${wo.shipped_at ? wo.shipped_at.slice(0,10) : ''}</span>`
+                    : '📦 납품';
+                const shipStyle = wo.shipped == 1
+                    ? 'background:#1e293b; color:#10b981; border-color:#10b981; cursor:default;'
+                    : 'background:#0ea5e9; color:white; border-color:#0ea5e9;';
+                const shipOnclick = wo.shipped == 1 ? '' : `onclick="shipWO('${wo.wo_id}')"`;
+                buttons = `
+                    <div style="display:flex; gap:0.4rem; flex-shrink:0; margin-left:0.5rem;">
+                        <button class="btn btn-outline" style="font-size:0.8rem; ${shipStyle}" ${shipOnclick}>${shipLabel}</button>
+                    </div>`;
+            }
+
+            const completedInfo = !isReady && wo.completed_at
+                ? `<span style="font-size:0.78rem; color:#64748b; margin-left:0.5rem;">완료: ${wo.completed_at.slice(0,10)}</span>`
+                : '';
+
+            return `
+                <div class="list-item">
+                    <div class="list-item-row">
+                        <div class="wo-info">
+                            <strong style="font-size:1rem; color:#fff;">${wo.wo_id} ${bomIcon} ${ddayBadge}</strong>${completedInfo}<br>
+                            <span style="font-size:0.85rem; color:#94a3b8;">업체: ${wo.company_name || '미지정'} | 목표: ${wo.target_qty}개 | ${wo.status}</span>
+                        </div>
+                        ${buttons}
+                    </div>
+                    ${extra}
+                </div>
+            `;
+        }
+
+        // --- Modals ---
+        function openWOModal() {
+            document.getElementById('woModal').style.display = 'flex';
+            document.getElementById('wo_id').value = '';
+            document.getElementById('target_qty').value = '';
+            document.getElementById('companySelect').value = '';
+            handleCompanyChange();
+        }
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // --- Company Logic ---
+        function handleCompanyChange() {
+            const sel = document.getElementById('companySelect');
+            const newDiv = document.getElementById('newCompanyDiv');
+            const woIdInput = document.getElementById('wo_id');
+            
+            if (sel.value === 'NEW') {
+                newDiv.style.display = 'block';
+                woIdInput.value = '';
+            } else {
+                newDiv.style.display = 'none';
+                if(sel.value) {
+                    const code = sel.options[sel.selectedIndex].dataset.code;
+                    const d = new Date();
+                    const yyyy = d.getFullYear();
+                    const mm = String(d.getMonth()+1).padStart(2,'0');
+                    const dd = String(d.getDate()).padStart(2,'0');
+                    // 중복 방지를 위해 시:분:초를 추가
+                    const hh = String(d.getHours()).padStart(2,'0');
+                    const min = String(d.getMinutes()).padStart(2,'0');
+                    const sec = String(d.getSeconds()).padStart(2,'0');
+                    woIdInput.value = `WO-${yyyy}${mm}${dd}-${hh}${min}${sec}-${code}`;
+                } else {
+                    woIdInput.value = '';
+                }
+            }
+        }
+
+        async function shipWO(wo_id) {
+            if (!confirm(`[${wo_id}] 납품 처리하시겠습니까?`)) return;
+            const res = await fetch('../backend/api/ship_wo.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ wo_id })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                loadWOList();
+            } else {
+                alert(data.message);
+            }
+        }
+
+        async function registerCompany() {
+            const name = document.getElementById('newCompanyName').value.trim();
+            if(!name) { alert('업체명을 입력하세요.'); return; }
+            
+            const res = await fetch('../backend/api/create_company.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const data = await res.json();
+            if(data.status === 'success') {
+                alert('업체가 등록되었습니다.');
+                document.getElementById('newCompanyName').value = '';
+                await loadCompanies();
+                document.getElementById('companySelect').value = data.data.id;
+                handleCompanyChange();
+            } else {
+                alert(data.message);
+            }
+        }
+
+        // --- Create WO ---
+        async function deleteWO(wo_id) {
+            if (!confirm(`작업지시 [${wo_id}]를 정말 삭제하시겠습니까?`)) return;
+            
+            try {
+                const res = await fetch('../backend/api/delete_wo.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wo_id })
+                });
+                const data = await res.json();
+                alert(data.message);
+                if (data.status === 'success') {
+                    loadWOList();
+                }
+            } catch (e) {
+                console.error(e);
+                alert("삭제 중 오류가 발생했습니다.");
+            }
+        }
+
+        async function editWO(wo_id, currentQty, currentDue) {
+            const newQtyStr = prompt(`[${wo_id}] 목표 수량을 수정하세요:`, currentQty);
+            if (newQtyStr === null) return;
+            const target_qty = parseInt(newQtyStr);
+            if (isNaN(target_qty) || target_qty <= 0) {
+                alert("올바른 수량을 입력하세요.");
+                return;
+            }
+
+            const due_date = prompt(`[${wo_id}] 납기일을 수정하세요 (YYYY-MM-DD):`, currentDue === 'null' ? '' : currentDue);
+            if (due_date === null) return;
+
+            try {
+                const res = await fetch('../backend/api/update_wo.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wo_id, target_qty, due_date })
+                });
+                const data = await res.json();
+                alert(data.message);
+                if (data.status === 'success') {
+                    loadWOList();
+                }
+            } catch (e) {
+                console.error(e);
+                alert("수정 중 오류가 발생했습니다.");
+            }
+        }
+
+        async function createWO() {
+            const wo_id = document.getElementById('wo_id').value;
+            const target_qty = document.getElementById('target_qty').value;
+            const due_date = document.getElementById('due_date').value;
+            const company_id = document.getElementById('companySelect').value;
+
+            if(!wo_id || !target_qty || !due_date || !company_id || company_id === 'NEW') {
+                alert('모든 필드를 올바르게 입력하고 업체를 선택하세요.');
+                return;
+            }
+
+            const res = await fetch('../backend/api/create_wo.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ wo_id, target_qty: parseInt(target_qty), due_date, company_id })
+            });
+            const data = await res.json();
+            if(data.status === 'success') {
+                alert(data.message);
+                closeModal('woModal');
+                loadWOList();
+            } else {
+                alert(data.message);
+            }
+        }
+
+        // --- BOM Logic ---
+        async function openBOMModal(wo_id, company_id) {
+            document.getElementById('bomModal').style.display = 'flex';
+            document.getElementById('bom_wo_id').value = wo_id;
+            document.getElementById('bom_company_id').value = company_id;
+            document.getElementById('bomPaste').value = '';
+            document.getElementById('bomTableContainer').style.display = 'none';
+
+            // Fetch existing BOM if any
+            const res = await fetch(`../backend/api/get_bom.php?wo_id=${wo_id}`);
+            const data = await res.json();
+            if (data.status === 'success' && data.data.length > 0) {
+                let tsv = "자재명\t수량\t위치\n"; // Headers
+                data.data.forEach(row => {
+                    tsv += `${row.part_no}\t${row.req_qty}\t${row.location || ''}\n`;
+                });
+                document.getElementById('bomPaste').value = tsv.trim();
+                parseExcel(true); // Automatically render the table with existing data flag
+            }
+        }
+
+        function parseExcel(isExisting = false) {
+            const raw = document.getElementById('bomPaste').value.trim();
+            if(!raw) return;
+            
+            // Split by newline, then by tab (standard excel paste format)
+            const lines = raw.split('\n');
+            bomParsedData = lines.map(line => line.split('\t'));
+            
+            if(bomParsedData.length < 2) {
+                alert("헤더(1줄)와 데이터(1줄 이상)가 포함되어야 합니다.");
+                return;
+            }
+
+            renderBOMTable(isExisting);
+            document.getElementById('bomTableContainer').style.display = 'block';
+        }
+
+        function renderBOMTable(isExisting = false) {
+            const numCols = Math.max(...bomParsedData.map(r => r.length));
+            const headRow = document.getElementById('bomHeaderRow');
+            const body = document.getElementById('bomBody');
+            
+            headRow.innerHTML = '';
+            body.innerHTML = '';
+            
+            // Render Select Headers
+            for(let i=0; i<numCols; i++) {
+                headRow.innerHTML += `
+                    <th>
+                        <select class="bom-map-select" data-col="${i}">
+                            <option value="ignore">무시(Ignore)</option>
+                            <option value="part_no">자재명(Part Name)</option>
+                            <option value="req_qty">수량(Qty)</option>
+                            <option value="location">위치(Location)</option>
+                        </select>
+                    </th>
+                `;
+            }
+            
+            // Auto-guess headers based on the first row text OR saved mapping
+            const company_id = document.getElementById('bom_company_id').value;
+            const company = companies.find(c => c.id == company_id);
+            let savedMapping = null;
+            if (!isExisting && company && company.bom_mapping) {
+                try { savedMapping = JSON.parse(company.bom_mapping); } catch(e) {}
+            }
+
+            const firstRow = bomParsedData[0];
+            const selects = document.querySelectorAll('.bom-map-select');
+            for(let i=0; i<firstRow.length; i++) {
+                if (savedMapping && i < savedMapping.length) {
+                    selects[i].value = savedMapping[i];
+                } else {
+                    const text = firstRow[i].toLowerCase();
+                    if(text.includes('자재') || text.includes('품번') || text.includes('part')) selects[i].value = 'part_no';
+                    else if(text.includes('수량') || text.includes('qty')) selects[i].value = 'req_qty';
+                    else if(text.includes('위치') || text.includes('loc')) selects[i].value = 'location';
+                }
+            }
+
+            // Render Data (skip first row assuming it's header)
+            for(let i=1; i<Math.min(bomParsedData.length, 6); i++) {
+                let tr = '<tr>';
+                for(let j=0; j<numCols; j++) {
+                    tr += `<td>${bomParsedData[i][j] || ''}</td>`;
+                }
+                tr += '</tr>';
+                body.innerHTML += tr;
+            }
+            if(bomParsedData.length > 6) {
+                body.innerHTML += `<tr><td colspan="${numCols}" style="text-align:center; color:#94a3b8;">... (총 ${bomParsedData.length - 1}개 행) ...</td></tr>`;
+            }
+        }
+
+        async function saveBOM() {
+            const selects = document.querySelectorAll('.bom-map-select');
+            const mapping = {};
+            
+            // Find which column index corresponds to which field
+            selects.forEach((sel, i) => {
+                if(sel.value !== 'ignore') mapping[sel.value] = i;
+            });
+            
+            if(mapping.part_no === undefined || mapping.req_qty === undefined) {
+                alert("자재명과 수량 열(Column)은 반드시 지정해야 합니다!");
+                return;
+            }
+            
+            const finalData = [];
+            // Start from 1 to skip header
+            for(let i=1; i<bomParsedData.length; i++) {
+                const row = bomParsedData[i];
+                if(row.join('').trim() === '') continue; // Skip empty rows
+                
+                finalData.push({
+                    part_no: row[mapping.part_no] || '',
+                    req_qty: parseFloat((row[mapping.req_qty] || '').replace(/,/g, '')) || 0,
+                    location: mapping.location !== undefined ? (row[mapping.location] || '') : ''
+                });
+            }
+            
+            const wo_id = document.getElementById('bom_wo_id').value;
+            const company_id = document.getElementById('bom_company_id').value;
+            const mappingArray = Array.from(selects).map(s => s.value);
+            
+            const res = await fetch('../backend/api/save_bom.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ wo_id, bom_data: finalData, company_id, mapping: mappingArray })
+            });
+            const data = await res.json();
+            if(data.status === 'success') {
+                alert('BOM이 성공적으로 저장되었습니다.');
+                closeModal('bomModal');
+                await loadCompanies(); // Refresh company data to get the newly saved bom_mapping
+                loadWOList(); // Refresh to show document icon
+            } else {
+                alert(data.message);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

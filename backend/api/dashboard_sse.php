@@ -37,9 +37,10 @@ while (true) {
 
     // 새로운 이력이 있는지 확인
     $stmt = $pdo->prepare("
-        SELECT h.history_id, h.barcode, h.process_name, h.result_status, h.created_at, b.status 
+        SELECT h.history_id, h.barcode, h.process_name, h.result_status, h.process_data, h.created_at, b.status, w.target_qty, w.status AS wo_status 
         FROM barcode_history h
         JOIN barcode_master b ON h.barcode = b.barcode
+        JOIN work_order w ON b.wo_id = w.wo_id
         WHERE h.history_id > :last_id 
         ORDER BY h.history_id ASC
     ");
@@ -52,7 +53,12 @@ while (true) {
             echo "data: " . json_encode($record, JSON_UNESCAPED_UNICODE) . "\n\n";
             $lastId = $record['history_id'];
         }
-        ob_flush();
+        if (ob_get_level() > 0) ob_flush();
+        flush();
+    } else {
+        // 클라이언트 연결 끊김 감지를 위해 아무 일도 없더라도 더미(ping) 데이터를 보냄
+        echo ": keepalive\n\n";
+        if (ob_get_level() > 0) ob_flush();
         flush();
     }
 

@@ -1,5 +1,50 @@
 let totalCount = 0;
 let failCount = 0;
+let currentTarget = 0;
+
+// 페이지 로드 시 DB에서 실제 생산 실적을 가져와 KPI 초기값을 세팅
+async function initKPI() {
+    try {
+        const res = await fetch('../backend/api/get_kpi.php');
+        const json = await res.json();
+        if (json.status === 'success' && json.data) {
+            const d = json.data;
+            currentTarget = d.target_qty;
+            totalCount    = d.actual_qty;
+            failCount     = d.fail_qty;
+
+            document.getElementById('val-target').innerText = currentTarget;
+            document.getElementById('val-actual').innerText = totalCount;
+            document.getElementById('val-good').innerText   = totalCount - failCount;
+            document.getElementById('val-fail').innerText   = failCount;
+            const yieldRate = totalCount > 0
+                ? ((totalCount - failCount) / totalCount * 100).toFixed(1)
+                : '100.0';
+            document.getElementById('val-yield').innerText = yieldRate + '%';
+        }
+    } catch(e) {
+        console.error('KPI 초기화 실패:', e);
+    }
+}
+
+function applyLogFilter() {
+    const selProc = document.getElementById('filter-process').value;
+    const selStat = document.getElementById('filter-status').value;
+    const items = document.querySelectorAll('#log-list li');
+    
+    items.forEach(li => {
+        if (!li.dataset.process) return; // Skip dummy initial message
+        
+        const matchProc = (selProc === 'ALL' || li.dataset.process === selProc);
+        const matchStat = (selStat === 'ALL' || li.dataset.status === selStat);
+        
+        if (matchProc && matchStat) {
+            li.style.display = '';
+        } else {
+            li.style.display = 'none';
+        }
+    });
+}
 
 function addLog(process, status, dataStr) {
     const logList = document.getElementById('log-list');
@@ -7,12 +52,38 @@ function addLog(process, status, dataStr) {
     const time = new Date().toLocaleTimeString('ko-KR');
     const statusClass = status === 'PASS' ? 'log-pass' : 'log-fail';
     
+    li.dataset.process = process;
+    li.dataset.status = status;
+    
     li.innerHTML = `<span class="log-time">[${time}]</span> <span style="color:#38bdf8">[${process}]</span> <span class="${statusClass}">${status}</span> - ${dataStr}`;
     logList.appendChild(li);
+    
+    // Apply current filter immediately to new log
+    applyLogFilter();
+    
     logList.scrollTop = logList.scrollHeight; // 자동 스크롤
 }
 
-function updateMachine(processId, status, dataStr) {
+function resetAllMachines() {
+    document.querySelectorAll('.machine').forEach(mac => {
+        mac.className = 'machine wait';
+        const dataBox = mac.querySelector('.mac-data');
+        if(dataBox) dataBox.innerText = '-';
+    });
+}
+
+function updateMachine(processId, status, dataStr, pDataObj) {
+    // UI 버그(잔상) 해결: 다른 장비에 동일한 바코드가 띄워져 있다면 빈 상태로 초기화
+    document.querySelectorAll('.machine').forEach(mac => {
+        if (mac.id !== `mac-${processId}`) {
+            const box = mac.querySelector('.mac-data');
+            if (box && box.innerText === dataStr) {
+                mac.className = 'machine wait';
+                box.innerText = '-';
+            }
+        }
+    });
+
     const mac = document.getElementById(`mac-${processId}`);
     const dataBox = document.getElementById(`data-${processId}`);
     if (!mac || !dataBox) return;
@@ -21,12 +92,12 @@ function updateMachine(processId, status, dataStr) {
     mac.className = 'machine';
     mac.classList.add(status === 'PASS' ? 'run' : 'error');
     dataBox.innerText = dataStr;
-
-    // 3초 뒤 다시 Wait 상태로 (시연용 효과)
-    setTimeout(() => {
-        mac.className = 'machine wait';
-        dataBox.innerText = '-';
-    }, 3000);
+    
+    if (pDataObj) {
+        mac.dataset.detail = JSON.stringify(pDataObj);
+        mac.title = "Click to view detailed data";
+        mac.onclick = () => alert(processId + " Data:\n" + JSON.stringify(pDataObj, null, 2));
+    }
 }
 
 function updateKPI(status) {
@@ -36,7 +107,21 @@ function updateKPI(status) {
     const yieldRate = ((totalCount - failCount) / totalCount * 100).toFixed(1);
     
     document.getElementById('val-actual').innerText = totalCount;
-    document.getElementById('val-yield').innerText = `${yieldRate}%`;
+    if (document.getElementById('val-good')) {
+        document.getElementById('val-good').innerText = totalCount - failCount;
+        document.getElementById('val-fail').innerText = failCount;
+    }
+    document.getElementById('val-yield').innerText = yieldRate + '%';
+
+    // 목표 양품 도달 시 (작업 완료) 모든 설비를 대기 상태로 초기화
+    const goodCount = totalCount - failCount;
+    if (currentTarget > 0 && goodCount >= currentTarget) {
+        setTimeout(() => {
+            resetAllMachines();
+            addLog('SYSTEM', 'PASS', '작업 목표 달성. 모든 설비가 대기 상태로 전환되었습니다.');
+            loadWOList(); // 목록 새로고침
+        }, 1000);
+    }
 }
 
 // [SSE 실시간 동기화 연동]
@@ -58,20 +143,31 @@ function connectSSE() {
         try {
             const item = JSON.parse(event.data);
             
-            // DB의 process_name(예: SMT_TOP, MOUNTER 등)
             const proc = item.process_name;
             const isPass = item.result_status;
             const barcode = item.barcode;
+            const pDataStr = item.process_data;
+            const pDataObj = pDataStr ? JSON.parse(pDataStr) : null;
             
-            // UI를 위한 매핑 처리 (필요에 따라 process_name 그대로 사용할 수도 있음)
-            // dashboard.html에는 LASER, SPI, MOUNTER, REFLOW, DIP_AOI, WAVE 가 있음.
-            // 만약 DB에서 들어온 proc이 위와 다르다면, 적절히 변환하거나 매칭되는 돔만 업데이트
+            updateMachine(proc, isPass, `바코드: ${barcode}`, pDataObj);
+            addLog(proc, isPass, `상태: ${item.status}, 바코드: ${barcode} ${pDataStr ? pDataStr : ''}`);
             
-            updateMachine(proc, isPass, `바코드: ${barcode}`);
-            addLog(proc, isPass, `상태: ${item.status}, 바코드: ${barcode}`);
-            
-            // SMT_TOP 등 생산 완료성 공정일 때만 카운트 올리기 위해 임시로 모두 올림
-            updateKPI(isPass);
+            // 목표 수량 갱신
+            if (item.target_qty) {
+                currentTarget = parseInt(item.target_qty);
+                document.getElementById('val-target').innerText = currentTarget;
+            }
+
+            // 생산 실적 카운트 (자삽 완료, 수삽 완료, 혹은 중간 불량 발생으로 인한 폐기 시)
+            if (proc === 'REFLOW' || proc === 'WAVE' || isPass === 'FAIL') {
+                updateKPI(isPass);
+            }
+
+            if (item.wo_status === 'SMT_DONE') {
+                resetAllMachines(); // SMT 완료 시 설비 초기화 보장
+            } else if (item.wo_status === 'DONE') {
+                resetAllMachines(); // 최종 완료 시 설비 초기화 보장
+            }
             
         } catch(e) {
             console.error("데이터 파싱 에러:", e);
@@ -86,5 +182,5 @@ function connectSSE() {
     };
 }
 
-// 스크립트 로드 시 SSE 연결 시작
-connectSSE();
+// 스크립트 로드 시: DB에서 KPI 초기값 로드 후 SSE 연결 시작
+initKPI().then(() => connectSSE());
