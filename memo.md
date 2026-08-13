@@ -1,158 +1,77 @@
-# MES 개발 작업 메모
+# MES 개발 작업 메모 및 AI 모델별 작업 이력
 
-## 2026-08-13 작업 내역
-
-### 시스템 개요
-SMT/DIP 생산라인 통합 MES (Manufacturing Execution System)
-- **Frontend**: `frontend/admin.html` (관리자), `frontend/dashboard.html` (작업자)
-- **Backend**: PHP + MySQL (Docker, port 3307)
-- **인증**: localStorage `role` 키 (`admin` / `worker`)
-
----
-
-### 오늘 구현/수정 목록
-
-#### 1. 업체 코드(c2) 숨김 처리
-- **문제**: 작업지시 등록 시 업체 선택 드롭박스에 `업체명 (C2)` 형태로 코드가 노출됨
-- **수정**: `loadCompanies()` 에서 `${c.name}` 만 표시, `data-code` 속성으로 내부 보존
-
-#### 2. 입력폼 엔터키 UX 개선
-- 작업지시 등록 모달에서 엔터키로 다음 필드로 포커스 이동
-- 흐름: 업체 선택 → 작업수량 → 납기일 → 등록하기 버튼
-- 새 업체 추가 시: 업체명 입력 → 등록 버튼으로 포커스 이동
-
-#### 3. BOM 엑셀 컬럼 매핑 자동 기억 기능
-- **DB 변경**: `company` 테이블에 `bom_mapping VARCHAR(255)` 컬럼 추가
-- **저장**: BOM 저장 시 해당 업체의 컬럼 순서(JSON 배열)를 DB에 자동 기록
-- **복원**: 같은 업체의 BOM을 다시 열면 저전 저장된 순서로 드롭다운 자동 세팅
-- **예외 처리**: 기존 BOM 데이터를 다시 불러올 때는 매핑 미적용 (3칸 고정)
-- **관련 파일**: `backend/api/save_bom.php`, `backend/api/get_companies.php`, `frontend/admin.html`
-
-#### 4. Admin 권한 체크 스크립트 개선
-- `admin.html` 진입 시 role이 없으면 `throw new Error()`로 나머지 스크립트 실행 중단
-- 기존: alert → redirect / 수정 후: 바로 redirect
-
-#### 5. Admin 화면 10초 자동 새로고침
-- `init()` 내에 `setInterval(loadWOList, 10000)` 추가
-- 진행률, KPI 수치가 자동 갱신됨
-
-#### 6. admin → worker → admin 로그아웃 버그 수정
-- **문제**: worker 화면에서 로그아웃하면 role 제거 후 admin.html로 이동 → admin.html이 role 없어 로그인 페이지로 튕김
-- **수정**: admin이 worker 화면 나갈 때 role 유지하고 admin.html로 이동 (세션 유지)
-- **관련 파일**: `frontend/dashboard.html` `logout()` 함수
-
-#### 7. 완료 작업 납품 기능 추가
-- **DB 변경**: `work_order` 테이블에 `completed_at DATETIME`, `shipped TINYINT`, `shipped_at DATETIME` 추가
-- **신규 API**: `backend/api/ship_wo.php` — 납품 처리 엔드포인트
-- **화면**: 완료된 작업 카드에 📦 납품 버튼 추가, 납품 완료 시 ✅ 납품완료 (날짜) 로 변경
-
-#### 8. 오늘 완료 KPI 카운트 버그 수정
-- **문제**: `due_date`(납기일) 기준으로 오늘 완료 카운팅 → 납기일 없는 작업 누락
-- **수정**: `completed_at`(실제 완료 시각) 기준으로 변경
-- `update_process.php` DONE 상태 전환 시 `completed_at = NOW()` 기록 추가
-
-#### 9. 완료 작업 카드에 완료일자 표시
-- 작업지시 ID 옆에 `완료: YYYY-MM-DD` 형태로 표시
-
-#### 10. 진행률 바 공정 단계 표시
-- **자삽(SMT)**: 🔵 파란 뱃지
-- **자삽완료 대기**: 🟢 초록 뱃지
-- **수삽(DIP)**: 🟡 노란 뱃지
-
-#### 11. 수삽 진행률 0부터 시작
-- **문제**: DIP 시작 시에도 SMT 누적 수량 기준으로 진행률 표시
-- **수정**: `dip_qty` 필드 신규 추가 (`SHIPPING` + `FAIL` 바코드 수)
-- DIP 단계일 때만 `dip_qty / target_qty` 로 진행률 계산
-
-#### 12. 완료 작업 업체 필터
-- 완료된 작업 패널 오른쪽 상단에 업체 드롭박스 추가
-- 전체 업체 / 개별 업체별 필터링
-- 자동 새로고침 시 선택 상태 유지
-- 정렬: 최근 완료 내림차순 (`completed_at` 기준)
+## 📌 시스템 개요
+SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
+- **Frontend**: `frontend/admin.html` (관리자 12대 모듈 통합 대시보드), `frontend/dashboard.html` (작업자 라인 스캔), `frontend/login.html`
+- **Backend**: PHP 8.x + MySQL 8.0 (Docker, host port 3307) + PHP 내장 웹서버 (`0.0.0.0:8080`)
+- **인증**: Role 기반 권한 관리 (`admin` / `manager` / `worker`)
+- **공정**: 자삽(SMT: TOP ➔ BOTTOM ➔ TEST) ➔ 수삽(DIP: SHIPPING ➔ FAIL) 2단계 생산 및 바코드 트래킹
 
 ---
 
-### DB 스키마 변경 사항
+## 🤖 AI 모델별 작업 기여 내역 (AI Model Contribution Log)
 
-```sql
--- 업체 BOM 매핑 기억
-ALTER TABLE company ADD COLUMN bom_mapping VARCHAR(255) DEFAULT NULL;
-
--- 작업지시 완료 추적 및 납품 관리
-ALTER TABLE work_order
-    ADD COLUMN completed_at DATETIME DEFAULT NULL,
-    ADD COLUMN shipped TINYINT(1) NOT NULL DEFAULT 0,
-    ADD COLUMN shipped_at DATETIME DEFAULT NULL;
-```
-
----
-
-### 현재 바코드 상태 흐름
-
-```
-WAIT → (자삽 시작)
-→ TOP_DONE → BOTTOM_DONE → TEST_PASS   ← SMT 공정
-→ (수삽 시작)
-→ SHIPPING                              ← DIP 완료 (양품)
-→ FAIL                                  ← 불량
-```
-
-### 작업지시 상태 흐름
-
-```
-READY → IN_PROGRESS (SMT 진행) → SMT_DONE → DIP_IN_PROGRESS (수삽 진행) → DONE (전체 완료)
-```
-
----
-
-## 2026-08-14 작업 내역 (Phase 1 & Phase 2 완성)
-
-### 1. UI/UX 네비게이션 전면 리팩터링
-- `admin.html`을 좌측 고정 사이드바 + 상단 브레드크럼/탑바 + 콘텐츠 패널 구조로 개편
-- 모바일 반응형 사이드바 토글 지원
-- 공통 디자인 시스템 (다크 테마, 통일된 테이블, 카드, 모달, KPI 스트립)
-
-### 2. Phase 1 기능 완성
-- **🏢 거래처 관리**: CRUD, 업체별 WO/양품/수량 현황 집계, 실시간 검색 필터
-- **📦 품목 관리**: 품목코드/품목명/카테고리/단위 마스터 CRUD, 카테고리 셀렉트 필터
-- **🔬 불량 현황**: 기간별 불량률/합격수 KPI, 공정별/업체별 불량 바 차트, 최근 50건 이력 테이블
-- **📅 생산 계획**: 월별 작업지시 캘린더/테이블, D-Day 계산, 실시간 진행률 미니바
-
-### 3. Phase 2 기능 완성
-- **🏭 자재 입출고 관리**: 입고/출고 구분 등록, 파트번호 검색 및 기간 필터, 입출고량 KPI
-- **🚚 출하 관리**: 출하 지시/등록, 대기→출하완료/취소 상태 변경 및 work_order 연동
-- **👤 사용자/권한 관리**: Admin / Manager / Worker 역할 관리, 비밀번호 SHA256 암호화, 계정 활성화 토글
-- **✔️ 품질 검사 기준**: 공정별 검사 항목/기준값/단위 마스터 관리, 활성 기준 필터
-
-### 4. Phase 3 기능 완성
-- **📑 수주 (PO) 관리**: 수주(PO) 등록·수정·삭제, 수주 ➔ 작업지시(WO) 및 바코드 원클릭 연계 발행, 고객사/상태별 필터
-- **📊 종합 KPI 분석 대시보드**: 실시간 종합 수율, 납기 준수율(On-Time), 최근 7/14/30일 일별 생산/수율 추이 바 차트, SMT 라인 가동 상태 카드, 공정별 처리량/불량 점유율
-- **🔔 시스템 알림 센터**: D-3 납기 임박 작업지시 자동 감지 경보, 실시간 미확인 알림 뱃지, 탑바 드롭다운 팝업, 10초 주기 자동 동기화
-- **📜 시스템 활동 로그**: 작업지시·수주·출하·사용자 변경 등 주요 이벤트 실시간 감사 로그 추적
-
-### 5. 신규 DB 스키마 & 마이그레이션
-- `database/phase1_migration.sql` (item, company 확장)
-- `database/phase2_migration.sql` (material_inout, shipment, users, quality_standard)
-- `database/phase3_migration.sql` (sales_order, system_notification, system_log)
-
----
-
-### 신규 생성 파일 목록
-
-| 파일 | 설명 |
+| AI 모델 | 담당 개발 범위 및 주요 작업 내역 |
 |---|---|
-| `backend/api/create_company.php` | 업체 등록 |
-| `backend/api/get_companies.php` | 업체 목록 조회 |
-| `backend/api/get_admin_wo_list.php` | 관리자용 WO 목록 (KPI 포함) |
-| `backend/api/get_kpi.php` | KPI 집계 |
-| `backend/api/get_bom.php` | BOM 조회 |
-| `backend/api/get_wo_list.php` | 작업자용 WO 목록 |
-| `backend/api/create_wo.php` | WO 등록 |
-| `backend/api/delete_wo.php` | WO 삭제 |
-| `backend/api/update_wo.php` | WO 수정 |
-| `backend/api/save_bom.php` | BOM 저장 + 업체 매핑 기록 |
-| `backend/api/start_wo.php` | 자삽 시작 |
-| `backend/api/start_dip_wo.php` | 수삽 시작 |
-| `backend/api/ship_wo.php` | 납품 처리 |
-| `frontend/admin.html` | 관리자 대시보드 |
-| `frontend/login.html` | 로그인 화면 |
+| **Claude 3.5 Sonnet** | • **초기 아키텍처 및 코어 엔진 구축**<br>  - SMT/DIP 상태 전이 머신, 개별 바코드 발행/스캐너 이력 추적<br>  - 거래처별 가변 엑셀 BOM 동적 매핑 및 자동 기억 기능<br>• **Phase 1 모듈 개발**<br>  - 거래처 마스터 관리 (CRUD, WO 통계)<br>  - 품목 마스터 관리 (CRUD, 카테고리 필터)<br>  - 불량 현황 분석 (공정별/업체별 통계 차트, 실시간 불량 이력)<br>  - 생산 계획 (월별 캘린더, D-Day, 실시간 진행률)<br>• **Phase 2 모듈 개발**<br>  - 자재 입출고 관리 (수불 이력, 파트 검색, 입출고 KPI)<br>  - 출하 관리 (출하 지시/등록, 상태 전이, 거래명세서)<br>  - 사용자 / 권한 관리 (Admin/Manager/Worker, SHA256 암호화)<br>  - 품질 검사 기준 (공정별 기준치/단위 마스터 관리) |
+| **Gemini 3.7 Flash** | • **Phase 3 모듈 개발**<br>  - 수주 (PO) 관리 (`sales_order` DB 마이그레이션, CRUD, 수주 ➔ WO 원클릭 연계 발행)<br>  - 종합 KPI 분석 대시보드 (종합 누적 수율, 납기 준수율, 일별 추이 바 차트, 라인 가동 카드)<br>  - 시스템 알림 센터 (D-3 납기 임박 자동 감지 경보, 실시간 뱃지, 10초 폴링)<br>  - 시스템 감사 로그 (`system_log` 변경 이력 추적)<br>• **100% 풀 와이드(Full-Width) 반응형 레이아웃 확장**<br>  - 상위 뷰포트 제한 해제, WO 카드 반응형 멀티 컬럼 그리드(`repeat(auto-fill, minmax(280px, 1fr))`) 적용<br>• **프론트엔드-백엔드 서버 환경 안정화 및 런타임 버그 픽스**<br>  - PHP 내장 웹 서버 연동을 통한 API 404 차단 해소 및 듀얼 심볼릭 링크 구성<br>  - 자바스크립트 태그 분할 및 구버전 `showPage` 중복 제거로 초기화 오류 해결<br>• **한글 인코딩(UTF-8) 정제 및 DB 복구**<br>  - PDO `SET NAMES utf8mb4` 적용 및 이중 인코딩된 한글 데이터 복원<br>• **작업지시(WO) 수정 UI 모달 폼 개편**<br>  - 기존 브라우저 `prompt()` 팝업을 수주 수정창과 동일한 모던 모달 폼으로 전면 업그레이드<br>• **ORCA MES 매뉴얼 기반 RAG AI 어시스턴트 아키텍처 설계 검토** |
+
+---
+
+## 🛠️ 상세 개발 히스토리
+
+### 1. 코어 및 Phase 1 & 2 (작업자: Claude 3.5 Sonnet)
+- **업체 BOM 매핑 기억**: 거래처별 서로 다른 엑셀 컬럼 구조를 JSON으로 저장하여 재업로드 시 자동 복원.
+- **바코드 공정 흐름**:
+  ```
+  WAIT → (자삽 시작) → TOP_DONE → BOTTOM_DONE → TEST_PASS (SMT 완료)
+       → (수삽 시작) → SHIPPING (완료/양품) / FAIL (불량)
+  ```
+- **마스터 데이터 관리**: 거래처, 품목, 자재 수불, 출하, 사용자, 품질 검사 기준 8개 패널 구축.
+
+---
+
+### 2. Phase 3 & 시스템 고도화 (작업자: Gemini 3.7 Flash)
+- **수주 (PO) 관리 (`sales_order`)**:
+  - 발주 등록/수정/삭제, 단가/총액 자동 산출, 납기일 관리.
+  - **⚡ WO 발행**: 수주 건에서 버튼 클릭 한 번으로 작업지시(WO) 자동 생성 및 바코드 일괄 발행.
+- **종합 KPI 분석 대시보드 (`get_kpi_analytics.php`)**:
+  - 종합 누적 수율, 온타임(On-Time) 납기 준수율 계산.
+  - 최근 7/14/30일 일별 생산량/수율 인터랙티브 막대 차트.
+  - SMT/DIP 라인 가동 상태 및 4단계 공정별 불량률 매트릭스.
+- **시스템 알림 센터 (`system_notification`)**:
+  - D-3 납기 임박 작업지시 백엔드 자동 감지 및 인앱 알림 생성.
+  - 탑바 알림 종 아이콘 및 미확인 뱃지 카운트, 10초 주기 백그라운드 자동 동기화.
+- **감사 로그 (`system_log`)**:
+  - 수주, 작업지시, 출하, 사용자 변경 이력 실시간 기록.
+
+---
+
+### 3. UI/UX 및 안정화 작업 (작업자: Gemini 3.7 Flash)
+- **화면 100% 풀 와이드 확장**:
+  - 본문 너비를 100%로 시원하게 확장하고, 테이블 패딩과 폰트 크기를 와이드 화면에 맞게 최적화.
+  - 작업지시 카드를 반응형 멀티 컬럼 그리드로 재배치하여 한 화면에 많은 카드를 가독성 높게 표시.
+- **작업지시(WO) 수정 모달 폼 적용**:
+  - `editWO`의 브라우저 기본 `prompt()` 팝업을 제거하고, `#woModal`을 활용한 전용 모달 폼으로 개편.
+  - WO 번호 및 거래처 자동 고정, 목표 수량/납기일 직관적 수정.
+- **백엔드 서버 환경 최적화**:
+  - Python 정적 서버의 404 차단 문제를 PHP 내장 서버(`php -S 0.0.0.0:8080 -t .`) 정식 구동으로 전환하여 해결.
+- **한글 인코딩(UTF-8) 완전 정제**:
+  - `PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"` 적용 및 DB 내 이중 인코딩 데이터 원상 복구.
+
+---
+
+## 🗄️ 전체 데이터베이스 스키마 현황
+
+1. `company`: 거래처 마스터 (BOM 매핑 JSON 포함)
+2. `item`: 품목 마스터 (코드, 품목명, 카테고리, 단위)
+3. `work_order`: 작업지시 (목표수량, 납기일, 상태, 완료일시, 출하일시)
+4. `barcode_master`: 개별 제품 바코드 및 공정 상태
+5. `barcode_history`: 바코드 공정 스캔 이력 (PASS/FAIL)
+6. `material_inout`: 자재 입고/출고 이력 및 공급처/수량 관리
+7. `shipment`: 완제품 출하 지시 및 거래명세서 관리
+8. `users`: 시스템 사용자 계정 및 권한(Admin/Manager/Worker)
+9. `quality_standard`: 공정별 품질 검사 기준값 및 단위 마스터
+10. `sales_order`: 고객 수주(PO) 및 WO 연계 발행
+11. `system_notification`: 납기 임박 및 시스템 푸시 알림
+12. `system_log`: 시스템 활동 및 변경 감사 로그
