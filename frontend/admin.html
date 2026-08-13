@@ -2849,18 +2849,10 @@
         return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
-    // ── Start ──
-    initDefectDates();
-    initPlanDate();
-    initMaterialDates();
-    initShipmentDates();
-    init();
-</script>
+// ════════════════════════════════════════════════════════
+//  PHASE 2 & PHASE 3 JS MODULES
+// ════════════════════════════════════════════════════════
 
-<!-- ════════════════════════════════════════════════════════
-     PHASE 2 JS
-════════════════════════════════════════════════════════ -->
-<script>
 // ════════════════════════════════════════════════
 //  PHASE 2: 자재 입출고 관리
 // ════════════════════════════════════════════════
@@ -3753,7 +3745,12 @@ setInterval(() => {
     }
 }, 10000);
 
-// 초기 알림 로드
+// ── App Startup Initializers ──
+initDefectDates();
+initPlanDate();
+initMaterialDates();
+initShipmentDates();
+init();
 loadNotifications();
 </script>
 
