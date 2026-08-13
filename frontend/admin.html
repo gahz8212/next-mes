@@ -869,12 +869,15 @@
             padding: 3px 8px;
             border-radius: 9999px;
         }
-        .status-ready    { background: rgba(100,116,139,0.2); color: var(--text-dim); }
-        .status-progress { background: rgba(59,130,246,0.2); color: #93c5fd; }
-        .status-done     { background: rgba(52,211,153,0.2); color: #6ee7b7; }
-        .status-shipped  { background: rgba(16,185,129,0.25); color: #34d399; }
+        .status-ready       { background: rgba(100,116,139,0.2); color: var(--text-dim); }
+        .status-progress    { background: rgba(59,130,246,0.2); color: #93c5fd; }
+        .status-done        { background: rgba(52,211,153,0.2); color: #6ee7b7; }
+        .status-shipped     { background: rgba(16,185,129,0.25); color: #34d399; }
+        .status-received    { background: rgba(251,191,36,0.2); color: #fcd34d; }
+        .status-in-prod     { background: rgba(59,130,246,0.2); color: #93c5fd; }
+        .status-cancelled   { background: rgba(239,68,68,0.2); color: #fca5a5; }
 
-        /* Defect bar chart */
+        /* Defect & KPI bar charts */
         .bar-row {
             display: flex;
             align-items: center;
@@ -886,8 +889,80 @@
         .bar-fill   { height: 100%; border-radius: 9999px; transition: width 0.4s ease; }
         .bar-fill-red    { background: #f87171; }
         .bar-fill-yellow { background: #fbbf24; }
+        .bar-fill-green  { background: #34d399; }
+        .bar-fill-blue   { background: #60a5fa; }
         .bar-count  { font-size: 12px; font-weight: 700; color: #e2e8f0; min-width: 30px; text-align: right; }
         .bar-pct    { font-size: 11px; color: var(--text-muted); min-width: 38px; text-align: right; }
+
+        /* Topbar notification */
+        .noti-wrap { position: relative; }
+        .noti-btn {
+            background: var(--surface);
+            border: 1px solid var(--card-border);
+            color: var(--text-dim);
+            padding: 7px 11px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            cursor: pointer;
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s, color 0.15s;
+        }
+        .noti-btn:hover { background: #24344d; color: #e2e8f0; }
+        .noti-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #ef4444;
+            color: white;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 1px 5px;
+            border-radius: 9999px;
+            min-width: 16px;
+            text-align: center;
+            box-shadow: 0 0 0 2px var(--bg);
+        }
+        .noti-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            width: 340px;
+            background: #111c2e;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius);
+            box-shadow: 0 16px 36px rgba(0,0,0,0.5);
+            z-index: 500;
+            overflow: hidden;
+        }
+        .noti-dropdown.open { display: block; }
+        .noti-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            background: #0d1524;
+        }
+        .noti-header-title { font-size: 13px; font-weight: 700; color: #e2e8f0; }
+        .noti-read-all { font-size: 11px; color: var(--accent); cursor: pointer; background: none; border: none; font-weight: 600; }
+        .noti-read-all:hover { text-decoration: underline; }
+        .noti-list { max-height: 320px; overflow-y: auto; }
+        .noti-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .noti-item:hover { background: rgba(255,255,255,0.03); }
+        .noti-item.unread { background: rgba(59,130,246,0.06); border-left: 3px solid var(--accent); }
+        .noti-item-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+        .noti-item-title { font-size: 12px; font-weight: 700; color: #e2e8f0; }
+        .noti-item-time { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+        .noti-item-msg { font-size: 11.5px; color: var(--text-dim); line-height: 1.4; }
     </style>
 </head>
 <body>
@@ -908,9 +983,13 @@
         </div>
 
         <div class="sidebar-nav">
-            <!-- 작업 관리 -->
+            <!-- 작업 / 수주 관리 -->
             <div class="nav-section">
-                <div class="nav-section-label">작업 관리</div>
+                <div class="nav-section-label">작업 / 수주 관리</div>
+                <button class="nav-item" onclick="showPage('order', this)">
+                    <span class="nav-icon">📑</span>
+                    <span>수주 (PO) 관리</span>
+                </button>
                 <button class="nav-item active" onclick="showPage('wo', this)">
                     <span class="nav-icon">📋</span>
                     <span>작업지시 (WO) 관리</span>
@@ -921,17 +1000,20 @@
                 </button>
             </div>
 
-            <!-- 품질 관리 -->
+            <!-- 품질 / 통계 분석 -->
             <div class="nav-section">
-                <div class="nav-section-label">품질 관리</div>
+                <div class="nav-section-label">품질 / 종합 통계</div>
+                <button class="nav-item" onclick="showPage('kpi', this)">
+                    <span class="nav-icon">📊</span>
+                    <span>KPI 종합 분석</span>
+                </button>
                 <button class="nav-item" onclick="showPage('defect', this)">
                     <span class="nav-icon">🔬</span>
                     <span>불량 현황</span>
                 </button>
-                <button class="nav-item soon" title="준비 중">
-                    <span class="nav-icon">✅</span>
-                    <span>품질검사 현황</span>
-                    <span class="nav-badge soon-badge">예정</span>
+                <button class="nav-item" onclick="showPage('quality-std', this)">
+                    <span class="nav-icon">✔️</span>
+                    <span>품질 검사 기준</span>
                 </button>
             </div>
 
@@ -946,14 +1028,9 @@
                     <span class="nav-icon">📦</span>
                     <span>품목 관리</span>
                 </button>
-                <button class="nav-item soon" title="준비 중">
-                    <span class="nav-icon">🔩</span>
-                    <span>BOM 마스터</span>
-                    <span class="nav-badge soon-badge">예정</span>
-                </button>
             </div>
 
-            <!-- 자재/제품 관리 -->
+            <!-- 자재 / 제품 관리 -->
             <div class="nav-section">
                 <div class="nav-section-label">자재 / 제품</div>
                 <button class="nav-item" onclick="showPage('material', this)">
@@ -973,14 +1050,9 @@
                     <span class="nav-icon">👤</span>
                     <span>사용자 관리</span>
                 </button>
-                <button class="nav-item" onclick="showPage('quality-std', this)">
-                    <span class="nav-icon">✔️</span>
-                    <span>품질 검사 기준</span>
-                </button>
-                <button class="nav-item soon" title="준비 중">
+                <button class="nav-item" onclick="showPage('log', this)">
                     <span class="nav-icon">📜</span>
-                    <span>로그 이력</span>
-                    <span class="nav-badge soon-badge">예정</span>
+                    <span>시스템 로그 이력</span>
                 </button>
             </div>
         </div>
@@ -1011,6 +1083,23 @@
                 </div>
             </div>
             <div class="topbar-right">
+                <!-- Notifications -->
+                <div class="noti-wrap">
+                    <button class="noti-btn" onclick="toggleNotificationPopup(event)" title="알림 센터">
+                        🔔
+                        <span class="noti-badge" id="noti-count" style="display:none;">0</span>
+                    </button>
+                    <div class="noti-dropdown" id="notiDropdown">
+                        <div class="noti-header">
+                            <div class="noti-header-title">🔔 시스템 알림 센터</div>
+                            <button class="noti-read-all" onclick="markAllNotificationsRead()">모두 읽음</button>
+                        </div>
+                        <div class="noti-list" id="noti-list">
+                            <div style="padding:20px; text-align:center; color:var(--text-muted); font-size:12px;">알림이 없습니다.</div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="live-badge">
                     <div class="live-dot"></div>
                     LIVE
@@ -1520,6 +1609,196 @@
                     </table>
                 </div>
             </div><!-- /page-quality-std -->
+
+            <!-- ══════════════════════════════════════
+                 PAGE: 수주 (PO) 관리
+            ══════════════════════════════════════ -->
+            <div class="page-panel" id="page-order">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title-text">📑 수주 (PO) 관리</div>
+                        <div class="page-desc">고객사 발주(수주)를 등록하고, 원클릭으로 작업지시(WO)를 연계 발행합니다.</div>
+                    </div>
+                    <button class="topbar-action-btn" onclick="openOrderModal()">+ 수주 등록</button>
+                </div>
+
+                <!-- KPI -->
+                <div class="kpi-strip" style="padding:0 28px 16px;">
+                    <div class="kpi-card">
+                        <div class="kpi-label">📋 총 수주 건수</div>
+                        <div class="kpi-val accent" id="ord-kpi-total">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">⏳ 생산 대기 (접수)</div>
+                        <div class="kpi-val warn" id="ord-kpi-received">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">⚡ 생산 진행 중</div>
+                        <div class="kpi-val" style="color:#60a5fa;" id="ord-kpi-inprod">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">💰 총 수주 금액</div>
+                        <div class="kpi-val good" id="ord-kpi-amount">—</div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div style="padding:0 28px 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <input class="data-search" id="ord-search" type="search" placeholder="수주번호·품목·업체 검색…" oninput="loadOrders()" style="max-width:240px;">
+                    <select class="filter-select" id="ord-status-filter" onchange="loadOrders()" style="padding:7px 12px; min-width:130px;">
+                        <option value="">전체 상태</option>
+                        <option value="RECEIVED">접수(대기)</option>
+                        <option value="IN_PRODUCTION">생산진행중</option>
+                        <option value="COMPLETED">완료</option>
+                        <option value="CANCELLED">취소</option>
+                    </select>
+                    <select class="filter-select" id="ord-company-filter" onchange="loadOrders()" style="padding:7px 12px; min-width:140px;">
+                        <option value="">전체 고객사</option>
+                    </select>
+                    <button class="topbar-action-btn" onclick="loadOrders()">조회</button>
+                </div>
+
+                <!-- Table -->
+                <div class="data-table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>수주 번호</th>
+                                <th>고객사</th>
+                                <th>품목명</th>
+                                <th style="text-align:right">수량</th>
+                                <th style="text-align:right">총 수주액</th>
+                                <th>납기 요청일</th>
+                                <th>상태</th>
+                                <th>연계 WO</th>
+                                <th style="text-align:right">관리 및 발행</th>
+                            </tr>
+                        </thead>
+                        <tbody id="order-tbody"></tbody>
+                    </table>
+                </div>
+            </div><!-- /page-order -->
+
+            <!-- ══════════════════════════════════════
+                 PAGE: 종합 KPI 분석
+            ══════════════════════════════════════ -->
+            <div class="page-panel" id="page-kpi">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title-text">📊 종합 KPI 분석 대시보드</div>
+                        <div class="page-desc">공장 가동 현황, 수율 추이, 납기준수율 등 핵심 성과 지표를 실시간 분석합니다.</div>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <select class="filter-select" id="kpi-period-select" onchange="loadKpiAnalytics()" style="padding:7px 12px;">
+                            <option value="7">최근 7일</option>
+                            <option value="14" selected>최근 14일</option>
+                            <option value="30">최근 30일</option>
+                        </select>
+                        <button class="topbar-action-btn" onclick="loadKpiAnalytics()">새로고침</button>
+                    </div>
+                </div>
+
+                <!-- Main KPI strip -->
+                <div class="kpi-strip" style="padding:0 28px 16px;">
+                    <div class="kpi-card">
+                        <div class="kpi-label">🎯 종합 누적 수율</div>
+                        <div class="kpi-val good" id="kpi-ana-yield">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">⏱️ 납기 준수율 (On-Time)</div>
+                        <div class="kpi-val accent" id="kpi-ana-ontime">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">📦 누적 양품 생산량</div>
+                        <div class="kpi-val" id="kpi-ana-good">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">🚨 누적 불량 수량</div>
+                        <div class="kpi-val danger" id="kpi-ana-fail">—</div>
+                    </div>
+                </div>
+
+                <!-- 2 Column Chart Area -->
+                <div style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:16px; padding:0 28px 16px; flex:1; min-height:0; overflow:auto;">
+                    <!-- Daily Trend Bar Chart -->
+                    <div class="board-col" style="overflow:visible;">
+                        <div class="board-col-header">
+                            <div class="board-col-title">
+                                <div class="col-dot blue"></div>
+                                일별 생산량 및 수율 추이
+                            </div>
+                        </div>
+                        <div style="padding:16px; overflow-y:auto; max-height:360px;" id="kpi-trend-container">
+                            <div class="empty-msg">데이터를 불러오는 중…</div>
+                        </div>
+                    </div>
+
+                    <!-- Line Status & Process Split -->
+                    <div style="display:flex; flex-direction:column; gap:16px;">
+                        <!-- SMT Line Status Card -->
+                        <div class="board-col" style="flex:none;">
+                            <div class="board-col-header">
+                                <div class="board-col-title">
+                                    <div class="col-dot green"></div>
+                                    SMT 라인 실시간 가동 상태
+                                </div>
+                            </div>
+                            <div style="padding:14px;" id="kpi-lines-container">
+                                <div class="empty-msg">라인 상태 조회 중…</div>
+                            </div>
+                        </div>
+
+                        <!-- Process Volume Matrix -->
+                        <div class="board-col" style="flex:1; min-height:160px;">
+                            <div class="board-col-header">
+                                <div class="board-col-title">
+                                    <div class="col-dot" style="background:#fbbf24;"></div>
+                                    공정별 처리량 및 불량 집계
+                                </div>
+                            </div>
+                            <div style="padding:12px; overflow-y:auto;" id="kpi-process-container">
+                                <div class="empty-msg">공정 집계 로딩 중…</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- /page-kpi -->
+
+            <!-- ══════════════════════════════════════
+                 PAGE: 시스템 로그 이력
+            ══════════════════════════════════════ -->
+            <div class="page-panel" id="page-log">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title-text">📜 시스템 로그 이력</div>
+                        <div class="page-desc">작업지시, 수주, 출하, 사용자 변경 등 주요 시스템 활동 로그를 실시간 추적합니다.</div>
+                    </div>
+                    <button class="topbar-action-btn" onclick="loadSystemLogs()">새로고침</button>
+                </div>
+
+                <!-- Filter bar -->
+                <div style="padding:0 28px 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <input class="data-search" id="log-search" type="search" placeholder="로그 내용·사용자 검색…" oninput="loadSystemLogs()" style="max-width:240px;">
+                    <select class="filter-select" id="log-type-filter" onchange="loadSystemLogs()" style="padding:7px 12px; min-width:150px;">
+                        <option value="">전체 작업 유형</option>
+                    </select>
+                </div>
+
+                <!-- Table -->
+                <div class="data-table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>일시</th>
+                                <th>작업자</th>
+                                <th>유형</th>
+                                <th>상세 내용</th>
+                            </tr>
+                        </thead>
+                        <tbody id="log-tbody"></tbody>
+                    </table>
+                </div>
+            </div><!-- /page-log -->
 
             <!-- ── Placeholder ── -->
             <div class="page-panel" id="page-placeholder">
@@ -2887,19 +3166,570 @@ async function deleteQstd(id, name) {
     else alert(data.message);
 }
 
-// showPage Phase 2 hook
-const _origShowPage = showPage;
-// Extend showPage lazy-load
-const _p2ShowPage = function(pageId, navBtn) {
-    _origShowPage(pageId, navBtn);
+// ════════════════════════════════════════════════
+//  PHASE 3: 수주 (PO) 관리
+// ════════════════════════════════════════════════
+let ordersData = [];
+
+async function loadOrders() {
+    const search    = document.getElementById('ord-search')?.value.trim() || '';
+    const status    = document.getElementById('ord-status-filter')?.value || '';
+    const companyId = document.getElementById('ord-company-filter')?.value || '';
+
+    const res  = await fetch(`../backend/api/get_orders.php?search=${encodeURIComponent(search)}&status=${status}&company_id=${companyId}`);
+    const data = await res.json();
+    if (data.status !== 'success') return;
+
+    const { kpi, orders } = data.data;
+    ordersData = orders || [];
+
+    // KPI 카드 업데이트
+    document.getElementById('ord-kpi-total').textContent    = (kpi.total_orders || 0).toLocaleString();
+    document.getElementById('ord-kpi-received').textContent = (kpi.received_count || 0).toLocaleString();
+    document.getElementById('ord-kpi-inprod').textContent   = (kpi.in_prod_count || 0).toLocaleString();
+    document.getElementById('ord-kpi-amount').textContent   = '₩ ' + Math.round(kpi.total_amount || 0).toLocaleString();
+
+    // 고객사 셀렉트 필터 갱신 (선택 유지)
+    const cSel = document.getElementById('ord-company-filter');
+    if (cSel && companies.length) {
+        const prevC = cSel.value;
+        cSel.innerHTML = '<option value="">전체 고객사</option>' + 
+            companies.map(c => `<option value="${c.id}" ${prevC == c.id ? 'selected' : ''}>${escHtml(c.name)}</option>`).join('');
+    }
+
+    renderOrderTable(ordersData);
+}
+
+function renderOrderTable(list) {
+    const tbody = document.getElementById('order-tbody');
+    if (!tbody) return;
+    if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text-muted);">등록된 수주 내역이 없습니다.</td></tr>`;
+        return;
+    }
+
+    const statusBadgeMap = {
+        RECEIVED:      `<span class="status-badge status-received">⏳ 접수(대기)</span>`,
+        IN_PRODUCTION: `<span class="status-badge status-in-prod">⚡ 생산진행</span>`,
+        COMPLETED:     `<span class="status-badge status-done">✅ 완료</span>`,
+        CANCELLED:     `<span class="status-badge status-cancelled">🚫 취소</span>`,
+    };
+
+    tbody.innerHTML = list.map(o => {
+        const hasWO = !!o.wo_id;
+        const totalWon = o.total_price ? '₩ ' + Math.round(o.total_price).toLocaleString() : '—';
+        return `<tr>
+            <td><strong style="color:#e2e8f0;"><code style="color:#93c5fd;font-size:12px;">${escHtml(o.order_no)}</code></strong></td>
+            <td>${escHtml(o.company_name || '—')}</td>
+            <td>
+                <div style="font-weight:600;color:#e2e8f0;">${escHtml(o.item_name || '—')}</div>
+                ${o.item_code ? `<div style="font-size:10.5px;color:var(--text-muted);">${escHtml(o.item_code)}</div>` : ''}
+            </td>
+            <td style="text-align:right;font-weight:700;color:#e2e8f0;">${parseInt(o.order_qty).toLocaleString()} <span style="font-size:11px;color:var(--text-muted);">EA</span></td>
+            <td style="text-align:right;color:#6ee7b7;font-weight:600;">${totalWon}</td>
+            <td style="white-space:nowrap;font-weight:600;color:#e2e8f0;">${o.due_date || '—'}</td>
+            <td>${statusBadgeMap[o.status] || o.status}</td>
+            <td>
+                ${hasWO 
+                    ? `<span style="font-size:11px;color:#60a5fa;font-weight:700;cursor:pointer;" onclick="showPage('wo');" title="WO 관리로 이동">${escHtml(o.wo_id)}</span>` 
+                    : `<span style="color:var(--text-muted);font-size:11px;">미발행</span>`}
+            </td>
+            <td style="text-align:right;white-space:nowrap;">
+                ${!hasWO && o.status === 'RECEIVED' ? `
+                    <button class="topbar-action-btn" style="padding:4px 9px;font-size:11px;background:#2563eb;" onclick="convertOrderToWO(${o.id}, '${escHtml(o.order_no)}')">⚡ WO 발행</button>
+                ` : ''}
+                <button class="card-btn card-btn-edit" style="margin-left:4px;" onclick="openEditOrderModal(${o.id}, '${escHtml(o.order_no)}', ${o.company_id}, '${escHtml(o.item_code||'')}', '${escHtml(o.item_name||'')}', ${o.order_qty}, ${o.unit_price}, '${o.due_date}', '${o.status}', '${escHtml(o.memo||'')}')">수정</button>
+                ${!hasWO ? `<button class="card-btn card-btn-del" style="margin-left:4px;" onclick="deleteOrder(${o.id}, '${escHtml(o.order_no)}')">삭제</button>` : ''}
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function openOrderModal() {
+    document.getElementById('ord-modal-title').textContent = '수주 등록';
+    document.getElementById('ord-id').value = '';
+    document.getElementById('ord-no-wrap').style.display = 'none';
+    document.getElementById('ord-inp-company').value = '';
+    document.getElementById('ord-inp-itemname').value = '';
+    document.getElementById('ord-inp-itemcode').value = '';
+    document.getElementById('ord-inp-qty').value = '';
+    document.getElementById('ord-inp-price').value = '0';
+    document.getElementById('ord-inp-date').value = new Date().toISOString().slice(0,10);
+    
+    const d7 = new Date(); d7.setDate(d7.getDate() + 7);
+    document.getElementById('ord-inp-due').value = d7.toISOString().slice(0,10);
+    document.getElementById('ord-inp-status').value = 'RECEIVED';
+    document.getElementById('ord-inp-memo').value = '';
+
+    // populate company dropdown in modal
+    const cmSel = document.getElementById('ord-inp-company');
+    cmSel.innerHTML = '<option value="">고객사를 선택하세요</option>' +
+        companies.map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+
+    document.getElementById('orderModal').classList.add('open');
+}
+
+function openEditOrderModal(id, orderNo, companyId, itemCode, itemName, qty, unitPrice, dueDate, status, memo) {
+    document.getElementById('ord-modal-title').textContent = '수주 수정';
+    document.getElementById('ord-id').value = id;
+    document.getElementById('ord-no-wrap').style.display = 'block';
+    document.getElementById('ord-no-val').textContent = orderNo;
+
+    const cmSel = document.getElementById('ord-inp-company');
+    cmSel.innerHTML = '<option value="">고객사를 선택하세요</option>' +
+        companies.map(c => `<option value="${c.id}" ${c.id == companyId ? 'selected' : ''}>${escHtml(c.name)}</option>`).join('');
+
+    document.getElementById('ord-inp-itemname').value = itemName;
+    document.getElementById('ord-inp-itemcode').value = itemCode;
+    document.getElementById('ord-inp-qty').value = qty;
+    document.getElementById('ord-inp-price').value = unitPrice;
+    document.getElementById('ord-inp-due').value = dueDate;
+    document.getElementById('ord-inp-status').value = status;
+    document.getElementById('ord-inp-memo').value = memo;
+
+    document.getElementById('orderModal').classList.add('open');
+}
+
+async function saveOrder() {
+    const id         = document.getElementById('ord-id').value;
+    const company_id = document.getElementById('ord-inp-company').value;
+    const item_name  = document.getElementById('ord-inp-itemname').value.trim();
+    const item_code  = document.getElementById('ord-inp-itemcode').value.trim();
+    const order_qty  = parseInt(document.getElementById('ord-inp-qty').value);
+    const unit_price = parseFloat(document.getElementById('ord-inp-price').value) || 0;
+    const due_date   = document.getElementById('ord-inp-due').value;
+    const order_date = document.getElementById('ord-inp-date')?.value || new Date().toISOString().slice(0,10);
+    const status     = document.getElementById('ord-inp-status').value;
+    const memo       = document.getElementById('ord-inp-memo').value.trim();
+
+    if (!company_id || !item_name || !order_qty || order_qty <= 0 || !due_date) {
+        alert('고객사, 품목명, 수량(1 이상), 납기일은 필수 입력값입니다.');
+        return;
+    }
+
+    const url = id ? '../backend/api/update_order.php' : '../backend/api/create_order.php';
+    const body = id 
+        ? { id: parseInt(id), company_id: parseInt(company_id), item_name, item_code, order_qty, unit_price, due_date, status, memo }
+        : { company_id: parseInt(company_id), item_name, item_code, order_qty, unit_price, order_date, due_date, memo };
+
+    const res  = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (data.status === 'success') {
+        closeModal('orderModal');
+        loadOrders();
+        loadNotifications();
+    } else {
+        alert(data.message);
+    }
+}
+
+async function deleteOrder(id, orderNo) {
+    if (!confirm(`수주 [${orderNo}]를 삭제하시겠습니까?`)) return;
+    const res  = await fetch('../backend/api/delete_order.php', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id })
+    });
+    const data = await res.json();
+    if (data.status === 'success') loadOrders();
+    else alert(data.message);
+}
+
+async function convertOrderToWO(orderId, orderNo) {
+    if (!confirm(`수주 [${orderNo}]를 기반으로 작업지시(WO)와 바코드를 즉시 발행하시겠습니까?`)) return;
+    const res  = await fetch('../backend/api/convert_order_to_wo.php', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ order_id: orderId })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+        alert(data.message);
+        loadOrders();
+        loadWOList();
+        loadNotifications();
+    } else {
+        alert(data.message);
+    }
+}
+
+// ════════════════════════════════════════════════
+//  PHASE 3: 종합 KPI 분석
+// ════════════════════════════════════════════════
+async function loadKpiAnalytics() {
+    const days = document.getElementById('kpi-period-select')?.value || 14;
+    const res  = await fetch(`../backend/api/get_kpi_analytics.php?days=${days}`);
+    const data = await res.json();
+    if (data.status !== 'success') return;
+
+    const { summary, daily_trend, lines, process_stats } = data.data;
+
+    // KPI Cards
+    const yVal = summary.overall_yield ?? 100;
+    const yEl = document.getElementById('kpi-ana-yield');
+    yEl.textContent = yVal + '%';
+    yEl.className = 'kpi-val ' + (yVal >= 95 ? 'good' : yVal >= 85 ? 'warn' : 'danger');
+
+    const otVal = summary.on_time_rate ?? 100;
+    const otEl = document.getElementById('kpi-ana-ontime');
+    otEl.textContent = otVal + '%';
+    otEl.className = 'kpi-val ' + (otVal >= 90 ? 'accent' : 'warn');
+
+    document.getElementById('kpi-ana-good').textContent = (summary.total_good || 0).toLocaleString() + ' EA';
+    document.getElementById('kpi-ana-fail').textContent = (summary.total_fail || 0).toLocaleString() + ' EA';
+
+    // Daily Trend
+    renderKpiTrend(daily_trend || []);
+
+    // Line Status
+    renderLineStatus(lines || []);
+
+    // Process Stats Matrix
+    renderProcessStats(process_stats || []);
+}
+
+function renderKpiTrend(dailyTrend) {
+    const container = document.getElementById('kpi-trend-container');
+    if (!container) return;
+    if (!dailyTrend.length) {
+        container.innerHTML = `<div class="empty-msg">선택 기간에 생산 이력이 없습니다.</div>`;
+        return;
+    }
+    const maxTotal = Math.max(...dailyTrend.map(d => d.total), 1);
+
+    container.innerHTML = dailyTrend.map(d => {
+        const pct = Math.round((d.total / maxTotal) * 100);
+        const yClass = d.yield >= 95 ? 'bar-fill-green' : d.yield >= 85 ? 'bar-fill-yellow' : 'bar-fill-red';
+        return `
+            <div class="bar-row">
+                <div class="bar-label" style="min-width:85px;font-weight:600;">${d.date.slice(5)}</div>
+                <div class="bar-track" style="height:12px;">
+                    <div class="bar-fill ${yClass}" style="width:${pct}%;"></div>
+                </div>
+                <div class="bar-count" style="min-width:55px;">${d.total} <span style="font-size:10px;color:var(--text-muted);">EA</span></div>
+                <div class="bar-pct" style="min-width:55px;color:${d.yield>=95?'#34d399':d.yield>=85?'#fcd34d':'#f87171'};font-weight:700;">${d.yield}%</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderLineStatus(lines) {
+    const container = document.getElementById('kpi-lines-container');
+    if (!container) return;
+    if (!lines.length) {
+        container.innerHTML = `<div style="font-size:12px;color:var(--text-muted);">등록된 SMT 라인이 없습니다.</div>`;
+        return;
+    }
+
+    container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:10px;">` +
+        lines.map(l => {
+            const isRun = l.status === 'RUN';
+            const isDown = l.status === 'DOWN';
+            const color = isRun ? '#34d399' : isDown ? '#f87171' : '#94a3b8';
+            const bg = isRun ? 'rgba(52,211,153,0.1)' : isDown ? 'rgba(248,113,113,0.1)' : 'rgba(148,163,184,0.1)';
+            return `
+                <div style="background:${bg};border:1px solid ${color}40;border-radius:8px;padding:10px 12px;text-align:center;">
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:700;">${escHtml(l.line_id)}</div>
+                    <div style="font-size:14px;font-weight:800;color:${color};margin:4px 0;">${l.status}</div>
+                    <div style="font-size:11px;color:#93c5fd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(l.current_wo_id || 'IDLE')}</div>
+                </div>
+            `;
+        }).join('') + `</div>`;
+}
+
+function renderProcessStats(processStats) {
+    const container = document.getElementById('kpi-process-container');
+    if (!container) return;
+    if (!processStats.length) {
+        container.innerHTML = `<div class="empty-msg">공정 데이터가 없습니다.</div>`;
+        return;
+    }
+    const totalCount = processStats.reduce((s, p) => s + parseInt(p.count), 0);
+
+    container.innerHTML = processStats.map(p => {
+        const c = parseInt(p.count);
+        const f = parseInt(p.fail_count || 0);
+        const ratio = totalCount > 0 ? (c / totalCount * 100).toFixed(1) : 0;
+        return `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 6px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;">
+                <div>
+                    <strong style="color:#e2e8f0;">${escHtml(p.process_name)}</strong>
+                    <span style="color:var(--text-muted);font-size:11px;margin-left:6px;">(${ratio}%)</span>
+                </div>
+                <div>
+                    <span style="color:#93c5fd;font-weight:700;">${c.toLocaleString()} 건</span>
+                    ${f > 0 ? `<span style="color:#f87171;font-size:11px;margin-left:6px;font-weight:700;">불량 ${f}건</span>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ════════════════════════════════════════════════
+//  PHASE 3: 시스템 알림 센터
+// ════════════════════════════════════════════════
+let notificationsData = [];
+
+async function loadNotifications() {
+    try {
+        const res = await fetch('../backend/api/get_notifications.php');
+        const data = await res.json();
+        if (data.status !== 'success') return;
+
+        const { unread_count, notifications } = data.data;
+        notificationsData = notifications || [];
+
+        const badgeEl = document.getElementById('noti-count');
+        if (badgeEl) {
+            badgeEl.textContent = unread_count;
+            badgeEl.style.display = unread_count > 0 ? 'inline-block' : 'none';
+        }
+
+        const listEl = document.getElementById('noti-list');
+        if (!listEl) return;
+
+        if (!notificationsData.length) {
+            listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:12px;">알림 내역이 없습니다.</div>`;
+            return;
+        }
+
+        listEl.innerHTML = notificationsData.map(n => {
+            const isUnread = !parseInt(n.is_read);
+            const typeColor = n.type === 'DANGER' ? '#f87171' : n.type === 'WARNING' ? '#fbbf24' : n.type === 'SUCCESS' ? '#34d399' : '#60a5fa';
+            return `
+                <div class="noti-item ${isUnread ? 'unread' : ''}" onclick="onNotificationClick(${n.id}, '${escHtml(n.link_url||'')}')">
+                    <div class="noti-item-top">
+                        <div class="noti-item-title" style="color:${typeColor};">${escHtml(n.title)}</div>
+                        <div class="noti-item-time">${n.created_at ? n.created_at.slice(5, 16) : ''}</div>
+                    </div>
+                    <div class="noti-item-msg">${escHtml(n.message)}</div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (e) {
+        console.error("알림 로드 실패:", e);
+    }
+}
+
+function toggleNotificationPopup(event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById('notiDropdown');
+    dropdown.classList.toggle('open');
+}
+
+// 팝업 외부 클릭 시 닫기
+document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('notiDropdown');
+    const btn = document.querySelector('.noti-btn');
+    if (dropdown && dropdown.classList.contains('open')) {
+        if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
+            dropdown.classList.remove('open');
+        }
+    }
+});
+
+async function markAllNotificationsRead() {
+    await fetch('../backend/api/read_notification.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'all' })
+    });
+    loadNotifications();
+}
+
+async function onNotificationClick(id, linkUrl) {
+    await fetch('../backend/api/read_notification.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+    });
+    loadNotifications();
+    document.getElementById('notiDropdown').classList.remove('open');
+    if (linkUrl) {
+        showPage(linkUrl);
+    }
+}
+
+// ════════════════════════════════════════════════
+//  PHASE 3: 시스템 활동 로그
+// ════════════════════════════════════════════════
+async function loadSystemLogs() {
+    const search = document.getElementById('log-search')?.value.trim() || '';
+    const actionType = document.getElementById('log-type-filter')?.value || '';
+
+    const res  = await fetch(`../backend/api/get_system_logs.php?search=${encodeURIComponent(search)}&action_type=${actionType}`);
+    const data = await res.json();
+    if (data.status !== 'success') return;
+
+    const { logs, action_types } = data.data;
+
+    // Type filter select options update
+    const sel = document.getElementById('log-type-filter');
+    if (sel && action_types) {
+        const prev = sel.value;
+        sel.innerHTML = '<option value="">전체 작업 유형</option>' +
+            action_types.map(t => `<option value="${escHtml(t)}" ${prev === t ? 'selected' : ''}>${escHtml(t)}</option>`).join('');
+    }
+
+    renderLogTable(logs || []);
+}
+
+function renderLogTable(logs) {
+    const tbody = document.getElementById('log-tbody');
+    if (!tbody) return;
+    if (!logs.length) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text-muted);">로그 이력이 없습니다.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = logs.map(l => `
+        <tr>
+            <td style="font-size:11.5px;color:var(--text-muted);white-space:nowrap;">${l.created_at || '—'}</td>
+            <td><strong style="color:#e2e8f0;">${escHtml(l.username || 'system')}</strong></td>
+            <td><span class="status-badge status-progress" style="font-size:10px;">${escHtml(l.action_type)}</span></td>
+            <td style="color:var(--text-dim);font-size:12.5px;">${escHtml(l.description)}</td>
+        </tr>
+    `).join('');
+}
+
+// ════════════════════════════════════════════════
+//  Global Page Navigation Router (Phase 1 + 2 + 3)
+// ════════════════════════════════════════════════
+const ALL_PAGE_TITLES = {
+    wo: '작업지시 (WO) 관리',
+    order: '수주 (PO) 관리',
+    plan: '생산 계획',
+    kpi: 'KPI 종합 분석 대시보드',
+    defect: '불량 현황 분석',
+    company: '거래처 마스터 관리',
+    item: '품목 마스터 관리',
+    material: '자재 입출고 관리',
+    shipment: '출하 관리',
+    users: '사용자 / 권한 관리',
+    'quality-std': '품질 검사 기준',
+    log: '시스템 로그 이력'
+};
+
+function showPage(pageId, navBtn) {
+    // 1. Deactivate all nav items
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+    // 2. Activate target button (if not provided, find by onclick matching)
+    if (navBtn) {
+        navBtn.classList.add('active');
+    } else {
+        const btn = document.querySelector(`.nav-item[onclick*="'${pageId}'"]`);
+        if (btn) btn.classList.add('active');
+    }
+
+    // 3. Switch panel
+    document.querySelectorAll('.page-panel').forEach(el => el.classList.remove('active'));
+    const panelId = 'page-' + pageId;
+    const panel = document.getElementById(panelId);
+    if (panel) {
+        panel.classList.add('active');
+    } else {
+        document.getElementById('page-placeholder').classList.add('active');
+    }
+
+    // 4. Update breadcrumb
+    document.getElementById('breadcrumb-current').textContent = ALL_PAGE_TITLES[pageId] || pageId;
+
+    // 5. WO Button visibility (Only in WO page)
+    document.getElementById('addWoBtn').style.display = pageId === 'wo' ? '' : 'none';
+
+    // 6. Lazy-load data for target page
+    if (pageId === 'wo')          loadWOList();
+    if (pageId === 'order')       loadOrders();
+    if (pageId === 'plan')        loadPlan();
+    if (pageId === 'kpi')         loadKpiAnalytics();
+    if (pageId === 'defect')      loadDefects();
+    if (pageId === 'company')     loadCompanyStats();
+    if (pageId === 'item')        loadItems();
     if (pageId === 'material')    loadMaterials();
     if (pageId === 'shipment')    loadShipments();
     if (pageId === 'users')       loadUsers();
     if (pageId === 'quality-std') loadQualityStds();
-};
-// Replace global
-window.showPage = _p2ShowPage;
+    if (pageId === 'log')         loadSystemLogs();
+
+    closeSidebar();
+}
+window.showPage = showPage;
+
+// 10초마다 알림 및 활성 화면 자동 동기화
+setInterval(() => {
+    loadNotifications();
+    const activePanel = document.querySelector('.page-panel.active');
+    if (activePanel) {
+        const pid = activePanel.id.replace('page-', '');
+        if (pid === 'wo') loadWOList();
+        if (pid === 'order') loadOrders();
+        if (pid === 'kpi') loadKpiAnalytics();
+    }
+}, 10000);
+
+// 초기 알림 로드
+loadNotifications();
 </script>
+
+<!-- ════════ MODAL: 수주 (PO) 등록/수정 ════════ -->
+<div class="modal-overlay" id="orderModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title" id="ord-modal-title">수주 등록</div>
+            <button class="modal-close" onclick="closeModal('orderModal')">✕</button>
+        </div>
+        <input type="hidden" id="ord-id">
+        <div class="form-group" id="ord-no-wrap" style="display:none;">
+            <label class="form-label">수주 번호</label>
+            <div id="ord-no-val" style="color:#93c5fd;font-weight:700;font-size:14px;padding:6px 0;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">발주 고객사 <span style="color:#f87171;">*</span></label>
+            <select id="ord-inp-company" class="form-control">
+                <option value="">고객사를 선택하세요</option>
+            </select>
+        </div>
+        <div style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:12px;">
+            <div class="form-group">
+                <label class="form-label">품목명 <span style="color:#f87171;">*</span></label>
+                <input type="text" id="ord-inp-itemname" class="form-control" placeholder="예: Main Board A타입">
+            </div>
+            <div class="form-group">
+                <label class="form-label">품목 코드</label>
+                <input type="text" id="ord-inp-itemcode" class="form-control" placeholder="예: PCB-001">
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+                <label class="form-label">수주 수량 <span style="color:#f87171;">*</span></label>
+                <input type="number" id="ord-inp-qty" class="form-control" placeholder="0" min="1">
+            </div>
+            <div class="form-group">
+                <label class="form-label">단가 (원)</label>
+                <input type="number" id="ord-inp-price" class="form-control" placeholder="0" min="0">
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+                <label class="form-label">납기 요청일 <span style="color:#f87171;">*</span></label>
+                <input type="date" id="ord-inp-due" class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">수주 상태</label>
+                <select id="ord-inp-status" class="form-control">
+                    <option value="RECEIVED">접수(대기)</option>
+                    <option value="IN_PRODUCTION">생산진행중</option>
+                    <option value="COMPLETED">완료</option>
+                    <option value="CANCELLED">취소</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">특이사항 / 메모</label>
+            <textarea id="ord-inp-memo" class="form-control" rows="2" placeholder="요구 스펙, 납품 조건 등"></textarea>
+        </div>
+        <button class="btn-submit" onclick="saveOrder()">저장</button>
+    </div>
+</div>
+
 
 <!-- ════════ MODAL: 자재 입출고 등록 ════════ -->
 <div class="modal-overlay" id="materialModal">

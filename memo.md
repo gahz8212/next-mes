@@ -124,11 +124,16 @@ READY → IN_PROGRESS (SMT 진행) → SMT_DONE → DIP_IN_PROGRESS (수삽 진�
 - **👤 사용자/권한 관리**: Admin / Manager / Worker 역할 관리, 비밀번호 SHA256 암호화, 계정 활성화 토글
 - **✔️ 품질 검사 기준**: 공정별 검사 항목/기준값/단위 마스터 관리, 활성 기준 필터
 
-### 4. 신규 DB 스키마 & 마이그레이션
-- `database/phase1_migration.sql`
-- `database/phase2_migration.sql`
-- 생성 테이블: `item`, `material_inout`, `shipment`, `users`, `quality_standard`
-- 컬럼 추가: `company` (`tel`, `email`, `memo`, `created_at`)
+### 4. Phase 3 기능 완성
+- **📑 수주 (PO) 관리**: 수주(PO) 등록·수정·삭제, 수주 ➔ 작업지시(WO) 및 바코드 원클릭 연계 발행, 고객사/상태별 필터
+- **📊 종합 KPI 분석 대시보드**: 실시간 종합 수율, 납기 준수율(On-Time), 최근 7/14/30일 일별 생산/수율 추이 바 차트, SMT 라인 가동 상태 카드, 공정별 처리량/불량 점유율
+- **🔔 시스템 알림 센터**: D-3 납기 임박 작업지시 자동 감지 경보, 실시간 미확인 알림 뱃지, 탑바 드롭다운 팝업, 10초 주기 자동 동기화
+- **📜 시스템 활동 로그**: 작업지시·수주·출하·사용자 변경 등 주요 이벤트 실시간 감사 로그 추적
+
+### 5. 신규 DB 스키마 & 마이그레이션
+- `database/phase1_migration.sql` (item, company 확장)
+- `database/phase2_migration.sql` (material_inout, shipment, users, quality_standard)
+- `database/phase3_migration.sql` (sales_order, system_notification, system_log)
 
 ---
 
