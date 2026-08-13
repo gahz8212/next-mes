@@ -1882,16 +1882,18 @@
 </div><!-- /app-shell -->
 
 
-<!-- ════════ MODAL: WO 등록 ════════ -->
+<!-- ════════ MODAL: WO 등록 / 수정 ════════ -->
 <div class="modal-overlay" id="woModal">
     <div class="modal-box">
         <div class="modal-header">
-            <div class="modal-title">작업지시(WO) 등록</div>
+            <div class="modal-title" id="wo-modal-title">작업지시(WO) 등록</div>
             <button class="modal-close" onclick="closeModal('woModal')">✕</button>
         </div>
 
-        <div class="form-group">
-            <label class="form-label">업체 선택</label>
+        <input type="hidden" id="wo-edit-mode" value="create">
+
+        <div class="form-group" id="wo-company-wrap">
+            <label class="form-label">거래처 선택 <span style="color:#f87171;">*</span></label>
             <select id="companySelect" class="form-control"
                 onchange="handleCompanyChange()"
                 onkeydown="if(event.key==='Enter'){event.preventDefault(); if(this.value==='NEW') document.getElementById('newCompanyName').focus(); else document.getElementById('target_qty').focus();}">
@@ -1900,8 +1902,8 @@
             </select>
         </div>
 
-        <div class="new-company-box" id="newCompanyDiv">
-            <label class="form-label">새 업체명</label>
+        <div class="new-company-box" id="newCompanyDiv" style="display:none;">
+            <label class="form-label">새 거래처명</label>
             <div class="new-company-row">
                 <input type="text" id="newCompanyName" class="form-control" placeholder="예: 삼성전자"
                     onkeydown="if(event.key==='Enter'){event.preventDefault(); document.getElementById('btnRegisterCompany').focus();}">
@@ -1910,23 +1912,25 @@
         </div>
 
         <div class="form-group">
-            <label class="form-label">작업지시 번호 (자동 생성)</label>
-            <input type="text" id="wo_id" class="form-control" readonly>
+            <label class="form-label">작업지시 번호 (WO ID)</label>
+            <input type="text" id="wo_id" class="form-control" readonly style="background:rgba(255,255,255,0.04); font-family:monospace; color:#93c5fd; font-weight:700;">
         </div>
 
-        <div class="form-group">
-            <label class="form-label">작업 수량</label>
-            <input type="number" id="target_qty" class="form-control" placeholder="예: 1000"
-                onkeydown="if(event.key==='Enter'){event.preventDefault(); document.getElementById('due_date').focus();}">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+                <label class="form-label">작업 수량 <span style="color:#f87171;">*</span></label>
+                <input type="number" id="target_qty" class="form-control" placeholder="예: 1000" min="1"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault(); document.getElementById('due_date').focus();}">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">납기일 <span style="color:#f87171;">*</span></label>
+                <input type="date" id="due_date" class="form-control"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault(); document.getElementById('submitWOBtn').focus();}">
+            </div>
         </div>
 
-        <div class="form-group">
-            <label class="form-label">납기일</label>
-            <input type="date" id="due_date" class="form-control"
-                onkeydown="if(event.key==='Enter'){event.preventDefault(); document.getElementById('submitWOBtn').focus();}">
-        </div>
-
-        <button id="submitWOBtn" class="btn-submit" onclick="createWO()">등록하기</button>
+        <button id="submitWOBtn" class="btn-submit" onclick="submitWOForm()">등록하기</button>
     </div>
 </div>
 
@@ -2141,7 +2145,7 @@
             buttons = `
                 <div class="wo-card-actions">
                     <button class="card-btn card-btn-bom" onclick="openBOMModal('${wo.wo_id}', '${wo.company_id}')">BOM</button>
-                    <button class="card-btn card-btn-edit" onclick="editWO('${wo.wo_id}', ${wo.target_qty}, '${wo.due_date}')">수정</button>
+                    <button class="card-btn card-btn-edit" onclick="openEditWOModal('${wo.wo_id}', ${wo.target_qty}, '${wo.due_date}', ${wo.company_id || 'null'})">수정</button>
                     <button class="card-btn card-btn-del" onclick="deleteWO('${wo.wo_id}')">삭제</button>
                 </div>`;
         } else {
@@ -2180,12 +2184,43 @@
     }
 
     // ── Modal helpers ──
-    function openWOModal() {
+    async function openWOModal() {
+        if (!companies || !companies.length) {
+            await loadCompanies();
+        }
+        document.getElementById('wo-modal-title').textContent = '작업지시(WO) 등록';
+        document.getElementById('wo-edit-mode').value = 'create';
         document.getElementById('wo_id').value = '';
         document.getElementById('target_qty').value = '';
-        document.getElementById('companySelect').value = '';
+        
+        const sel = document.getElementById('companySelect');
+        sel.disabled = false;
+        sel.value = '';
         handleCompanyChange();
+
         document.getElementById('due_date').valueAsDate = new Date();
+        document.getElementById('submitWOBtn').textContent = '등록하기';
+        document.getElementById('woModal').classList.add('open');
+    }
+
+    async function openEditWOModal(wo_id, currentQty, currentDue, company_id) {
+        if (!companies || !companies.length) {
+            await loadCompanies();
+        }
+        document.getElementById('wo-modal-title').textContent = '작업지시(WO) 수정';
+        document.getElementById('wo-edit-mode').value = 'edit';
+        document.getElementById('wo_id').value = wo_id;
+        document.getElementById('target_qty').value = currentQty || '';
+        document.getElementById('due_date').value = (currentDue && currentDue !== 'null') ? currentDue : '';
+
+        const sel = document.getElementById('companySelect');
+        if (company_id) {
+            sel.value = company_id;
+        }
+        sel.disabled = true; // 수정 시 거래처/WO ID 고정
+        document.getElementById('newCompanyDiv').style.display = 'none';
+
+        document.getElementById('submitWOBtn').textContent = '수정 완료';
         document.getElementById('woModal').classList.add('open');
     }
 
@@ -2205,7 +2240,7 @@
         } else {
             newDiv.style.display = 'none';
             if (sel.value) {
-                const code = sel.options[sel.selectedIndex].dataset.code;
+                const code = sel.options[sel.selectedIndex]?.dataset?.code || 'WO';
                 const d = new Date();
                 const pad = n => String(n).padStart(2, '0');
                 woIdInput.value = `WO-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}-${code}`;
@@ -2234,28 +2269,67 @@
         }
     }
 
+    async function submitWOForm() {
+        const mode = document.getElementById('wo-edit-mode').value;
+        if (mode === 'edit') {
+            await saveEditWO();
+        } else {
+            await createWO();
+        }
+    }
+
     async function createWO() {
         const wo_id = document.getElementById('wo_id').value;
-        const target_qty = document.getElementById('target_qty').value;
+        const target_qty = parseInt(document.getElementById('target_qty').value);
         const due_date = document.getElementById('due_date').value;
         const company_id = document.getElementById('companySelect').value;
 
-        if (!wo_id || !target_qty || !due_date || !company_id || company_id === 'NEW') {
-            alert('모든 필드를 올바르게 입력하고 업체를 선택하세요.');
+        if (!wo_id || isNaN(target_qty) || target_qty <= 0 || !due_date || !company_id || company_id === 'NEW') {
+            alert('모든 필수 항목을 입력하고 거래처를 선택하세요.');
             return;
         }
 
         const res = await fetch('../backend/api/create_wo.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ wo_id, target_qty: parseInt(target_qty), due_date, company_id })
+            body: JSON.stringify({ wo_id, target_qty, due_date, company_id })
         });
         const data = await res.json();
         if (data.status === 'success') {
             closeModal('woModal');
             loadWOList();
+            loadNotifications();
         } else {
             alert(data.message);
+        }
+    }
+
+    async function saveEditWO() {
+        const wo_id = document.getElementById('wo_id').value;
+        const target_qty = parseInt(document.getElementById('target_qty').value);
+        const due_date = document.getElementById('due_date').value;
+
+        if (!wo_id || isNaN(target_qty) || target_qty <= 0 || !due_date) {
+            alert('목표 수량(1 이상)과 납기일을 올바르게 입력하세요.');
+            return;
+        }
+
+        try {
+            const res = await fetch('../backend/api/update_wo.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ wo_id, target_qty, due_date })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                closeModal('woModal');
+                loadWOList();
+                loadNotifications();
+            } else {
+                alert(data.message);
+            }
+        } catch (e) {
+            alert('수정 중 오류가 발생했습니다.');
         }
     }
 
@@ -2271,27 +2345,6 @@
             if (data.status === 'success') loadWOList();
             else alert(data.message);
         } catch (e) { alert('삭제 중 오류가 발생했습니다.'); }
-    }
-
-    async function editWO(wo_id, currentQty, currentDue) {
-        const newQtyStr = prompt(`[${wo_id}] 목표 수량을 수정하세요:`, currentQty);
-        if (newQtyStr === null) return;
-        const target_qty = parseInt(newQtyStr);
-        if (isNaN(target_qty) || target_qty <= 0) { alert('올바른 수량을 입력하세요.'); return; }
-
-        const due_date = prompt(`[${wo_id}] 납기일을 수정하세요 (YYYY-MM-DD):`, currentDue === 'null' ? '' : currentDue);
-        if (due_date === null) return;
-
-        try {
-            const res = await fetch('../backend/api/update_wo.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ wo_id, target_qty, due_date })
-            });
-            const data = await res.json();
-            if (data.status === 'success') loadWOList();
-            else alert(data.message);
-        } catch (e) { alert('수정 중 오류가 발생했습니다.'); }
     }
 
     async function shipWO(wo_id) {
