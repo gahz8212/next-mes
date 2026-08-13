@@ -3305,14 +3305,17 @@ function renderOrderTable(list) {
                 ${!hasWO && o.status === 'RECEIVED' ? `
                     <button class="topbar-action-btn" style="padding:4px 9px;font-size:11px;background:#2563eb;" onclick="convertOrderToWO(${o.id}, '${escHtml(o.order_no)}')">⚡ WO 발행</button>
                 ` : ''}
-                <button class="card-btn card-btn-edit" style="margin-left:4px;" onclick="openEditOrderModal(${o.id}, '${escHtml(o.order_no)}', ${o.company_id}, '${escHtml(o.item_code||'')}', '${escHtml(o.item_name||'')}', ${o.order_qty}, ${o.unit_price}, '${o.due_date}', '${o.status}', '${escHtml(o.memo||'')}')">수정</button>
+                <button class="card-btn card-btn-edit" style="margin-left:4px;" onclick="openEditOrderModal(${o.id}, '${escHtml(o.order_no)}', ${o.company_id}, '${escHtml(o.item_code||'')}', '${escHtml(o.item_name||'')}', ${o.order_qty}, ${o.unit_price}, '${o.due_date}', '${o.status}', '${escHtml(o.memo||'')}', '${o.order_date||''}')">수정</button>
                 ${!hasWO ? `<button class="card-btn card-btn-del" style="margin-left:4px;" onclick="deleteOrder(${o.id}, '${escHtml(o.order_no)}')">삭제</button>` : ''}
             </td>
         </tr>`;
     }).join('');
 }
 
-function openOrderModal() {
+async function openOrderModal() {
+    if (!companies || !companies.length) {
+        await loadCompanies();
+    }
     document.getElementById('ord-modal-title').textContent = '수주 등록';
     document.getElementById('ord-id').value = '';
     document.getElementById('ord-no-wrap').style.display = 'none';
@@ -3321,38 +3324,56 @@ function openOrderModal() {
     document.getElementById('ord-inp-itemcode').value = '';
     document.getElementById('ord-inp-qty').value = '';
     document.getElementById('ord-inp-price').value = '0';
-    document.getElementById('ord-inp-date').value = new Date().toISOString().slice(0,10);
     
+    const today = new Date().toISOString().slice(0,10);
+    const dateEl = document.getElementById('ord-inp-date');
+    if (dateEl) dateEl.value = today;
+
     const d7 = new Date(); d7.setDate(d7.getDate() + 7);
-    document.getElementById('ord-inp-due').value = d7.toISOString().slice(0,10);
+    const dueEl = document.getElementById('ord-inp-due');
+    if (dueEl) dueEl.value = d7.toISOString().slice(0,10);
+
     document.getElementById('ord-inp-status').value = 'RECEIVED';
     document.getElementById('ord-inp-memo').value = '';
 
     // populate company dropdown in modal
     const cmSel = document.getElementById('ord-inp-company');
-    cmSel.innerHTML = '<option value="">고객사를 선택하세요</option>' +
-        companies.map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+    if (cmSel) {
+        cmSel.innerHTML = '<option value="">고객사를 선택하세요</option>' +
+            (companies || []).map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+    }
 
     document.getElementById('orderModal').classList.add('open');
 }
 
-function openEditOrderModal(id, orderNo, companyId, itemCode, itemName, qty, unitPrice, dueDate, status, memo) {
+async function openEditOrderModal(id, orderNo, companyId, itemCode, itemName, qty, unitPrice, dueDate, status, memo, orderDate) {
+    if (!companies || !companies.length) {
+        await loadCompanies();
+    }
     document.getElementById('ord-modal-title').textContent = '수주 수정';
     document.getElementById('ord-id').value = id;
     document.getElementById('ord-no-wrap').style.display = 'block';
     document.getElementById('ord-no-val').textContent = orderNo;
 
     const cmSel = document.getElementById('ord-inp-company');
-    cmSel.innerHTML = '<option value="">고객사를 선택하세요</option>' +
-        companies.map(c => `<option value="${c.id}" ${c.id == companyId ? 'selected' : ''}>${escHtml(c.name)}</option>`).join('');
+    if (cmSel) {
+        cmSel.innerHTML = '<option value="">고객사를 선택하세요</option>' +
+            (companies || []).map(c => `<option value="${c.id}" ${c.id == companyId ? 'selected' : ''}>${escHtml(c.name)}</option>`).join('');
+    }
 
-    document.getElementById('ord-inp-itemname').value = itemName;
-    document.getElementById('ord-inp-itemcode').value = itemCode;
-    document.getElementById('ord-inp-qty').value = qty;
-    document.getElementById('ord-inp-price').value = unitPrice;
-    document.getElementById('ord-inp-due').value = dueDate;
-    document.getElementById('ord-inp-status').value = status;
-    document.getElementById('ord-inp-memo').value = memo;
+    document.getElementById('ord-inp-itemname').value = itemName || '';
+    document.getElementById('ord-inp-itemcode').value = itemCode || '';
+    document.getElementById('ord-inp-qty').value = qty || '';
+    document.getElementById('ord-inp-price').value = unitPrice || 0;
+    
+    const dateEl = document.getElementById('ord-inp-date');
+    if (dateEl) dateEl.value = orderDate || new Date().toISOString().slice(0,10);
+    
+    const dueEl = document.getElementById('ord-inp-due');
+    if (dueEl) dueEl.value = dueDate || '';
+
+    document.getElementById('ord-inp-status').value = status || 'RECEIVED';
+    document.getElementById('ord-inp-memo').value = memo || '';
 
     document.getElementById('orderModal').classList.add('open');
 }
@@ -3776,18 +3797,22 @@ loadNotifications();
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
             <div class="form-group">
+                <label class="form-label">수주일자 <span style="color:#f87171;">*</span></label>
+                <input type="date" id="ord-inp-date" class="form-control">
+            </div>
+            <div class="form-group">
                 <label class="form-label">납기 요청일 <span style="color:#f87171;">*</span></label>
                 <input type="date" id="ord-inp-due" class="form-control">
             </div>
-            <div class="form-group">
-                <label class="form-label">수주 상태</label>
-                <select id="ord-inp-status" class="form-control">
-                    <option value="RECEIVED">접수(대기)</option>
-                    <option value="IN_PRODUCTION">생산진행중</option>
-                    <option value="COMPLETED">완료</option>
-                    <option value="CANCELLED">취소</option>
-                </select>
-            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">수주 상태</label>
+            <select id="ord-inp-status" class="form-control">
+                <option value="RECEIVED">접수(대기)</option>
+                <option value="IN_PRODUCTION">생산진행중</option>
+                <option value="COMPLETED">완료</option>
+                <option value="CANCELLED">취소</option>
+            </select>
         </div>
         <div class="form-group">
             <label class="form-label">특이사항 / 메모</label>
