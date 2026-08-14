@@ -3,37 +3,215 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MES Login</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>MES PRO 로그인 - SMT/DIP 전자제조 통합 관제</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #0f172a; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .login-box { background: #1e293b; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); text-align: center; width: 300px; }
-        h1 { margin-top: 0; color: #38bdf8; }
-        input { width: 100%; padding: 0.75rem; margin: 1rem 0; box-sizing: border-box; border: 1px solid #334155; border-radius: 4px; background: #0f172a; color: white; }
-        button { width: 100%; padding: 0.75rem; background: #0ea5e9; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #0284c7; }
-        .error { color: #ef4444; margin-bottom: 1rem; font-size: 0.875rem; }
+        :root {
+            --bg: #0b1120;
+            --surface: #131f33;
+            --surface2: #1e293b;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --danger: #ef4444;
+            --text-primary: #f1f5f9;
+            --text-muted: #64748b;
+            --text-dim: #94a3b8;
+            --radius: 12px;
+            --radius-sm: 6px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: var(--bg);
+            color: var(--text-primary);
+            font-family: 'Inter', 'Pretendard', sans-serif;
+            overflow: hidden;
+        }
+
+        .login-card {
+            background: var(--surface);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 36px 32px;
+            border-radius: var(--radius);
+            box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+            text-align: center;
+            width: 360px;
+            max-width: 90vw;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: none; }
+        }
+
+        .brand-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .brand-icon {
+            width: 44px;
+            height: 44px;
+            background: var(--accent);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+        }
+
+        .brand-name {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: #fff;
+        }
+
+        .brand-desc {
+            font-size: 12.5px;
+            color: var(--text-muted);
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            text-align: left;
+        }
+
+        .input-label {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: var(--text-dim);
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        .input-box {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-sm);
+            background: var(--bg);
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.15s;
+        }
+
+        .input-box:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            transition: background 0.15s;
+        }
+
+        .btn-login:hover {
+            background: var(--accent-hover);
+        }
+
+        .error-msg {
+            color: var(--danger);
+            font-size: 12px;
+            font-weight: 600;
+            min-height: 16px;
+        }
+
+        .role-helper {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            padding-top: 16px;
+        }
+
+        .helper-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-dim);
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 11.5px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .helper-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
     </style>
 </head>
 <body>
-    <div class="login-box">
-        <h1>MES System</h1>
-        <p>비밀번호를 입력하세요</p>
-        <div id="error-msg" class="error"></div>
-        <input type="password" id="pwd" placeholder="비밀번호" onkeypress="if(event.key === 'Enter') login()">
-        <button onclick="login()">로그인</button>
+    <div class="login-card">
+        <div class="brand-header">
+            <div class="brand-icon">MES</div>
+            <div class="brand-name">MES PRO 시스템</div>
+            <div class="brand-desc">SMT/DIP 전자제조 통합 생산라인</div>
+        </div>
+
+        <div class="input-group">
+            <label class="input-label" for="pwd">비밀번호 (Passcode)</label>
+            <input type="password" id="pwd" class="input-box" placeholder="비밀번호 입력 (admin / worker)" autofocus onkeypress="if(event.key === 'Enter') login()">
+        </div>
+
+        <div id="error-msg" class="error-msg"></div>
+
+        <button class="btn-login" onclick="login()">로그인</button>
+
+        <div class="role-helper">
+            <button class="helper-btn" onclick="quickFill('admin')">관리자 (admin)</button>
+            <button class="helper-btn" onclick="quickFill('supervisor')">라인 반장 (supervisor)</button>
+            <button class="helper-btn" onclick="quickFill('kitting')">자재 피킹 (kitting)</button>
+        </div>
     </div>
+
     <script>
+        function quickFill(role) {
+            document.getElementById('pwd').value = role;
+            login();
+        }
+
         function login() {
-            const pwd = document.getElementById('pwd').value;
+            const pwd = document.getElementById('pwd').value.trim();
+            const errBox = document.getElementById('error-msg');
             if (pwd === 'admin') {
                 localStorage.setItem('role', 'admin');
                 window.location.href = 'admin.html';
-            } else if (pwd === 'worker') {
+            } else if (pwd === 'worker' || pwd === 'supervisor') {
                 localStorage.setItem('role', 'worker');
                 window.location.href = 'dashboard.html';
+            } else if (pwd === 'kitting') {
+                localStorage.setItem('role', 'worker');
+                window.location.href = 'kitting.html';
             } else {
-                document.getElementById('error-msg').innerText = '비밀번호가 틀렸습니다.';
+                errBox.innerText = '비밀번호가 올바르지 않습니다. (admin / supervisor / kitting)';
             }
         }
     </script>

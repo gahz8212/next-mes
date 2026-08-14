@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MES 자재 피킹 & 피더 셋업 단말기 - SMT 라인</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/kitting.css">
+</head>
+<body>
+    <!-- Topbar -->
+    <header class="kitting-topbar">
+        <div class="brand-section">
+            <span class="brand-tag">KITTING OP</span>
+            <div class="brand-title-wrap">
+                <div class="brand-title">자재 피킹 & 피더 셋업 전용 단말기</div>
+                <div class="brand-subtitle">SMT 마운터 오삽 방지(포카요케) 및 MSL 추적</div>
+            </div>
+        </div>
+
+        <div class="topbar-actions">
+            <a href="dashboard.html" class="btn-nav-link">
+                라인 종합 관제 콘솔
+            </a>
+            <a href="admin.html" class="btn-nav-link" id="btnAdminLink" style="display: none;">
+                관리자 대시보드
+            </a>
+            <button class="btn-nav-link" style="color:#f87171;" onclick="logout()">
+                로그아웃
+            </button>
+        </div>
+    </header>
+
+    <!-- 2-Column Split Stage -->
+    <div class="kitting-stage">
+        <!-- ── Left Column: Fixed Scan Controller ── -->
+        <aside class="left-control-col">
+            <!-- 1. 작업지시(WO) 선택 -->
+            <div class="left-header">
+                <div class="wo-select-row">
+                    <label class="wo-select-label" for="woSelect">작업지시 (WORK ORDER):</label>
+                    <select id="woSelect" class="wo-dropdown" onchange="onWoChanged()">
+                        <option value="">작업지시 로딩 중...</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 2. 고정 스캔 조작 영역 -->
+            <div class="left-scroll-body">
+                <!-- Big Circular Progress Gauge Card -->
+                <div class="circular-gauge-card">
+                    <div class="gauge-header-row">
+                        <span class="gauge-title-label">피더 검증 진행률</span>
+                        <div id="kpiInterlockBadge" class="interlock-badge badge-locked">
+                            인터록 잠김
+                        </div>
+                    </div>
+
+                    <!-- SVG Circular Gauge -->
+                    <div class="circular-progress-wrap">
+                        <svg class="circular-gauge" viewBox="0 0 120 120">
+                            <circle class="gauge-bg" cx="60" cy="60" r="50"></circle>
+                            <circle class="gauge-fill" id="gaugeCircleFill" cx="60" cy="60" r="50"></circle>
+                        </svg>
+                        <div class="gauge-center-content">
+                            <span class="gauge-percent-text" id="gaugePercentText">0%</span>
+                            <span class="gauge-count-text" id="gaugeCountText">0 / 0</span>
+                            <span class="gauge-sub-label">장착 완료</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Big Scan Input Box (바코드 건 스캔 입력창) -->
+                <div class="scan-action-box">
+                    <div class="scan-box-title">
+                        <span>바코드 스캔 입력</span>
+                        <span style="font-size:10.5px; color:#94a3b8; font-weight:500;">스캐너 건 / 직접 입력</span>
+                    </div>
+
+                    <input type="text" id="scannerInput" class="scanner-input" placeholder="릴 바코드 or 품번 스캔 (Enter)" autofocus onkeypress="handleKeyScan(event)">
+                    
+                    <button class="btn-scan-submit" onclick="submitScan()">
+                        스캔 확인 (ENTER)
+                    </button>
+                </div>
+
+                <!-- Big Feedback Banner (실시간 판정 결과) -->
+                <div id="feedbackBanner" class="feedback-banner">
+                    <span id="feedbackText">-</span>
+                </div>
+
+                <!-- Quick Simulation Tools -->
+                <div class="quick-tools-panel">
+                    <span class="quick-tools-label">테스트 퀵 시뮬레이션:</span>
+                    <div class="quick-tools-grid">
+                        <button class="quick-btn pass" onclick="quickScanCorrect()">정상 릴 1건 스캔</button>
+                        <button class="quick-btn fail" onclick="quickScanWrong()">오투입 릴 (에러)</button>
+                        <button class="quick-btn" onclick="autoVerifyAll()">100% 일괄 셋업</button>
+                        <button class="quick-btn" onclick="resetFeederSetup()">셋업 초기화</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Left Footer / Complete Action -->
+            <div class="left-footer">
+                <button id="btnCompleteKitting" class="btn-complete-kitting" disabled onclick="releaseAndGoToDashboard()">
+                    인터록 해제 승인 & 라인 관제로 이동
+                </button>
+            </div>
+        </aside>
+
+        <!-- ── Right Column: Scrollable Feeder Slots Checklist ── -->
+        <main class="right-checklist-col">
+            <div class="right-header">
+                <span class="checklist-title">
+                    <span>마운터 피더 슬롯 체크리스트</span>
+                </span>
+                <span style="font-size: 11.5px; color: var(--text-dim);">
+                    생산 목표: <b id="kpiTargetQty" style="color:#fff;">-</b>
+                </span>
+            </div>
+
+            <div class="checklist-scroll-area" id="kittingListContainer">
+                <!-- 동적 2줄 카드 리스트 렌더링 -->
+            </div>
+        </main>
+    </div>
+
+    <!-- 스크립트 로직 -->
+    <script>
+        let currentWoId = null;
+        let currentFeederData = null;
+
+        const currentRole = localStorage.getItem('role');
+        if (currentRole !== 'worker' && currentRole !== 'admin') {
+            alert("접근 권한이 없습니다. 로그인해 주세요.");
+            window.location.href = 'login.html';
+        }
+
+        if (currentRole === 'admin') {
+            const adminLink = document.getElementById('btnAdminLink');
+            if (adminLink) adminLink.style.display = 'inline-block';
+        }
+
+        function logout() {
+            localStorage.removeItem('role');
+            window.location.href = 'login.html';
+        }
+
+        // 초기 작업지시 목록 로드
+        async function initWOList() {
+            try {
+                const res = await fetch('/backend/api/get_wo_list.php');
+                const json = await res.json();
+                const select = document.getElementById('woSelect');
+                select.innerHTML = '';
+
+                if (json.status === 'success' && json.data && json.data.length > 0) {
+                    json.data.forEach(wo => {
+                        const opt = document.createElement('option');
+                        opt.value = wo.wo_id;
+                        const companyStr = wo.company_name ? `[${wo.company_name}] ` : '';
+                        const statusStr = (wo.status === 'READY') ? '대기' : wo.status;
+                        opt.innerText = `${companyStr}${wo.wo_id} (${statusStr})`;
+                        select.appendChild(opt);
+                    });
+
+                    // 첫 번째 작업지시 자동 선택
+                    currentWoId = json.data[0].wo_id;
+                    await loadKittingData(currentWoId);
+                } else {
+                    select.innerHTML = '<option value="">대기/진행 중인 작업지시가 없습니다.</option>';
+                }
+            } catch (e) {
+                console.error("작업지시 로드 실패:", e);
+            }
+        }
+
+        async function onWoChanged() {
+            const select = document.getElementById('woSelect');
+            currentWoId = select.value;
+            if (currentWoId) {
+                await loadKittingData(currentWoId);
+            }
+        }
+
+        // 피더 데이터 로드
+        async function loadKittingData(wo_id, highlightSlotNo = null) {
+            try {
+                const res = await fetch(`/backend/api/get_feeder_setup.php?wo_id=${encodeURIComponent(wo_id)}`);
+                const json = await res.json();
+
+                if (json.status !== 'success' || !json.data) {
+                    alert(json.message || "피더 정보를 불러오지 못했습니다.");
+                    return;
+                }
+
+                currentFeederData = json.data;
+                renderKittingUI(json.data, highlightSlotNo);
+            } catch (e) {
+                console.error("피더 데이터 로드 실패:", e);
+            }
+        }
+
+        function renderKittingUI(data, highlightSlotNo = null) {
+            document.getElementById('kpiTargetQty').innerText = `${data.target_qty}개`;
+
+            // SVG 원형 도넛 게이지 및 텍스트 업데이트
+            const circumference = 314.16;
+            const percent = data.progress_percent || 0;
+            const offset = circumference * (1 - (percent / 100));
+
+            const gaugeFill = document.getElementById('gaugeCircleFill');
+            const percentText = document.getElementById('gaugePercentText');
+            const countText = document.getElementById('gaugeCountText');
+
+            if (percentText) percentText.innerText = `${percent}%`;
+            if (countText) countText.innerText = `${data.verified_slots} / ${data.total_slots}`;
+
+            if (gaugeFill) {
+                gaugeFill.style.strokeDashoffset = offset;
+                if (data.interlock_released) {
+                    gaugeFill.classList.add('done');
+                } else {
+                    gaugeFill.classList.remove('done');
+                }
+            }
+
+            const badge = document.getElementById('kpiInterlockBadge');
+            const btnComplete = document.getElementById('btnCompleteKitting');
+
+            if (data.interlock_released) {
+                badge.className = 'interlock-badge badge-released';
+                badge.innerText = '인터록 해제 승인';
+                btnComplete.disabled = false;
+            } else {
+                badge.className = 'interlock-badge badge-locked';
+                badge.innerText = `인터록 잠김 (${data.verified_slots}/${data.total_slots})`;
+                btnComplete.disabled = true;
+            }
+
+            const container = document.getElementById('kittingListContainer');
+            container.innerHTML = '';
+
+            let targetCardElement = null;
+
+            data.slots.forEach(slot => {
+                const isVerified = (slot.status === 'VERIFIED');
+                const isTargetHighlight = (highlightSlotNo && slot.slot_no === highlightSlotNo);
+
+                let cardClass = 'feeder-card-item';
+                if (isTargetHighlight) {
+                    cardClass += ' is-highlight';
+                } else if (isVerified) {
+                    cardClass += ' is-verified';
+                }
+
+                const statusBadge = isVerified
+                    ? `<span class="status-badge-chip verified">검증완료 (PASS)</span>`
+                    : `<span class="status-badge-chip pending">장착대기</span>`;
+
+                const reelText = slot.reel_barcode
+                    ? `<span class="reel-code-tag">${slot.reel_barcode}</span>`
+                    : `<span class="reel-code-none">미장착 (스캔 대기)</span>`;
+
+                const mslText = slot.msl_level
+                    ? `<span class="msl-tag">MSL Level ${slot.msl_level}</span>`
+                    : `<span style="color:var(--text-muted); font-size:11px;">MSL 미지정</span>`;
+
+                const scanTime = slot.scanned_at
+                    ? `스캔: ${slot.scanned_at.substring(11, 19)} (${slot.scanned_by || 'OP'})`
+                    : `최초 개봉 대기`;
+
+                const card = document.createElement('div');
+                card.className = cardClass;
+                card.id = `slot-card-${slot.slot_no}`;
+                card.innerHTML = `
+                    <!-- 1st Line: Slot, Location, Part No, Status -->
+                    <div class="feeder-line-main">
+                        <div class="feeder-left-group">
+                            <span class="slot-pill">#${slot.slot_no}</span>
+                            <span class="location-pill">${slot.location || 'POS'}</span>
+                            <span class="part-number-text" title="${slot.part_no}">${slot.part_no}</span>
+                        </div>
+                        <div class="feeder-right-group">
+                            ${statusBadge}
+                        </div>
+                    </div>
+
+                    <!-- 2nd Line: Req Qty, Reel Barcode, MSL -->
+                    <div class="feeder-line-sub">
+                        <div class="reel-meta-info">
+                            <span class="req-qty-badge">소요: <b>${parseFloat(slot.req_qty)}</b>ea</span>
+                            <span>|</span>
+                            ${reelText}
+                        </div>
+                        <div class="msl-meta-info">
+                            ${mslText}
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+
+                if (isTargetHighlight) {
+                    targetCardElement = card;
+                }
+            });
+
+            // 스캔 매칭된 카드로 부드럽게 스크롤 이동
+            if (targetCardElement) {
+                targetCardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function handleKeyScan(e) {
+            if (e.key === 'Enter') {
+                submitScan();
+            }
+        }
+
+        async function submitScan() {
+            const input = document.getElementById('scannerInput');
+            const barcode = input.value.trim();
+            if (!barcode) return;
+            await executeScan(barcode);
+            input.value = '';
+            input.focus();
+        }
+
+        async function executeScan(reel_barcode) {
+            const banner = document.getElementById('feedbackBanner');
+            const text = document.getElementById('feedbackText');
+            if (!currentWoId) return;
+
+            try {
+                const res = await fetch('/backend/api/scan_feeder.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        wo_id: currentWoId,
+                        reel_barcode: reel_barcode
+                    })
+                });
+                const json = await res.json();
+
+                if (json.status === 'success') {
+                    banner.className = 'feedback-banner success';
+                    text.innerText = `[PASS 검증성공] ${json.message}`;
+                    const matchedSlotNo = json.data ? json.data.slot_no : null;
+                    await loadKittingData(currentWoId, matchedSlotNo);
+                } else {
+                    banner.className = 'feedback-banner error';
+                    text.innerText = `[FAIL 검증실패] ${json.message}`;
+                }
+            } catch (e) {
+                banner.className = 'feedback-banner error';
+                text.innerText = "서버 통신 실패: " + e.message;
+            }
+        }
+
+        // 퀵 시뮬레이션 도구들
+        async function quickScanCorrect() {
+            if (!currentFeederData || !currentFeederData.slots) return;
+            const pendingSlot = currentFeederData.slots.find(s => s.status !== 'VERIFIED');
+            if (!pendingSlot) {
+                alert("모든 슬롯이 이미 검증 완료되었습니다.");
+                return;
+            }
+
+            const matchedReel = currentFeederData.available_reels.find(r => r.part_no === pendingSlot.part_no);
+            const barcode = matchedReel ? matchedReel.reel_barcode : pendingSlot.part_no;
+            document.getElementById('scannerInput').value = barcode;
+            await executeScan(barcode);
+        }
+
+        async function quickScanWrong() {
+            const wrongBarcode = 'REEL-WRONG-CAP100';
+            document.getElementById('scannerInput').value = wrongBarcode;
+            await executeScan(wrongBarcode);
+        }
+
+        async function autoVerifyAll() {
+            if (!currentWoId) return;
+            try {
+                const res = await fetch('/backend/api/reset_feeder_setup.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wo_id: currentWoId, action: 'auto_verify' })
+                });
+                await loadKittingData(currentWoId);
+            } catch (e) {
+                alert("일괄 셋업 실패: " + e.message);
+            }
+        }
+
+        async function resetFeederSetup() {
+            if (!currentWoId) return;
+            try {
+                const res = await fetch('/backend/api/reset_feeder_setup.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wo_id: currentWoId, action: 'reset' })
+                });
+                await loadKittingData(currentWoId);
+            } catch (e) {
+                alert("초기화 실패: " + e.message);
+            }
+        }
+
+        function releaseAndGoToDashboard() {
+            alert("피더 셋업 검증이 100% 완료되었습니다. SMT 라인 가동 콘솔로 이동합니다.");
+            window.location.href = 'dashboard.html';
+        }
+
+        // 초기화
+        initWOList();
+    </script>
+</body>
+</html>

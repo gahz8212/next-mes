@@ -1,38 +1,56 @@
 <?php
+// backend/api/get_kpi.php - 현재 활성 작업지시 기준 실시간 KPI 조회
 header('Content-Type: application/json; charset=utf-8');
-require_once '../config.php';
+require_once __DIR__ . '/../config.php';
 
 try {
-    // 현재 진행 중인 작업지시의 실제 생산 실적을 DB에서 조회
-    // totalCount 기준: REFLOW 통과(BOTTOM_DONE 이상) 또는 FAIL 된 기판
-    // failCount 기준: FAIL 된 기판
+    // 1. 현재 진행 중이거나 대기 중인 작업지시 조회
     $stmt = $pdo->query("
         SELECT
             wo.wo_id,
             wo.target_qty,
-            SUM(CASE WHEN bm.status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING', 'FAIL') THEN 1 ELSE 0 END) as actual_qty,
-            SUM(CASE WHEN bm.status = 'FAIL' THEN 1 ELSE 0 END) as fail_qty
+            wo.status,
+            COALESCE(SUM(CASE WHEN bm.status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING', 'DONE') THEN 1 ELSE 0 END), 0) as good_qty,
+            COALESCE(SUM(CASE WHEN bm.status IN ('DEFECT', 'FAIL') THEN 1 ELSE 0 END), 0) as fail_qty
         FROM work_order wo
         LEFT JOIN barcode_master bm ON wo.wo_id = bm.wo_id
         WHERE wo.status IN ('IN_PROGRESS', 'SMT_DONE', 'DIP_IN_PROGRESS')
-        GROUP BY wo.wo_id, wo.target_qty
+        GROUP BY wo.wo_id, wo.target_qty, wo.status
         ORDER BY wo.due_date ASC
         LIMIT 1
     ");
     $data = $stmt->fetch();
 
     if ($data) {
+        $good = (int)$data['good_qty'];
+        $fail = (int)$data['fail_qty'];
+        $total = $good + $fail;
+        $yield = $total > 0 ? number_format(($good / $total) * 100, 1) : '100.0';
+
         echo json_encode([
             "status" => "success",
             "data" => [
                 "wo_id"      => $data['wo_id'],
                 "target_qty" => (int)$data['target_qty'],
-                "actual_qty" => (int)$data['actual_qty'],
-                "fail_qty"   => (int)$data['fail_qty'],
+                "actual_qty" => $total,
+                "good_qty"   => $good,
+                "fail_qty"   => $fail,
+                "yield_rate" => $yield . '%'
             ]
         ], JSON_UNESCAPED_UNICODE);
     } else {
-        echo json_encode(["status" => "success", "data" => null]);
+        // 활성 작업이 없을 때: 0으로 클린 초기화
+        echo json_encode([
+            "status" => "success",
+            "data" => [
+                "wo_id"      => null,
+                "target_qty" => 0,
+                "actual_qty" => 0,
+                "good_qty"   => 0,
+                "fail_qty"   => 0,
+                "yield_rate" => "100.0%"
+            ]
+        ], JSON_UNESCAPED_UNICODE);
     }
 } catch (Exception $e) {
     echo json_encode(["status" => "error", "message" => $e->getMessage()], JSON_UNESCAPED_UNICODE);

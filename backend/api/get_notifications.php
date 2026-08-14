@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
-require_once '../config.php';
+require_once __DIR__ . '/../config.php';
 
 try {
     // 1. 자동 트리거 체크: D-3 이내 미완료 작업지시 알림 자동 생성

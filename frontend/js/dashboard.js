@@ -1,186 +1,244 @@
-let totalCount = 0;
-let failCount = 0;
+// frontend/js/dashboard.js - SMT / DIP 라인 실시간 관제 및 머신 상태 업데이트 엔진
 let currentTarget = 0;
+let lastHistoryId = 0;
+let isPollingActive = false;
 
-// 페이지 로드 시 DB에서 실제 생산 실적을 가져와 KPI 초기값을 세팅
+// 1. KPI 실시간 동기화 (DB 실제 수치와 100% 일치)
 async function initKPI() {
     try {
-        const res = await fetch('../backend/api/get_kpi.php');
+        const res = await fetch('/backend/api/get_kpi.php');
         const json = await res.json();
         if (json.status === 'success' && json.data) {
             const d = json.data;
-            currentTarget = d.target_qty;
-            totalCount    = d.actual_qty;
-            failCount     = d.fail_qty;
+            currentTarget = d.target_qty || 0;
+            const totalCount = d.actual_qty || 0;
+            const failCount  = d.fail_qty || 0;
+            const goodCount  = d.good_qty || 0;
 
             document.getElementById('val-target').innerText = currentTarget;
             document.getElementById('val-actual').innerText = totalCount;
-            document.getElementById('val-good').innerText   = totalCount - failCount;
+            document.getElementById('val-good').innerText   = goodCount;
             document.getElementById('val-fail').innerText   = failCount;
-            const yieldRate = totalCount > 0
-                ? ((totalCount - failCount) / totalCount * 100).toFixed(1)
-                : '100.0';
-            document.getElementById('val-yield').innerText = yieldRate + '%';
+            document.getElementById('val-yield').innerText  = d.yield_rate || '100.0%';
         }
     } catch(e) {
-        console.error('KPI 초기화 실패:', e);
+        console.error('KPI 동기화 실패:', e);
     }
 }
+const syncKPI = initKPI;
+window.initKPI = initKPI;
+window.syncKPI = syncKPI;
+window.resetAllMachines = resetAllMachines;
 
+// 2. 로그 필터링
 function applyLogFilter() {
     const selProc = document.getElementById('filter-process').value;
     const selStat = document.getElementById('filter-status').value;
     const items = document.querySelectorAll('#log-list li');
     
     items.forEach(li => {
-        if (!li.dataset.process) return; // Skip dummy initial message
+        if (!li.dataset.process) return;
         
         const matchProc = (selProc === 'ALL' || li.dataset.process === selProc);
         const matchStat = (selStat === 'ALL' || li.dataset.status === selStat);
         
         if (matchProc && matchStat) {
-            li.style.display = '';
+            li.style.display = 'flex';
         } else {
             li.style.display = 'none';
         }
     });
 }
 
+// 3. 로그 리스트 추가
 function addLog(process, status, dataStr) {
     const logList = document.getElementById('log-list');
+    if (!logList) return;
+
+    // 초기 안내 메시지 삭제
+    if (logList.children.length === 1 && logList.children[0].innerText.includes('센서 스트림 대기 중')) {
+        logList.innerHTML = '';
+    }
+
     const li = document.createElement('li');
     const time = new Date().toLocaleTimeString('ko-KR');
-    const statusClass = status === 'PASS' ? 'log-pass' : 'log-fail';
+    const isPass = (status === 'PASS');
     
     li.dataset.process = process;
     li.dataset.status = status;
     
-    li.innerHTML = `<span class="log-time">[${time}]</span> <span style="color:#38bdf8">[${process}]</span> <span class="${statusClass}">${status}</span> - ${dataStr}`;
+    li.innerHTML = `
+        <span class="log-time">[${time}]</span>
+        <span class="log-tag">${process}</span>
+        <span class="log-res ${isPass ? 'pass' : 'fail'}">${status}</span>
+        <span class="log-msg">${dataStr}</span>
+    `;
     logList.appendChild(li);
     
-    // Apply current filter immediately to new log
+    // 최대 150개 로그 유지
+    if (logList.children.length > 150) {
+        logList.removeChild(logList.firstChild);
+    }
+
     applyLogFilter();
-    
     logList.scrollTop = logList.scrollHeight; // 자동 스크롤
 }
 
+// 4. 머신 카드 전체 클린 리셋
 function resetAllMachines() {
-    document.querySelectorAll('.machine').forEach(mac => {
-        mac.className = 'machine wait';
-        const dataBox = mac.querySelector('.mac-data');
-        if(dataBox) dataBox.innerText = '-';
+    const machineIds = ['LASER', 'SPI', 'MOUNTER', 'REFLOW', 'DIP_AOI', 'WAVE'];
+    machineIds.forEach(id => {
+        const mac = document.getElementById(`mac-${id}`);
+        const dataBox = document.getElementById(`data-${id}`);
+        const cellWrap = document.getElementById(`cells-${id}`);
+        if (mac) {
+            mac.className = 'machine-card wait';
+            const indicator = mac.querySelector('.mac-status-indicator');
+            if (indicator) indicator.innerText = '대기';
+        }
+        if (dataBox) {
+            dataBox.innerText = '-';
+        }
+        if (cellWrap) {
+            cellWrap.innerHTML = `
+                <span class="cell-chip wait">#1</span>
+                <span class="cell-chip wait">#2</span>
+                <span class="cell-chip wait">#3</span>
+                <span class="cell-chip wait">#4</span>
+            `;
+        }
     });
 }
 
-function updateMachine(processId, status, dataStr, pDataObj) {
-    // UI 버그(잔상) 해결: 다른 장비에 동일한 바코드가 띄워져 있다면 빈 상태로 초기화
-    document.querySelectorAll('.machine').forEach(mac => {
-        if (mac.id !== `mac-${processId}`) {
-            const box = mac.querySelector('.mac-data');
-            if (box && box.innerText === dataStr) {
-                mac.className = 'machine wait';
-                box.innerText = '-';
-            }
-        }
-    });
+// 5. 머신 카드 실시간 상태 업데이트 & 4-UP 어레이 패널 셀 개별 판정
+const machineResetTimers = {};
 
+function updateMachine(processId, status, barcode, pDataObj) {
     const mac = document.getElementById(`mac-${processId}`);
     const dataBox = document.getElementById(`data-${processId}`);
+    const cellWrap = document.getElementById(`cells-${processId}`);
     if (!mac || !dataBox) return;
 
-    // 클래스 초기화 후 상태 적용
-    mac.className = 'machine';
-    mac.classList.add(status === 'PASS' ? 'run' : 'error');
-    dataBox.innerText = dataStr;
+    const isPass = (status === 'PASS');
+    const targetClass = isPass ? 'run' : 'error';
+    
+    if (!mac.classList.contains(targetClass)) {
+        mac.classList.remove('wait', 'run', 'error');
+        mac.classList.add(targetClass);
+    }
+    
+    // 바코드 텍스트 갱신
+    dataBox.innerText = barcode || '-';
+    
+    const indicator = mac.querySelector('.mac-status-indicator');
+    if (indicator) {
+        indicator.innerText = isPass ? '가동중' : '불량감지';
+    }
+
+    // 4-UP 어레이 패널 셀 인디케이터 업데이트
+    if (cellWrap) {
+        let failedCell = (pDataObj && pDataObj.failed_cell) ? pDataObj.failed_cell : (!isPass ? 2 : 0);
+        let cellHtml = '';
+        for (let c = 1; c <= 4; c++) {
+            if (failedCell === c) {
+                cellHtml += `<span class="cell-chip fail" title="[셀 #${c} 불량] Bad Mark 스킵 처리됨">#${c} ✖</span>`;
+            } else {
+                cellHtml += `<span class="cell-chip pass" title="[셀 #${c}] 정상 양품">#${c} ✔</span>`;
+            }
+        }
+        cellWrap.innerHTML = cellHtml;
+    }
     
     if (pDataObj) {
         mac.dataset.detail = JSON.stringify(pDataObj);
-        mac.title = "Click to view detailed data";
-        mac.onclick = () => alert(processId + " Data:\n" + JSON.stringify(pDataObj, null, 2));
+        mac.title = "클릭 시 설비 파라미터 세부 정보 확인";
+        mac.onclick = () => alert(`[${processId} 설비 파라미터]\n` + JSON.stringify(pDataObj, null, 2));
     }
-}
 
-function updateKPI(status) {
-    totalCount++;
-    if (status === 'FAIL') failCount++;
-    
-    const yieldRate = ((totalCount - failCount) / totalCount * 100).toFixed(1);
-    
-    document.getElementById('val-actual').innerText = totalCount;
-    if (document.getElementById('val-good')) {
-        document.getElementById('val-good').innerText = totalCount - failCount;
-        document.getElementById('val-fail').innerText = failCount;
+    // 공정 라인에 기판이 끊겼을 때 (6초 동안 신호 부재 시) 대기 상태로 자연 복귀
+    if (machineResetTimers[processId]) {
+        clearTimeout(machineResetTimers[processId]);
     }
-    document.getElementById('val-yield').innerText = yieldRate + '%';
-
-    // 목표 양품 도달 시 (작업 완료) 모든 설비를 대기 상태로 초기화
-    const goodCount = totalCount - failCount;
-    if (currentTarget > 0 && goodCount >= currentTarget) {
-        setTimeout(() => {
-            resetAllMachines();
-            addLog('SYSTEM', 'PASS', '작업 목표 달성. 모든 설비가 대기 상태로 전환되었습니다.');
-            loadWOList(); // 목록 새로고침
-        }, 1000);
-    }
-}
-
-// [SSE 실시간 동기화 연동]
-function connectSSE() {
-    // EventSource 인스턴스 생성 (작성했던 dashboard_sse.php 연결)
-    const evtSource = new EventSource('../backend/api/dashboard_sse.php');
-    
-    // 최초 연결 시 로그 출력
-    evtSource.onopen = function() {
-        const logList = document.getElementById('log-list');
-        if(logList.innerHTML.includes('시스템 대기 중')) {
-            logList.innerHTML = ''; // 기본 메시지 삭제
+    machineResetTimers[processId] = setTimeout(() => {
+        if (mac.classList.contains('run')) {
+            mac.classList.remove('run', 'pulse-active');
+            mac.classList.add('wait');
+            if (indicator) indicator.innerText = '대기';
+            dataBox.innerText = '-';
+            if (cellWrap) {
+                cellWrap.innerHTML = `
+                    <span class="cell-chip wait">#1</span>
+                    <span class="cell-chip wait">#2</span>
+                    <span class="cell-chip wait">#3</span>
+                    <span class="cell-chip wait">#4</span>
+                `;
+            }
         }
-        addLog('SYSTEM', 'PASS', 'SSE 실시간 연결 성공');
-    };
-
-    // 서버에서 데이터(push)가 넘어왔을 때
-    evtSource.onmessage = function(event) {
-        try {
-            const item = JSON.parse(event.data);
-            
-            const proc = item.process_name;
-            const isPass = item.result_status;
-            const barcode = item.barcode;
-            const pDataStr = item.process_data;
-            const pDataObj = pDataStr ? JSON.parse(pDataStr) : null;
-            
-            updateMachine(proc, isPass, `바코드: ${barcode}`, pDataObj);
-            addLog(proc, isPass, `상태: ${item.status}, 바코드: ${barcode} ${pDataStr ? pDataStr : ''}`);
-            
-            // 목표 수량 갱신
-            if (item.target_qty) {
-                currentTarget = parseInt(item.target_qty);
-                document.getElementById('val-target').innerText = currentTarget;
-            }
-
-            // 생산 실적 카운트 (자삽 완료, 수삽 완료, 혹은 중간 불량 발생으로 인한 폐기 시)
-            if (proc === 'REFLOW' || proc === 'WAVE' || isPass === 'FAIL') {
-                updateKPI(isPass);
-            }
-
-            if (item.wo_status === 'SMT_DONE') {
-                resetAllMachines(); // SMT 완료 시 설비 초기화 보장
-            } else if (item.wo_status === 'DONE') {
-                resetAllMachines(); // 최종 완료 시 설비 초기화 보장
-            }
-            
-        } catch(e) {
-            console.error("데이터 파싱 에러:", e);
-        }
-    };
-    
-    // 에러 발생 시 재연결 처리
-    evtSource.onerror = function() {
-        addLog('SYSTEM', 'FAIL', 'SSE 연결 끊어짐... 재연결 시도 중');
-        evtSource.close();
-        setTimeout(connectSSE, 5000); // 5초 뒤 재연결
-    };
+    }, 6000);
 }
 
-// 스크립트 로드 시: DB에서 KPI 초기값 로드 후 SSE 연결 시작
-initKPI().then(() => connectSSE());
+// 6. 실시간 고속 폴링 엔진 (0.8초 주기 실시간 자동 동기화)
+async function pollLiveStream() {
+    if (isPollingActive) return;
+    isPollingActive = true;
+
+    try {
+        const url = `/backend/api/get_live_logs.php?last_id=${lastHistoryId}`;
+        const res = await fetch(url);
+        const json = await res.json();
+
+        if (json.status === 'success' && json.data) {
+            const logs = json.data.logs || [];
+            
+            if (logs.length > 0) {
+                logs.forEach(item => {
+                    const proc = item.process_name;
+                    const isPass = item.result_status;
+                    const barcode = item.barcode;
+                    const pDataStr = item.process_data;
+                    const pDataObj = pDataStr ? JSON.parse(pDataStr) : null;
+                    
+                    // 설비 가동 상태 및 실시간 로그 갱신
+                    updateMachine(proc, isPass, barcode, pDataObj);
+                    addLog(proc, isPass, `[${item.barcode_status || 'ING'}] 바코드: ${barcode} ${pDataStr ? JSON.stringify(pDataObj) : ''}`);
+                    
+                    if (item.target_qty) {
+                        currentTarget = parseInt(item.target_qty);
+                        document.getElementById('val-target').innerText = currentTarget;
+                    }
+
+                    // 공정 완료 이벤트 감지
+                    if (item.wo_status === 'SMT_DONE') {
+                        setTimeout(() => {
+                            resetAllMachines();
+                            addLog('SMT_LINE', 'PASS', `작업지시 [${item.wo_id || ''}] 자삽(SMT) 공정 완료 ➔ 수삽(DIP) 대기`);
+                            if (typeof loadWOList === 'function') loadWOList();
+                        }, 1000);
+                    } else if (item.wo_status === 'DONE') {
+                        setTimeout(() => {
+                            resetAllMachines();
+                            addLog('DIP_LINE', 'PASS', `작업지시 [${item.wo_id || ''}] 최종 생산 완료`);
+                            if (typeof loadWOList === 'function') loadWOList();
+                        }, 1000);
+                    }
+                });
+
+                lastHistoryId = json.data.max_id;
+            }
+        }
+
+        // 실시간 KPI 수치 동기화
+        await syncKPI();
+
+    } catch (e) {
+        console.error("실시간 스트림 폴링 오류:", e);
+    } finally {
+        isPollingActive = false;
+    }
+}
+
+// 7. 초기화 및 고속 실시간 루프 가동 (0.8초마다 자동 실행)
+syncKPI().then(() => {
+    pollLiveStream();
+    setInterval(pollLiveStream, 800);
+});

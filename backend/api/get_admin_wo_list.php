@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
-require_once '../config.php';
+require_once __DIR__ . '/../config.php';
 
 try {
     // 작업지시 목록 + 진행률/수율 데이터를 한 번에 조회

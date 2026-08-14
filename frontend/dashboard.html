@@ -3,179 +3,764 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MES 실시간 관제 대시보드</title>
-    <link rel="stylesheet" href="css/dashboard.css">
+    <title>MES 작업자 라인 관제 콘솔 - SMT/DIP 전자제조</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/dashboard.css?v=20260814_6">
 </head>
 <body>
-    <header class="kpi-header">
-        <div>
-            <h1>SMT / DIP 생산 라인 통합 관제</h1>
-            <span class="status-indicator">● LIVE</span>
-            <button onclick="logout()" style="margin-left: 15px; padding: 5px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">로그아웃</button>
+    <!-- Topbar -->
+    <header class="worker-topbar">
+        <div class="brand-section">
+            <span class="brand-tag">MES PRO</span>
+            <div class="brand-title-wrap">
+                <div class="brand-title">생산라인 실시간 관제 콘솔</div>
+                <div class="brand-subtitle">SMT & DIP 독립 2공정 라인 모니터링</div>
+            </div>
         </div>
-        <div class="kpi-board">
-            <div class="kpi-box">목표: <span id="val-target">-</span></div>
-            <div class="kpi-box" title="총 투입/처리 수량">투입: <span id="val-actual">0</span></div>
-            <div class="kpi-box" style="color:#10b981;">양품: <span id="val-good">0</span></div>
-            <div class="kpi-box" style="color:#ef4444;">불량: <span id="val-fail">0</span></div>
-            <div class="kpi-box highlight">수율: <span id="val-yield">100.0%</span></div>
+
+        <div class="topbar-actions">
+            <div class="live-badge">
+                <div class="live-dot"></div>
+                <span>LIVE FEED</span>
+            </div>
+
+            <a href="kitting.html" class="btn-nav-admin" style="background: rgba(59,130,246,0.15); color: #93c5fd; border-color: rgba(59,130,246,0.3);">
+                자재 피킹 단말기 (Kitting)
+            </a>
+
+            <div class="user-badge" id="userBadge">
+                <span>작업자:</span>
+                <span class="role-tag" id="userNameLabel">Supervisor</span>
+            </div>
+
+            <a href="admin.html" class="btn-nav-admin" id="btnAdminNav" style="display: none;">
+                관리자 대시보드
+            </a>
+
+            <button class="btn-logout" onclick="logout()">
+                로그아웃
+            </button>
         </div>
     </header>
 
-    <div class="dashboard-layout" style="display: flex; height: calc(100vh - 80px);">
-        <aside class="wo-sidebar" style="width: 300px; background: #1e293b; padding: 1rem; overflow-y: auto;">
-            <h2 style="color: #38bdf8; margin-top: 0; font-size: 1.2rem;">대기중인 작업지시</h2>
-            <div id="wo-list"></div>
-        </aside>
-        
-        <div class="main-content" style="flex: 1; display: flex; flex-direction: column;">
-            <main class="factory-line" style="flex: 1;">
-        <!-- 자삽(SMT) 라인 -->
-        <div class="machine wait" id="mac-LASER">
-            <div class="mac-title">Laser Marker</div>
-            <div class="mac-data" id="data-LASER">-</div>
+    <!-- Top 5대 KPI 메트릭 바 -->
+    <section class="kpi-strip">
+        <div class="kpi-card">
+            <span class="kpi-label">목표 수량 (TARGET)</span>
+            <span class="kpi-val" id="val-target">-</span>
         </div>
-        <div class="arrow">▶</div>
-        <div class="machine wait" id="mac-SPI">
-            <div class="mac-title">SPI 검사</div>
-            <div class="mac-data" id="data-SPI">-</div>
+        <div class="kpi-card">
+            <span class="kpi-label">투입/처리 수량 (ACTUAL)</span>
+            <span class="kpi-val accent" id="val-actual">0</span>
         </div>
-        <div class="arrow">▶</div>
-        <div class="machine wait" id="mac-MOUNTER">
-            <div class="mac-title">고속 마운터</div>
-            <div class="mac-data" id="data-MOUNTER">-</div>
+        <div class="kpi-card">
+            <span class="kpi-label">양품 수량 (GOOD)</span>
+            <span class="kpi-val good" id="val-good">0</span>
         </div>
-        <div class="arrow">▶</div>
-        <div class="machine wait" id="mac-REFLOW">
-            <div class="mac-title">Reflow Oven</div>
-            <div class="mac-data" id="data-REFLOW">-</div>
+        <div class="kpi-card">
+            <span class="kpi-label">불량 수량 (DEFECT)</span>
+            <span class="kpi-val danger" id="val-fail">0</span>
         </div>
-        
-        <div class="arrow" style="color: #fbbf24;">▶ (수삽 이동) ▶</div>
-        
-        <!-- 수삽(DIP) 라인 -->
-        <div class="machine wait" id="mac-DIP_AOI">
-            <div class="mac-title">수삽 AOI</div>
-            <div class="mac-data" id="data-DIP_AOI">-</div>
+        <div class="kpi-card">
+            <span class="kpi-label">종합 수율 (YIELD)</span>
+            <span class="kpi-val good" id="val-yield">100.0%</span>
         </div>
-        <div class="arrow">▶</div>
-        <div class="machine wait" id="mac-WAVE">
-            <div class="mac-title">Wave Soldering</div>
-            <div class="mac-data" id="data-WAVE">-</div>
-        </div>
-    </main>
+    </section>
 
-    <footer class="terminal-log">
-        <div class="log-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <span>설비 실시간 수신 로그 (Node-RED)</span>
-            <div class="log-filters" style="display: flex; gap: 10px;">
-                <select id="filter-process" onchange="applyLogFilter()" style="padding: 2px 5px; background: #334155; color: white; border: 1px solid #475569; border-radius: 4px;">
-                    <option value="ALL">전체 공정</option>
-                    <option value="LASER">Laser Marker</option>
-                    <option value="SPI">SPI 검사</option>
-                    <option value="MOUNTER">고속 마운터</option>
-                    <option value="REFLOW">Reflow Oven</option>
-                    <option value="DIP_AOI">수삽 AOI</option>
-                    <option value="WAVE">Wave Soldering</option>
-                </select>
-                <select id="filter-status" onchange="applyLogFilter()" style="padding: 2px 5px; background: #334155; color: white; border: 1px solid #475569; border-radius: 4px;">
-                    <option value="ALL">전체 상태</option>
-                    <option value="PASS">PASS</option>
-                    <option value="FAIL">FAIL</option>
-                </select>
+    <!-- 메인 레이아웃 바디 -->
+    <div class="app-body">
+        <!-- 좌측 사이드바: 작업지시 대기열 -->
+        <aside class="wo-sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-title">작업지시 대기열</span>
+                <span class="sidebar-count-badge" id="woCountBadge">0건</span>
             </div>
-        </div>
-        <ul id="log-list">
-            <li>시스템 대기 중... 데이터를 수신하세요.</li>
-        </ul>
-    </footer>
+            <div class="wo-list-scroll" id="wo-list">
+                <!-- 동적 렌더링 -->
+            </div>
+        </aside>
+
+        <!-- 메인 중앙: SMT / DIP 분리형 공정 라인 + 하단 이벤트 콘솔 -->
+        <main class="main-stage">
+            <!-- 2단 공정 분리 컨테이너 (Line 1: SMT / Line 2: DIP) -->
+            <div class="lines-wrapper">
+                <!-- 1. SMT 표면실장 라인 (Line 1) -->
+                <section class="line-panel">
+                    <div class="line-panel-header">
+                        <div class="line-panel-title">
+                            <span>Line 1: SMT 자삽/표면실장 자동화 라인</span>
+                        </div>
+                        <span class="line-status-chip chip-smt">자삽 공정</span>
+                    </div>
+
+                    <div class="line-machines-row">
+                        <!-- Machine 1: Laser Marker -->
+                        <div class="machine-card wait" id="mac-LASER" title="Laser Marking System">
+                            <div class="mac-header-row">
+                                <span class="mac-title">Laser Marker</span>
+                                <span class="mac-status-indicator">대기</span>
+                            </div>
+                            <div class="mac-data-box">
+                                <div class="mac-data-label">BARCODE</div>
+                                <div class="mac-data" id="data-LASER">-</div>
+                            </div>
+                            <div class="array-panel-strip">
+                                <span class="array-strip-label">4-UP PANEL</span>
+                                <div class="array-cells-wrap" id="cells-LASER">
+                                    <span class="cell-chip wait">#1</span>
+                                    <span class="cell-chip wait">#2</span>
+                                    <span class="cell-chip wait">#3</span>
+                                    <span class="cell-chip wait">#4</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flow-step-arrow">▶</div>
+
+                        <!-- Machine 2: SPI -->
+                        <div class="machine-card wait" id="mac-SPI" title="3D Solder Paste Inspection">
+                            <div class="mac-header-row">
+                                <span class="mac-title">SPI 3D 검사</span>
+                                <span class="mac-status-indicator">대기</span>
+                            </div>
+                            <div class="mac-data-box">
+                                <div class="mac-data-label">BARCODE</div>
+                                <div class="mac-data" id="data-SPI">-</div>
+                            </div>
+                            <div class="array-panel-strip">
+                                <span class="array-strip-label">4-UP PANEL</span>
+                                <div class="array-cells-wrap" id="cells-SPI">
+                                    <span class="cell-chip wait">#1</span>
+                                    <span class="cell-chip wait">#2</span>
+                                    <span class="cell-chip wait">#3</span>
+                                    <span class="cell-chip wait">#4</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flow-step-arrow">▶</div>
+
+                        <!-- Machine 3: Chip Mounter -->
+                        <div class="machine-card wait" id="mac-MOUNTER" title="High-Speed Surface Mounter">
+                            <div class="mac-header-row">
+                                <span class="mac-title">고속 마운터</span>
+                                <span class="mac-status-indicator">대기</span>
+                            </div>
+                            <div class="mac-data-box">
+                                <div class="mac-data-label">BARCODE</div>
+                                <div class="mac-data" id="data-MOUNTER">-</div>
+                            </div>
+                            <div class="array-panel-strip">
+                                <span class="array-strip-label">4-UP PANEL</span>
+                                <div class="array-cells-wrap" id="cells-MOUNTER">
+                                    <span class="cell-chip wait">#1</span>
+                                    <span class="cell-chip wait">#2</span>
+                                    <span class="cell-chip wait">#3</span>
+                                    <span class="cell-chip wait">#4</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flow-step-arrow">▶</div>
+
+                        <!-- Machine 4: Reflow Oven -->
+                        <div class="machine-card wait" id="mac-REFLOW" title="Reflow Soldering Oven">
+                            <div class="mac-header-row">
+                                <span class="mac-title">Reflow Oven</span>
+                                <span class="mac-status-indicator">대기</span>
+                            </div>
+                            <div class="mac-data-box">
+                                <div class="mac-data-label">BARCODE</div>
+                                <div class="mac-data" id="data-REFLOW">-</div>
+                            </div>
+                            <div class="array-panel-strip">
+                                <span class="array-strip-label">4-UP PANEL</span>
+                                <div class="array-cells-wrap" id="cells-REFLOW">
+                                    <span class="cell-chip wait">#1</span>
+                                    <span class="cell-chip wait">#2</span>
+                                    <span class="cell-chip wait">#3</span>
+                                    <span class="cell-chip wait">#4</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. DIP 수삽 & 웨이브 솔더링 라인 (Line 2) -->
+                <section class="line-panel">
+                    <div class="line-panel-header">
+                        <div class="line-panel-title">
+                            <span>Line 2: DIP 수삽 & 웨이브 솔더링 라인</span>
+                        </div>
+                        <span class="line-status-chip chip-dip">수삽 공정</span>
+                    </div>
+
+                    <div class="line-machines-row">
+                        <!-- Machine 5: 수삽 AOI -->
+                        <div class="machine-card wait" id="mac-DIP_AOI" title="Automated Optical Inspection">
+                            <div class="mac-header-row">
+                                <span class="mac-title">수삽 AOI 검사</span>
+                                <span class="mac-status-indicator">대기</span>
+                            </div>
+                            <div class="mac-data-box">
+                                <div class="mac-data-label">BARCODE</div>
+                                <div class="mac-data" id="data-DIP_AOI">-</div>
+                            </div>
+                            <div class="array-panel-strip">
+                                <span class="array-strip-label">4-UP PANEL</span>
+                                <div class="array-cells-wrap" id="cells-DIP_AOI">
+                                    <span class="cell-chip wait">#1</span>
+                                    <span class="cell-chip wait">#2</span>
+                                    <span class="cell-chip wait">#3</span>
+                                    <span class="cell-chip wait">#4</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flow-step-arrow">▶</div>
+
+                        <!-- Machine 6: Wave Soldering -->
+                        <div class="machine-card wait" id="mac-WAVE" title="Wave Soldering System">
+                            <div class="mac-header-row">
+                                <span class="mac-title">Wave Soldering</span>
+                                <span class="mac-status-indicator">대기</span>
+                            </div>
+                            <div class="mac-data-box">
+                                <div class="mac-data-label">BARCODE</div>
+                                <div class="mac-data" id="data-WAVE">-</div>
+                            </div>
+                            <div class="array-panel-strip">
+                                <span class="array-strip-label">4-UP PANEL</span>
+                                <div class="array-cells-wrap" id="cells-WAVE">
+                                    <span class="cell-chip wait">#1</span>
+                                    <span class="cell-chip wait">#2</span>
+                                    <span class="cell-chip wait">#3</span>
+                                    <span class="cell-chip wait">#4</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 하단 실시간 로그 콘솔 -->
+            <div class="event-terminal">
+                <div class="terminal-header">
+                    <span class="terminal-title">설비 실시간 센서 이벤트 스트림 (Node-RED)</span>
+                    <div class="terminal-filters">
+                        <select id="filter-process" class="custom-filter-select" onchange="applyLogFilter()">
+                            <option value="ALL">전체 공정</option>
+                            <option value="FEEDER">자재 피더 셋업</option>
+                            <option value="LASER">Laser Marker</option>
+                            <option value="SPI">SPI 3D 검사</option>
+                            <option value="MOUNTER">고속 마운터</option>
+                            <option value="REFLOW">Reflow Oven</option>
+                            <option value="DIP_AOI">수삽 AOI</option>
+                            <option value="WAVE">Wave Soldering</option>
+                        </select>
+                        <select id="filter-status" class="custom-filter-select" onchange="applyLogFilter()">
+                            <option value="ALL">전체 상태</option>
+                            <option value="PASS">PASS (양품/검증완료)</option>
+                            <option value="FAIL">FAIL (불량/오투입)</option>
+                        </select>
+                    </div>
+                </div>
+                <ul id="log-list" class="terminal-stream">
+                    <li>
+                        <span class="log-time">[대기]</span>
+                        <span class="log-tag">SYSTEM</span>
+                        <span class="log-res pass">READY</span>
+                        <span class="log-msg">센서 스트림 대기 중... 자재 피킹/피더 셋업을 진행하거나 작업을 시작하세요.</span>
+                    </li>
+                </ul>
+            </div>
+        </main>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         자재 피킹 & 피더 오삽 방지 셋업 모달 (Poka-Yoke Kitting Console)
+         ═══════════════════════════════════════════════════════════════════ -->
+    <div class="feeder-modal-overlay" id="feederModalOverlay">
+        <div class="feeder-modal-box">
+            <!-- Modal Header -->
+            <div class="feeder-modal-header">
+                <div class="feeder-header-info">
+                    <span class="feeder-title">SMT 피더 셋업 & 자재 피킹 검증</span>
+                    <span class="feeder-wo-tag" id="modalWoIdLabel">-</span>
+                    <span class="feeder-progress-text">(목표: <b id="modalTargetQtyLabel">0</b>개)</span>
+                </div>
+                <div id="modalInterlockBadge" class="interlock-badge interlock-locked">
+                    인터록 잠김 (검증 필요)
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="feeder-modal-body">
+                <!-- Barcode Scan Hero Box -->
+                <div class="scan-hero-box">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 12px; font-weight: 700; color: #93c5fd;">바코드 스캔 (스캐너 건 또는 바코드 입력)</span>
+                        <span style="font-size: 11px; color: var(--text-muted);">포카요케 실시간 오투입 검증 및 MSL 추적</span>
+                    </div>
+
+                    <div class="scan-input-row">
+                        <input type="text" id="scanReelInput" class="scan-input" placeholder="릴 바코드를 스캔하세요 (예: REEL-U2-MT29F)" autofocus onkeypress="handleScanInput(event)">
+                        <button class="btn-scan-action" onclick="submitManualScan()">스캔 확인</button>
+                    </div>
+
+                    <div id="scanFeedbackAlert" class="scan-feedback-alert"></div>
+
+                    <!-- Quick Testing Tools -->
+                    <div class="scan-helper-tools">
+                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">퀵 시뮬레이션 도구:</span>
+                        <button class="tool-chip-btn success" onclick="quickScanCorrect()">정상 릴 1건 스캔</button>
+                        <button class="tool-chip-btn danger" onclick="quickScanWrong()">오투입 릴 스캔 (에러 테스트)</button>
+                        <button class="tool-chip-btn" onclick="autoVerifyAll()">100% 일괄 셋업 완료</button>
+                        <button class="tool-chip-btn" onclick="resetFeederSetup()">셋업 초기화</button>
+                    </div>
+                </div>
+
+                <!-- Feeder Slots Matrix Table -->
+                <div class="feeder-table-wrap">
+                    <table class="feeder-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">슬롯</th>
+                                <th style="width: 90px;">위치</th>
+                                <th>BOM 필요 부품 (Part No)</th>
+                                <th style="width: 80px;">소요량</th>
+                                <th>장착 릴 바코드</th>
+                                <th style="width: 80px;">MSL 수명</th>
+                                <th style="width: 100px; text-align: center;">상태</th>
+                            </tr>
+                        </thead>
+                        <tbody id="feederTableBody">
+                            <!-- 동적 렌더링 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="feeder-modal-footer">
+                <div class="feeder-progress-text">
+                    피더 장착 진행률: <b id="modalProgressCount">0 / 0</b> (<span id="modalProgressPercent">0%</span>)
+                </div>
+                <div class="footer-actions">
+                    <button class="btn-close-modal" onclick="closeFeederModal()">닫기</button>
+                    <button id="btnReleaseAndRun" class="btn-release-and-run" disabled onclick="startWOFromModal()">
+                        인터록 해제 & 자삽(SMT) 시작
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- 스크립트 로드: dashboard.js를 먼저 로드하여 전역 함수 정의 (캐시 방지 v=3) -->
+    <script src="js/dashboard.js?v=20260814_3"></script>
     <script>
+        let currentModalWoId = null;
+        let currentFeederData = null;
+
+        // 전역 함수 안전 폴백 (스크립트 로드 타이밍 방어)
+        if (typeof window.initKPI !== 'function') {
+            window.initKPI = function() { console.log('initKPI fallback'); };
+        }
+        if (typeof window.resetAllMachines !== 'function') {
+            window.resetAllMachines = function() { console.log('resetAllMachines fallback'); };
+        }
+        if (typeof window.addLog !== 'function') {
+            window.addLog = function(process, status, dataStr) {
+                const logList = document.getElementById('log-list');
+                if (!logList) return;
+                const li = document.createElement('li');
+                const time = new Date().toLocaleTimeString('ko-KR');
+                const isPass = (status === 'PASS');
+                li.dataset.process = process;
+                li.dataset.status = status;
+                li.innerHTML = `
+                    <span class="log-time">[${time}]</span>
+                    <span class="log-tag">${process}</span>
+                    <span class="log-res ${isPass ? 'pass' : 'fail'}">${status}</span>
+                    <span class="log-msg">${dataStr}</span>
+                `;
+                logList.appendChild(li);
+                logList.scrollTop = logList.scrollHeight;
+            };
+        }
+
+        const currentRole = localStorage.getItem('role');
+        if (currentRole !== 'worker' && currentRole !== 'admin') {
+            alert("접근 권한이 없습니다. 로그인해 주세요.");
+            window.location.href = 'login.html';
+        }
+
+        if (currentRole === 'admin') {
+            const btnAdmin = document.getElementById('btnAdminNav');
+            if (btnAdmin) btnAdmin.style.display = 'block';
+            const nameLabel = document.getElementById('userNameLabel');
+            if (nameLabel) nameLabel.innerText = 'Admin';
+        }
+
         function logout() {
-            const role = localStorage.getItem('role');
-            if (role === 'admin') {
-                // admin은 세션 유지하고 관리자 화면으로 복귀
+            if (currentRole === 'admin') {
                 window.location.href = 'admin.html';
             } else {
-                // worker는 세션 제거 후 로그인으로
                 localStorage.removeItem('role');
                 window.location.href = 'login.html';
             }
         }
 
-        // 권한 체크 (worker 또는 admin 허용)
-        const role = localStorage.getItem('role');
-        if (role !== 'worker' && role !== 'admin') {
-            alert("접근 권한이 없습니다.");
-            window.location.href = 'login.html';
-        }
-        
+        // 작업지시 목록 로드
         async function loadWOList() {
-            const res = await fetch('../backend/api/get_wo_list.php');
-            const data = await res.json();
-            const listDiv = document.getElementById('wo-list');
-            listDiv.innerHTML = '';
-            if(data.status === 'success' && data.data.length > 0) {
-                data.data.forEach(wo => {
-                    let btnHtml = '';
-                    if (wo.status === 'READY') {
-                        btnHtml = `<button onclick="startWO('${wo.wo_id}')" style="margin-top: 0.5rem; width: 100%; padding: 0.5rem; background: #0ea5e9; color: white; border: none; border-radius: 4px; cursor: pointer;">자삽 시작</button>`;
-                    } else if (wo.status === 'IN_PROGRESS') {
-                        btnHtml = `<button disabled style="margin-top: 0.5rem; width: 100%; padding: 0.5rem; background: #475569; color: #94a3b8; border: none; border-radius: 4px; cursor: not-allowed;">자삽 진행중</button>`;
-                    } else if (wo.status === 'SMT_DONE') {
-                        btnHtml = `<button onclick="startDip('${wo.wo_id}')" style="margin-top: 0.5rem; width: 100%; padding: 0.5rem; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">수삽 시작</button>`;
-                    } else if (wo.status === 'DIP_IN_PROGRESS') {
-                        btnHtml = `<button disabled style="margin-top: 0.5rem; width: 100%; padding: 0.5rem; background: #475569; color: #94a3b8; border: none; border-radius: 4px; cursor: not-allowed;">수삽 진행중</button>`;
-                    }
+            try {
+                const res = await fetch('/backend/api/get_wo_list.php');
+                const data = await res.json();
+                const listDiv = document.getElementById('wo-list');
+                const countBadge = document.getElementById('woCountBadge');
+                listDiv.innerHTML = '';
+                
+                if (data.status === 'success' && data.data && data.data.length > 0) {
+                    if (countBadge) countBadge.innerText = `${data.data.length}건`;
+                    data.data.forEach(wo => {
+                        let btnHtml = '';
+                        let statusBadge = '';
+                        
+                        if (wo.status === 'READY') {
+                            const isReady = wo.feeder_ready;
+                            const total = wo.feeder_total || 0;
+                            const verified = wo.feeder_verified || 0;
 
-                    listDiv.innerHTML += `
-                        <div style="background: #334155; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
-                            <div style="font-weight: bold; color: white;">${wo.wo_id}</div>
-                            <div style="font-size: 0.9rem; color: #cbd5e1;">수량: ${wo.target_qty} | 납기: ${wo.due_date || '-'}</div>
-                            ${btnHtml}
-                        </div>
-                    `;
-                });
-            } else {
-                listDiv.innerHTML = '<div style="color: #94a3b8;">대기중인 작업이 없습니다.</div>';
+                            if (isReady) {
+                                statusBadge = `<span style="font-size: 10px; background: rgba(16,185,129,0.2); color: #6ee7b7; padding: 2px 6px; border-radius: 4px; font-weight: bold;">피더 준비완료</span>`;
+                                btnHtml = `
+                                    <div style="display: flex; gap: 6px; margin-top: 6px;">
+                                        <button class="wo-action-btn btn-start-smt" style="flex:1;" onclick="startWO('${wo.wo_id}')">▶ 자삽 시작</button>
+                                        <button class="wo-action-btn" style="width: 40px; background: var(--surface2); border:1px solid var(--border); color:#94a3b8;" title="피더 설정 재확인" onclick="openFeederModal('${wo.wo_id}')">⚙️</button>
+                                    </div>
+                                `;
+                            } else {
+                                statusBadge = `<span style="font-size: 10px; background: rgba(59,130,246,0.2); color: #93c5fd; padding: 2px 6px; border-radius: 4px; font-weight: bold;">자재 검증 필요</span>`;
+                                btnHtml = `
+                                    <button class="wo-action-btn" style="background: rgba(59,130,246,0.2); color:#93c5fd; border:1px solid rgba(59,130,246,0.4);" onclick="openFeederModal('${wo.wo_id}')">
+                                        자재 피킹 & 피더 셋업 (${verified}/${total})
+                                    </button>
+                                `;
+                            }
+                        } else if (wo.status === 'IN_PROGRESS') {
+                            statusBadge = `<span style="font-size: 10px; background: rgba(56,189,248,0.2); color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-weight: bold;">자삽 진행중</span>`;
+                            btnHtml = `
+                                <div style="display:flex; gap:6px;">
+                                    <button class="wo-action-btn btn-running" disabled style="flex:1;">자삽 가동중</button>
+                                    <button class="wo-action-btn" style="width: auto; padding: 6px 10px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.4);" onclick="stopWo('${wo.wo_id}')" title="가동 강제 중단">중단</button>
+                                </div>
+                            `;
+                        } else if (wo.status === 'SMT_DONE') {
+                            statusBadge = `<span style="font-size: 10px; background: rgba(16,185,129,0.2); color: #6ee7b7; padding: 2px 6px; border-radius: 4px; font-weight: bold;">자삽 완료</span>`;
+                            btnHtml = `<button class="wo-action-btn btn-start-dip" onclick="startDip('${wo.wo_id}')">▶ 수삽(DIP) 시작</button>`;
+                        } else if (wo.status === 'DIP_IN_PROGRESS') {
+                            statusBadge = `<span style="font-size: 10px; background: rgba(245,158,11,0.2); color: #fcd34d; padding: 2px 6px; border-radius: 4px; font-weight: bold;">수삽 진행중</span>`;
+                            btnHtml = `
+                                <div style="display:flex; gap:6px;">
+                                    <button class="wo-action-btn btn-running" disabled style="flex:1;">수삽 가동중</button>
+                                    <button class="wo-action-btn" style="width: auto; padding: 6px 10px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.4);" onclick="stopWo('${wo.wo_id}')" title="가동 강제 중단">중단</button>
+                                </div>
+                            `;
+                        }
+
+                        const companyName = wo.company_name ? wo.company_name : '일반';
+
+                        listDiv.innerHTML += `
+                            <div class="wo-item-card">
+                                <div class="wo-item-top">
+                                    <div style="flex:1; min-width:0;">
+                                        <div class="wo-item-company">[${companyName}]</div>
+                                        <div class="wo-item-id">${wo.wo_id}</div>
+                                    </div>
+                                    ${statusBadge}
+                                </div>
+                                <div class="wo-item-meta">
+                                    <span>수량: <b style="color:#f1f5f9;">${wo.target_qty}</b>개</span>
+                                    <span>납기: ${wo.due_date || '-'}</span>
+                                </div>
+                                ${btnHtml}
+                            </div>
+                        `;
+                    });
+                } else {
+                    if (countBadge) countBadge.innerText = `0건`;
+                    listDiv.innerHTML = '<div style="color: #64748b; text-align: center; padding: 30px 10px; font-size: 12px;">대기/진행 중인 작업이 없습니다.</div>';
+                }
+            } catch (err) {
+                console.error("작업지시 로드 실패:", err);
+                document.getElementById('wo-list').innerHTML = '<div style="color: #f87171; text-align: center; padding: 15px; font-size: 12px;">데이터 조회 실패</div>';
             }
         }
 
-        async function startWO(wo_id) {
-            const res = await fetch('../backend/api/start_wo.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ wo_id })
-            });
-            const data = await res.json();
-            if(data.status === 'success') {
-                alert(data.message);
-                location.reload();
+        /* ── 피더 셋업 모달 로직 ── */
+        async function openFeederModal(wo_id) {
+            currentModalWoId = wo_id;
+            document.getElementById('modalWoIdLabel').innerText = wo_id;
+            document.getElementById('scanFeedbackAlert').style.display = 'none';
+            document.getElementById('feederModalOverlay').classList.add('open');
+            
+            await loadFeederData(wo_id);
+
+            setTimeout(() => {
+                const input = document.getElementById('scanReelInput');
+                if (input) { input.value = ''; input.focus(); }
+            }, 100);
+        }
+
+        function closeFeederModal() {
+            document.getElementById('feederModalOverlay').classList.remove('open');
+            currentModalWoId = null;
+            loadWOList();
+        }
+
+        async function loadFeederData(wo_id) {
+            try {
+                const res = await fetch(`/backend/api/get_feeder_setup.php?wo_id=${encodeURIComponent(wo_id)}`);
+                const json = await res.json();
+                
+                if (json.status !== 'success' || !json.data) {
+                    alert(json.message || "피더 정보를 불러오지 못했습니다.");
+                    return;
+                }
+
+                currentFeederData = json.data;
+                renderFeederTable(json.data);
+            } catch (e) {
+                console.error("피더 데이터 로드 실패:", e);
+            }
+        }
+
+        function renderFeederTable(data) {
+            document.getElementById('modalTargetQtyLabel').innerText = data.target_qty;
+            document.getElementById('modalProgressCount').innerText = `${data.verified_slots} / ${data.total_slots}`;
+            document.getElementById('modalProgressPercent').innerText = `${data.progress_percent}%`;
+
+            const badge = document.getElementById('modalInterlockBadge');
+            const btnRun = document.getElementById('btnReleaseAndRun');
+
+            if (data.interlock_released) {
+                badge.className = 'interlock-badge interlock-released';
+                badge.innerText = '인터록 해제 (가동 승인)';
+                btnRun.disabled = false;
             } else {
-                alert(data.message);
+                badge.className = 'interlock-badge interlock-locked';
+                badge.innerText = `인터록 잠김 (${data.verified_slots}/${data.total_slots} 검증)`;
+                btnRun.disabled = true;
+            }
+
+            const tbody = document.getElementById('feederTableBody');
+            tbody.innerHTML = '';
+
+            data.slots.forEach(slot => {
+                const isVerified = (slot.status === 'VERIFIED');
+                const rowClass = isVerified ? 'row-verified' : '';
+                const statusChip = isVerified
+                    ? `<span class="status-chip-slot verified">검증완료</span>`
+                    : `<span class="status-chip-slot pending">대기</span>`;
+
+                const reelCode = slot.reel_barcode
+                    ? `<span style="font-family:'JetBrains Mono'; color:#34d399; font-weight:700;">${slot.reel_barcode}</span>`
+                    : `<span style="color:var(--text-muted); font-size:11px;">(미장착)</span>`;
+
+                const mslInfo = slot.msl_level
+                    ? `<span style="font-size:11px; color:#93c5fd;">Level ${slot.msl_level}</span>`
+                    : `<span style="color:var(--text-muted); font-size:11px;">-</span>`;
+
+                tbody.innerHTML += `
+                    <tr class="${rowClass}">
+                        <td><span class="slot-badge">#${slot.slot_no}</span></td>
+                        <td><b style="color:#e2e8f0;">${slot.location || '-'}</b></td>
+                        <td><span style="font-family:'JetBrains Mono'; color:#f1f5f9; font-weight:600;">${slot.part_no}</span></td>
+                        <td>${parseFloat(slot.req_qty)}</td>
+                        <td>${reelCode}</td>
+                        <td>${mslInfo}</td>
+                        <td style="text-align: center;">${statusChip}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function handleScanInput(e) {
+            if (e.key === 'Enter') {
+                submitManualScan();
+            }
+        }
+
+        async function submitManualScan() {
+            const input = document.getElementById('scanReelInput');
+            const barcode = input.value.trim();
+            if (!barcode) return;
+            await executeScan(barcode);
+            input.value = '';
+            input.focus();
+        }
+
+        async function executeScan(reel_barcode) {
+            const alertBox = document.getElementById('scanFeedbackAlert');
+            if (!currentModalWoId) return;
+
+            try {
+                const res = await fetch('/backend/api/scan_feeder.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        wo_id: currentModalWoId,
+                        reel_barcode: reel_barcode
+                    })
+                });
+                const json = await res.json();
+
+                if (json.status === 'success') {
+                    alertBox.className = 'scan-feedback-alert success';
+                    alertBox.innerText = json.message;
+                    addLog('FEEDER', 'PASS', `[포카요케 통과] 릴: ${reel_barcode} ➔ 슬롯 #${json.data.slot_no} (${json.data.part_no})`);
+                    await loadFeederData(currentModalWoId);
+                } else {
+                    alertBox.className = 'scan-feedback-alert error';
+                    alertBox.innerText = json.message;
+                    addLog('FEEDER', 'FAIL', `[오투입 경고] 릴: ${reel_barcode} ➔ ${json.message}`);
+                }
+            } catch (e) {
+                alertBox.className = 'scan-feedback-alert error';
+                alertBox.innerText = "서버 통신 실패: " + e.message;
+            }
+        }
+
+        // 퀵 테스트 도구들
+        async function quickScanCorrect() {
+            if (!currentFeederData || !currentFeederData.slots) return;
+            const pendingSlot = currentFeederData.slots.find(s => s.status !== 'VERIFIED');
+            if (!pendingSlot) {
+                alert("모든 슬롯이 이미 검증 완료되었습니다.");
+                return;
+            }
+
+            // 매칭되는 릴 찾기
+            const matchedReel = currentFeederData.available_reels.find(r => r.part_no === pendingSlot.part_no);
+            const barcodeToScan = matchedReel ? matchedReel.reel_barcode : `REEL-SLOT-${pendingSlot.slot_no}`;
+            
+            document.getElementById('scanReelInput').value = barcodeToScan;
+            await executeScan(barcodeToScan);
+        }
+
+        async function quickScanWrong() {
+            const wrongBarcode = 'REEL-WRONG-CAP100';
+            document.getElementById('scanReelInput').value = wrongBarcode;
+            await executeScan(wrongBarcode);
+        }
+
+        async function autoVerifyAll() {
+            if (!currentModalWoId) return;
+            try {
+                const res = await fetch('/backend/api/reset_feeder_setup.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wo_id: currentModalWoId, action: 'auto_verify' })
+                });
+                const json = await res.json();
+                addLog('FEEDER', 'PASS', `작업지시 [${currentModalWoId}] 모든 피더 100% 일괄 검증 완료`);
+                await loadFeederData(currentModalWoId);
+            } catch (e) {
+                alert("일괄 셋업 실패: " + e.message);
+            }
+        }
+
+        async function resetFeederSetup() {
+            if (!currentModalWoId) return;
+            try {
+                const res = await fetch('/backend/api/reset_feeder_setup.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wo_id: currentModalWoId, action: 'reset' })
+                });
+                const json = await res.json();
+                addLog('FEEDER', 'FAIL', `작업지시 [${currentModalWoId}] 피더 셋업 초기화됨 (인터록 잠김)`);
+                await loadFeederData(currentModalWoId);
+            } catch (e) {
+                alert("초기화 실패: " + e.message);
+            }
+        }
+
+        async function startWOFromModal() {
+            if (!currentModalWoId) return;
+            closeFeederModal();
+            await startWO(currentModalWoId);
+        }
+
+        async function startWO(wo_id) {
+            try {
+                const res = await fetch('/backend/api/start_wo.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wo_id })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    resetAllMachines();
+                    initKPI();
+                    addLog('SMT_LINE', 'PASS', `작업지시 [${wo_id}] SMT 라인 인터록 해제 및 자삽 가동 시작`);
+                    loadWOList();
+                } else {
+                    alert(data.message || "작업 시작 실패");
+                    // 만약 인터록 미완료 에러라면 피더 모달 오픈
+                    if (data.message.includes('인터록')) {
+                        openFeederModal(wo_id);
+                    }
+                }
+            } catch(e) {
+                alert("서버 통신 오류: " + e.message);
+            }
+        }
+
+        async function stopWo(wo_id) {
+            if (!confirm(`작업지시 [${wo_id}] 가동을 중단하시겠습니까?`)) return;
+            try {
+                const res = await fetch('/backend/api/stop_wo.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wo_id })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    resetAllMachines();
+                    initKPI();
+                    addLog('LINE_CTRL', 'FAIL', `작업지시 [${wo_id}] 가동 중단됨 (대기 상태로 전환)`);
+                    loadWOList();
+                } else {
+                    alert(data.message || "작업 중단 실패");
+                }
+            } catch(e) {
+                alert("서버 통신 오류: " + e.message);
             }
         }
 
         async function startDip(wo_id) {
-            const res = await fetch('../backend/api/start_dip_wo.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ wo_id })
-            });
-            const data = await res.json();
-            if(data.status === 'success') {
-                alert(data.message);
-                location.reload();
-            } else {
-                alert(data.message);
+            try {
+                const res = await fetch('../backend/api/start_dip_wo.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wo_id })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    addLog('DIP_LINE', 'PASS', `작업지시 [${wo_id}] 수삽(DIP) 공정 시작`);
+                    loadWOList();
+                } else {
+                    alert(data.message || "수삽 시작 실패");
+                }
+            } catch(e) {
+                alert("서버 통신 오류: " + e.message);
             }
         }
 
         loadWOList();
-        setInterval(loadWOList, 10000);
+        setInterval(loadWOList, 2000);
     </script>
-    <script src="js/dashboard.js"></script>
 </body>
 </html>

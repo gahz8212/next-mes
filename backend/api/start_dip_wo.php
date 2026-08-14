@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
-require_once '../config.php';
+require_once __DIR__ . '/../config.php';
 
 $input = json_decode(file_get_contents('php://input'), true);
 $wo_id = $input['wo_id'] ?? '';
@@ -28,24 +28,18 @@ try {
     
     $pdo->commit();
 
-    // Node-RED API 호출 (수삽 시뮬레이션 시작 트리거)
-    $url = 'http://localhost:1880/start-dip-sim';
+    // 3. 로컬 Node-RED (1880 포트) 수삽 시뮬레이션 시작 트리거 전송
     $data = json_encode([
         "wo_id" => $wo_id,
-        "target_qty" => $wo['target_qty']
+        "target_qty" => intval($wo['target_qty'])
     ]);
 
-    $options = [
-        'http' => [
-            'header'  => "Content-Type: application/json\r\n",
-            'method'  => 'POST',
-            'content' => $data,
-            'timeout' => 1
-        ]
-    ];
-    $context  = stream_context_create($options);
-    
-    @file_get_contents($url, false, $context);
+    $fp = @fsockopen('127.0.0.1', 1880, $errno, $errstr, 0.5);
+    if ($fp) {
+        $out = "POST /start-dip-sim HTTP/1.1\r\nHost: 127.0.0.1:1880\r\nContent-Type: application/json\r\nContent-Length: " . strlen($data) . "\r\nConnection: Close\r\n\r\n" . $data;
+        fwrite($fp, $out);
+        fclose($fp);
+    }
 
     echo json_encode(["status" => "success", "message" => "수삽 공정이 시작되었습니다. 시뮬레이션이 가동됩니다."]);
 } catch (Exception $e) {

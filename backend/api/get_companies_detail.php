@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
-require_once '../config.php';
+require_once __DIR__ . '/../config.php';
 
 try {
     $stmt = $pdo->query("SELECT id, name, code, tel, email, memo, bom_mapping, created_at FROM company ORDER BY name ASC");

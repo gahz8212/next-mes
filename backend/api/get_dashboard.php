@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
-require_once '../config.php';
+require_once __DIR__ . '/../config.php';
 
 try {
     // 1. 현재 라인(LINE_01)의 작업지시 진행 상황
