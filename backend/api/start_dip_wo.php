@@ -13,30 +13,39 @@ if (!$wo_id) {
 try {
     $pdo->beginTransaction();
     
-    // 상태 변경 (SMT_DONE -> DIP_IN_PROGRESS)
-    $stmt = $pdo->prepare("UPDATE work_order SET status = 'DIP_IN_PROGRESS' WHERE wo_id = ? AND status = 'SMT_DONE'");
-    $stmt->execute([$wo_id]);
-    
-    if ($stmt->rowCount() == 0) {
-        throw new Exception("해당 작업지시를 수삽 시작할 수 없습니다. (상태 오류)");
-    }
-
-    // 작업지시 정보 가져오기
-    $stmt = $pdo->prepare("SELECT target_qty FROM work_order WHERE wo_id = ?");
+    // 작업지시 조회 및 상태 검증
+    $stmt = $pdo->prepare("SELECT status, target_qty FROM work_order WHERE wo_id = ? FOR UPDATE");
     $stmt->execute([$wo_id]);
     $wo = $stmt->fetch();
+    if (!$wo) {
+        throw new Exception("해당 작업지시를 찾을 수 없습니다: " . $wo_id);
+    }
+    if ($wo['status'] !== 'SMT_DONE' && $wo['status'] !== 'DIP_IN_PROGRESS') {
+        throw new Exception("해당 작업지시를 수삽 시작할 수 없습니다. (현재 상태: " . $wo['status'] . ")");
+    }
+
+    // 상태를 DIP_IN_PROGRESS로 갱신
+    $stmt = $pdo->prepare("UPDATE work_order SET status = 'DIP_IN_PROGRESS' WHERE wo_id = ?");
+    $stmt->execute([$wo_id]);
+
+    // 불량을 제외한 바코드들을 SMT 완료(BOTTOM_DONE)로 준비하여 DIP_AOI 공정으로 투입
+    $resetBc = $pdo->prepare("UPDATE barcode_master SET status = 'BOTTOM_DONE' WHERE wo_id = ? AND status != 'FAIL'");
+    $resetBc->execute([$wo_id]);
     
     $pdo->commit();
 
-    // 3. 로컬 Node-RED (1880 포트) 수삽 시뮬레이션 시작 트리거 전송
+    // 3. Node-RED (Docker 1881 포트) 수삽 시뮬레이션 시작 트리거 전송
     $data = json_encode([
         "wo_id" => $wo_id,
         "target_qty" => intval($wo['target_qty'])
     ]);
 
-    $fp = @fsockopen('127.0.0.1', 1880, $errno, $errstr, 0.5);
+    $nrHost = defined('NODERED_HOST') ? NODERED_HOST : '127.0.0.1';
+    $nrPort = defined('NODERED_PORT') ? NODERED_PORT : 1881;
+
+    $fp = @fsockopen($nrHost, $nrPort, $errno, $errstr, 0.5);
     if ($fp) {
-        $out = "POST /start-dip-sim HTTP/1.1\r\nHost: 127.0.0.1:1880\r\nContent-Type: application/json\r\nContent-Length: " . strlen($data) . "\r\nConnection: Close\r\n\r\n" . $data;
+        $out = "POST /start-dip-sim HTTP/1.1\r\nHost: {$nrHost}:{$nrPort}\r\nContent-Type: application/json\r\nContent-Length: " . strlen($data) . "\r\nConnection: Close\r\n\r\n" . $data;
         fwrite($fp, $out);
         fclose($fp);
     }

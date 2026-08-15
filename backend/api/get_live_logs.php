@@ -6,19 +6,36 @@ require_once __DIR__ . '/../config.php';
 $last_id = isset($_GET['last_id']) ? intval($_GET['last_id']) : 0;
 
 try {
+    // 1. 현재 활성/최신 작업지시 상태 조회
+    $stmtWo = $pdo->query("
+        SELECT wo_id, status, target_qty 
+        FROM work_order 
+        WHERE status IN ('IN_PROGRESS', 'DIP_IN_PROGRESS', 'SMT_DONE', 'READY', 'DONE') 
+        ORDER BY FIELD(status, 'IN_PROGRESS', 'DIP_IN_PROGRESS', 'SMT_DONE', 'READY', 'DONE'), wo_id DESC 
+        LIMIT 1
+    ");
+    $activeWo = $stmtWo->fetch(PDO::FETCH_ASSOC);
+
     if ($last_id > 0) {
         // last_id 이후에 발생한 신규 센서 로그 실시간 조회
         $stmt = $pdo->prepare("
             SELECT h.history_id, h.barcode, h.process_name, h.result_status, h.process_data, h.created_at, 
-                   COALESCE(b.status, 'ING') AS barcode_status, b.wo_id, w.target_qty, w.status AS wo_status
+                   COALESCE(b.status, 'ING') AS barcode_status, 
+                   COALESCE(b.wo_id, :active_wo_id) AS wo_id,
+                   :target_qty AS target_qty, 
+                   :wo_status AS wo_status
             FROM barcode_history h
             LEFT JOIN barcode_master b ON h.barcode = b.barcode
-            LEFT JOIN work_order w ON b.wo_id = w.wo_id
-            WHERE h.history_id > ?
+            WHERE h.history_id > :last_id
             ORDER BY h.history_id ASC
             LIMIT 100
         ");
-        $stmt->execute([$last_id]);
+        $stmt->execute([
+            ':last_id' => $last_id,
+            ':active_wo_id' => $activeWo['wo_id'] ?? null,
+            ':target_qty' => $activeWo['target_qty'] ?? 0,
+            ':wo_status' => $activeWo['status'] ?? 'READY'
+        ]);
         $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         $max_id = !empty($logs) ? (int)end($logs)['history_id'] : $last_id;
@@ -27,22 +44,22 @@ try {
         $stmtMax = $pdo->query("SELECT COALESCE(MAX(history_id), 0) FROM barcode_history");
         $currentMax = (int)$stmtMax->fetchColumn();
 
-        // 만약 현재 진행 중인 작업지시가 있다면 최근 5개 이력을 즉시 반환
-        $chkActive = $pdo->query("SELECT wo_id FROM work_order WHERE status IN ('IN_PROGRESS', 'DIP_IN_PROGRESS') LIMIT 1");
-        $activeWo = $chkActive->fetchColumn();
-
-        if ($activeWo) {
+        if ($activeWo && ($activeWo['status'] === 'IN_PROGRESS' || $activeWo['status'] === 'DIP_IN_PROGRESS')) {
             $stmt = $pdo->prepare("
                 SELECT h.history_id, h.barcode, h.process_name, h.result_status, h.process_data, h.created_at, 
-                       COALESCE(b.status, 'ING') AS barcode_status, b.wo_id, w.target_qty, w.status AS wo_status
+                       COALESCE(b.status, 'ING') AS barcode_status, b.wo_id, 
+                       :target_qty AS target_qty, :wo_status AS wo_status
                 FROM barcode_history h
                 LEFT JOIN barcode_master b ON h.barcode = b.barcode
-                LEFT JOIN work_order w ON b.wo_id = w.wo_id
-                WHERE b.wo_id = ?
+                WHERE b.wo_id = :wo_id
                 ORDER BY h.history_id DESC
                 LIMIT 5
             ");
-            $stmt->execute([$activeWo]);
+            $stmt->execute([
+                ':wo_id' => $activeWo['wo_id'],
+                ':target_qty' => $activeWo['target_qty'] ?? 0,
+                ':wo_status' => $activeWo['status']
+            ]);
             $logs = array_reverse($stmt->fetchAll(PDO::FETCH_ASSOC));
         } else {
             $logs = [];
@@ -54,8 +71,9 @@ try {
     echo json_encode([
         "status" => "success",
         "data" => [
-            "logs"   => $logs,
-            "max_id" => $max_id
+            "logs"      => $logs,
+            "max_id"    => $max_id,
+            "active_wo" => $activeWo
         ]
     ], JSON_UNESCAPED_UNICODE);
 

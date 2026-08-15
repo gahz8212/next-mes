@@ -1,9 +1,172 @@
-// frontend/js/dashboard.js - SMT / DIP 라인 실시간 관제 및 머신 상태 업데이트 엔진
+// frontend/js/dashboard.js - SMT / DIP 라인 실시간 관제 & 예지보전(PdM) 스파크라인 및 RUL 엔진
 let currentTarget = 0;
 let lastHistoryId = 0;
 let isPollingActive = false;
+const machineResetTimers = {};
 
-// 1. KPI 실시간 동기화 (DB 실제 수치와 100% 일치)
+// ── 설비별 텔레메트리 스키마 (상단 듀얼 원그래프 + 하단 4대 물리량 막대그래프) ──
+const MACHINE_TELEMETRY_SCHEMAS = {
+    LASER: {
+        defaultHealth: 98,
+        defaultCycleVal: 82,
+        defaultCycleText: 'D-14',
+        defaultCycleSub: '필터수명',
+        bars: [
+            { key: 'laser_power_w', label: '출력', unit: 'W', base: 15.20, min: 10, max: 20, decimals: 1, color: '#10b981' },
+            { key: 'tube_temp_c', label: '온도', unit: '℃', base: 31.5, min: 20, max: 45, decimals: 1, color: '#38bdf8' },
+            { key: 'fume_pressure_kpa', label: '차압', unit: 'kPa', base: -2.3, min: -3.5, max: -1.0, decimals: 1, color: '#a78bfa' },
+            { key: 'lens_cleanliness_pct', label: '렌즈', unit: '%', base: 95, min: 70, max: 100, decimals: 0, color: '#38bdf8' }
+        ]
+    },
+    SPI: {
+        defaultHealth: 97,
+        defaultCycleVal: 88,
+        defaultCycleText: '12타',
+        defaultCycleSub: '세척주기',
+        bars: [
+            { key: 'volume_pct', label: '체적', unit: '%', base: 100.2, min: 70, max: 130, decimals: 0, color: '#10b981' },
+            { key: 'offset_x_um', label: '오프셋', unit: 'μm', base: 6.8, min: -15, max: 15, decimals: 1, color: '#38bdf8' },
+            { key: 'paste_viscosity_pa_s', label: '점도', unit: 'Pa·s', base: 202, min: 160, max: 240, decimals: 0, color: '#a78bfa' },
+            { key: 'solder_height_um', label: '높이', unit: 'μm', base: 143.5, min: 110, max: 170, decimals: 0, color: '#38bdf8' }
+        ]
+    },
+    MOUNTER: {
+        defaultHealth: 99,
+        defaultCycleVal: 85,
+        defaultCycleText: 'D-4',
+        defaultCycleSub: '노즐수명',
+        bars: [
+            { key: 'vacuum_kpa', label: '진공', unit: 'kPa', base: -84.5, min: -100, max: -60, decimals: 1, color: '#10b981' },
+            { key: 'head_vibration_g', label: '진동', unit: 'G', base: 0.088, min: 0, max: 0.20, decimals: 3, color: '#38bdf8' },
+            { key: 'motor_temp_c', label: '발열', unit: '℃', base: 37.8, min: 25, max: 55, decimals: 1, color: '#a78bfa' },
+            { key: 'feeder_tension_n', label: '장력', unit: 'N', base: 4.2, min: 2.5, max: 6.0, decimals: 1, color: '#38bdf8' }
+        ]
+    },
+    REFLOW: {
+        defaultHealth: 98,
+        defaultCycleVal: 58,
+        defaultCycleText: 'D-8',
+        defaultCycleSub: '트랩정비',
+        bars: [
+            { key: 'peak_temp_c', label: '피크', unit: '℃', base: 245.5, min: 220, max: 270, decimals: 1, color: '#10b981' },
+            { key: 'oxygen_ppm', label: '산소', unit: 'ppm', base: 375, min: 100, max: 700, decimals: 0, color: '#38bdf8' },
+            { key: 'ramp_rate_c_s', label: '승온', unit: '℃/s', base: 1.85, min: 1.0, max: 3.0, decimals: 2, color: '#a78bfa' },
+            { key: 'tal_sec', label: '체류', unit: 's', base: 52.0, min: 35, max: 70, decimals: 1, color: '#38bdf8' }
+        ]
+    },
+    DIP_AOI: {
+        defaultHealth: 99,
+        defaultCycleVal: 90,
+        defaultCycleText: 'D-15',
+        defaultCycleSub: '광학보정',
+        bars: [
+            { key: 'pin_soldering_score', altKey: 'metric_val', label: '점수', unit: '점', base: 99.2, min: 70, max: 100, decimals: 1, color: '#10b981' },
+            { key: 'bridge_risk_pct', label: '브릿지', unit: '%', base: 1.2, min: 0, max: 8.0, decimals: 1, color: '#38bdf8' },
+            { key: 'lift_height_um', label: '들뜸', unit: 'μm', base: 18.0, min: 0, max: 50, decimals: 0, color: '#a78bfa' },
+            { key: 'comp_tilt_deg', label: '경사', unit: '°', base: 0.4, min: 0, max: 2.5, decimals: 1, color: '#38bdf8' }
+        ]
+    },
+    WAVE: {
+        defaultHealth: 97,
+        defaultCycleVal: 72,
+        defaultCycleText: 'D-5',
+        defaultCycleSub: '드로스정비',
+        bars: [
+            { key: 'pot_temp_c', label: '용탕', unit: '℃', base: 250.2, min: 230, max: 270, decimals: 1, color: '#10b981' },
+            { key: 'wave_height_mm', label: '파고', unit: 'mm', base: 9.15, min: 6.5, max: 12.0, decimals: 2, color: '#38bdf8' },
+            { key: 'preheater_temp_c', label: '예열', unit: '℃', base: 132.5, min: 100, max: 160, decimals: 1, color: '#a78bfa' },
+            { key: 'dross_level_pct', label: '드로스', unit: '%', base: 28.5, min: 0, max: 60, decimals: 0, color: '#38bdf8' }
+        ]
+    }
+};
+
+const latestPdmData = {
+    LASER: null,
+    SPI: null,
+    MOUNTER: null,
+    REFLOW: null,
+    DIP_AOI: null,
+    WAVE: null
+};
+
+// 최근 실제 공정 이벤트 수신 시각 (ms)
+const lastActiveTimestamp = {
+    LASER: 0,
+    SPI: 0,
+    MOUNTER: 0,
+    REFLOW: 0,
+    DIP_AOI: 0,
+    WAVE: 0
+};
+
+// 현재 머신별 실시간 렌더링 캐시
+const machineCurrentState = {};
+
+// 대기/미가동 상태용 텔레메트리 초기화
+function initIdleHistories() {
+    Object.keys(MACHINE_TELEMETRY_SCHEMAS).forEach(id => {
+        const schema = MACHINE_TELEMETRY_SCHEMAS[id];
+        const barVals = schema.bars.map(b => b.base);
+        machineCurrentState[id] = {
+            health: schema.defaultHealth,
+            cycleVal: schema.defaultCycleVal,
+            cycleText: schema.defaultCycleText,
+            cycleSub: schema.defaultCycleSub,
+            bars: barVals,
+            status: 'NORMAL'
+        };
+
+        drawRadialGauges(id, schema.defaultHealth, schema.defaultCycleVal, schema.defaultCycleText, schema.defaultCycleSub, 'NORMAL');
+        drawVerticalBars(id, barVals, 'NORMAL');
+    });
+}
+window.initIdleHistories = initIdleHistories;
+
+let isIdleAmbientLoopRunning = false;
+
+// 미가동 설비 대기 하트비트 루프 (게이지 및 막대 미세 변동)
+function startIdleAmbientLoop() {
+    if (isIdleAmbientLoopRunning) return;
+    isIdleAmbientLoopRunning = true;
+
+    setInterval(() => {
+        const now = Date.now();
+        Object.keys(MACHINE_TELEMETRY_SCHEMAS).forEach(id => {
+            // 최근 3.5초간 실제 생산 이벤트가 없었던 미가동 설비만 대상
+            if (now - lastActiveTimestamp[id] > 3500) {
+                const schema = MACHINE_TELEMETRY_SCHEMAS[id];
+                const state = machineCurrentState[id] || {
+                    health: schema.defaultHealth,
+                    cycleVal: schema.defaultCycleVal,
+                    cycleText: schema.defaultCycleText,
+                    cycleSub: schema.defaultCycleSub,
+                    bars: schema.bars.map(b => b.base),
+                    status: 'NORMAL'
+                };
+
+                // 건전도 미세 변동
+                let health = schema.defaultHealth + (Math.random() - 0.5) * 1.2;
+                health = Math.round(Math.max(94, Math.min(100, health)));
+                state.health = health;
+
+                // 4대 막대 수치 미세 변동
+                state.bars = schema.bars.map((b, idx) => {
+                    const base = b.base;
+                    const span = (b.max - b.min) * 0.02;
+                    let val = base + (Math.random() - 0.5) * span;
+                    return parseFloat(val.toFixed(b.decimals));
+                });
+
+                drawRadialGauges(id, state.health, state.cycleVal, state.cycleText, state.cycleSub, 'NORMAL');
+                drawVerticalBars(id, state.bars, 'NORMAL');
+            }
+        });
+    }, 1400);
+}
+
+let activeModalProcess = null;
+
+// 1. KPI 실시간 동기화
 async function initKPI() {
     try {
         const res = await fetch('/backend/api/get_kpi.php');
@@ -15,11 +178,17 @@ async function initKPI() {
             const failCount  = d.fail_qty || 0;
             const goodCount  = d.good_qty || 0;
 
-            document.getElementById('val-target').innerText = currentTarget;
-            document.getElementById('val-actual').innerText = totalCount;
-            document.getElementById('val-good').innerText   = goodCount;
-            document.getElementById('val-fail').innerText   = failCount;
-            document.getElementById('val-yield').innerText  = d.yield_rate || '100.0%';
+            const elTarget = document.getElementById('val-target');
+            const elActual = document.getElementById('val-actual');
+            const elGood   = document.getElementById('val-good');
+            const elFail   = document.getElementById('val-fail');
+            const elYield  = document.getElementById('val-yield');
+
+            if (elTarget) elTarget.innerText = currentTarget;
+            if (elActual) elActual.innerText = totalCount;
+            if (elGood)   elGood.innerText   = goodCount;
+            if (elFail)   elFail.innerText   = failCount;
+            if (elYield)  elYield.innerText  = d.yield_rate || '100.0%';
         }
     } catch(e) {
         console.error('KPI 동기화 실패:', e);
@@ -32,30 +201,28 @@ window.resetAllMachines = resetAllMachines;
 
 // 2. 로그 필터링
 function applyLogFilter() {
-    const selProc = document.getElementById('filter-process').value;
-    const selStat = document.getElementById('filter-status').value;
+    const selProcEl = document.getElementById('filter-process');
+    const selStatEl = document.getElementById('filter-status');
+    if (!selProcEl || !selStatEl) return;
+
+    const selProc = selProcEl.value;
+    const selStat = selStatEl.value;
     const items = document.querySelectorAll('#log-list li');
     
     items.forEach(li => {
         if (!li.dataset.process) return;
-        
         const matchProc = (selProc === 'ALL' || li.dataset.process === selProc);
         const matchStat = (selStat === 'ALL' || li.dataset.status === selStat);
-        
-        if (matchProc && matchStat) {
-            li.style.display = 'flex';
-        } else {
-            li.style.display = 'none';
-        }
+        li.style.display = (matchProc && matchStat) ? 'flex' : 'none';
     });
 }
+window.applyLogFilter = applyLogFilter;
 
 // 3. 로그 리스트 추가
 function addLog(process, status, dataStr) {
     const logList = document.getElementById('log-list');
     if (!logList) return;
 
-    // 초기 안내 메시지 삭제
     if (logList.children.length === 1 && logList.children[0].innerText.includes('센서 스트림 대기 중')) {
         logList.innerHTML = '';
     }
@@ -68,37 +235,50 @@ function addLog(process, status, dataStr) {
     li.dataset.status = status;
     
     li.innerHTML = `
-        <span class="log-time">[${time}]</span>
-        <span class="log-tag">${process}</span>
-        <span class="log-res ${isPass ? 'pass' : 'fail'}">${status}</span>
-        <span class="log-msg">${dataStr}</span>
+        <div class="log-row-top">
+            <span class="log-time">[${time}]</span>
+            <span class="log-tag">${process}</span>
+            <span class="log-res ${isPass ? 'pass' : 'fail'}">${status}</span>
+        </div>
+        <div class="log-msg">${dataStr}</div>
     `;
     logList.appendChild(li);
     
-    // 최대 150개 로그 유지
     if (logList.children.length > 150) {
         logList.removeChild(logList.firstChild);
     }
 
     applyLogFilter();
-    logList.scrollTop = logList.scrollHeight; // 자동 스크롤
+    logList.scrollTop = logList.scrollHeight;
 }
+window.addLog = addLog;
 
-// 4. 머신 카드 전체 클린 리셋
-function resetAllMachines() {
-    const machineIds = ['LASER', 'SPI', 'MOUNTER', 'REFLOW', 'DIP_AOI', 'WAVE'];
+// 4. 머신 카드 및 텔레메트리 전체 클린 리셋
+function resetAllMachines(targetLine = 'ALL') {
+    const smtIds = ['LASER', 'SPI', 'MOUNTER', 'REFLOW'];
+    const dipIds = ['DIP_AOI', 'WAVE'];
+    const machineIds = targetLine === 'SMT' ? smtIds : (targetLine === 'DIP' ? dipIds : [...smtIds, ...dipIds]);
+
     machineIds.forEach(id => {
+        if (machineResetTimers[id]) {
+            clearTimeout(machineResetTimers[id]);
+        }
+        lastActiveTimestamp[id] = 0;
         const mac = document.getElementById(`mac-${id}`);
         const dataBox = document.getElementById(`data-${id}`);
         const cellWrap = document.getElementById(`cells-${id}`);
+        
+        latestPdmData[id] = null;
+        const defectTag = document.getElementById(`defect-tag-${id}`);
+        if (defectTag) defectTag.innerHTML = '';
+
         if (mac) {
             mac.className = 'machine-card wait';
             const indicator = mac.querySelector('.mac-status-indicator');
             if (indicator) indicator.innerText = '대기';
         }
-        if (dataBox) {
-            dataBox.innerText = '-';
-        }
+        if (dataBox) dataBox.innerText = '-';
+        
         if (cellWrap) {
             cellWrap.innerHTML = `
                 <span class="cell-chip wait">#1</span>
@@ -108,17 +288,250 @@ function resetAllMachines() {
             `;
         }
     });
+
+    initIdleHistories();
+
+    if (activeModalProcess && machineIds.includes(activeModalProcess)) {
+        closePdmModal();
+    }
 }
 
-// 5. 머신 카드 실시간 상태 업데이트 & 4-UP 어레이 패널 셀 개별 판정
-const machineResetTimers = {};
+// 5-1. 상단: 건전도 & 정비주기 듀얼 원형 게이지 (High-DPI 컴팩트 패딩 렌더링)
+function drawRadialGauges(processId, healthVal, cycleVal, cycleText, cycleSub, pdmStatus) {
+    const canvas = document.getElementById(`canvas-radial-${processId}`);
+    if (!canvas) return;
 
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const cssW = Math.max(220, Math.round(rect.width) || 260);
+    const cssH = Math.max(44, Math.round(rect.height) || 46);
+
+    if (canvas.width !== Math.round(cssW * dpr) || canvas.height !== Math.round(cssH * dpr)) {
+        canvas.width = Math.round(cssW * dpr);
+        canvas.height = Math.round(cssH * dpr);
+    }
+
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    const safeHealth = Math.max(0, Math.min(100, Number(healthVal) || 98));
+    const safeCycle  = Math.max(0, Math.min(100, Number(cycleVal) || 80));
+
+    // 색상 테마
+    let healthColor = '#10b981';
+    let statusText = '정상';
+    if (pdmStatus === 'WARNING' || safeHealth < 75) {
+        healthColor = '#ef4444';
+        statusText = '경고';
+    } else if (pdmStatus === 'CAUTION' || safeHealth < 88) {
+        healthColor = '#f59e0b';
+        statusText = '주의';
+    }
+
+    const cy = Math.round(cssH / 2);
+    const r = Math.min(18.5, Math.round((cssH - 4) / 2));
+    const strokeW = 3.4;
+
+    // ── 좌측 원그래프: 설비 건전도 (Health Index) ──
+    const leftCX = Math.round(cssW * 0.16);
+
+    // 배경 링
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(leftCX, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = strokeW;
+    ctx.stroke();
+
+    // 값 아크
+    ctx.beginPath();
+    ctx.arc(leftCX, cy, r, -Math.PI / 2, -Math.PI / 2 + (safeHealth / 100) * (Math.PI * 2));
+    ctx.strokeStyle = healthColor;
+    ctx.lineWidth = strokeW;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+
+    // 아크 내부 퍼센트 수치
+    ctx.save();
+    ctx.font = 'bold 9.5px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#f8fafc';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${safeHealth}%`, leftCX, cy);
+
+    // 우측 텍스트 라벨 (건전도 / 상태)
+    ctx.textAlign = 'left';
+    ctx.font = '9px sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText('건전도', leftCX + r + 6, cy - 4.5);
+
+    ctx.font = 'bold 9.5px sans-serif';
+    ctx.fillStyle = healthColor;
+    ctx.fillText(statusText, leftCX + r + 6, cy + 7);
+    ctx.restore();
+
+    // ── 중앙 구분선 ──
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(Math.round(cssW * 0.48), 3);
+    ctx.lineTo(Math.round(cssW * 0.48), cssH - 3);
+    ctx.stroke();
+    ctx.restore();
+
+    // ── 우측 원그래프: 예방보전 주기/수명 (PM Cycle / RUL) ──
+    const rightCX = Math.round(cssW * 0.63);
+    const cycleColor = '#38bdf8';
+
+    // 배경 링
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(rightCX, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = strokeW;
+    ctx.stroke();
+
+    // 값 아크
+    ctx.beginPath();
+    ctx.arc(rightCX, cy, r, -Math.PI / 2, -Math.PI / 2 + (safeCycle / 100) * (Math.PI * 2));
+    ctx.strokeStyle = cycleColor;
+    ctx.lineWidth = strokeW;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+
+    // 아크 내부 D-Day / 수치
+    ctx.save();
+    ctx.font = 'bold 9px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#f8fafc';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(cycleText || `${safeCycle}%`, rightCX, cy);
+
+    // 우측 텍스트 라벨 (정비주기 / 부품명)
+    ctx.textAlign = 'left';
+    ctx.font = '9px sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText('정비주기', rightCX + r + 6, cy - 4.5);
+
+    ctx.font = 'bold 9.5px sans-serif';
+    ctx.fillStyle = cycleColor;
+    ctx.fillText(cycleSub || '양호', rightCX + r + 6, cy + 7);
+    ctx.restore();
+}
+
+// 5-2. 하단: 4대 핵심 물리량 상하 막대 그래프 (High-DPI 꽉 찬 공간 활용 렌더링)
+function drawVerticalBars(processId, metricsValues, pdmStatus) {
+    const canvas = document.getElementById(`canvas-bars-${processId}`);
+    const schema = MACHINE_TELEMETRY_SCHEMAS[processId];
+    if (!canvas || !schema) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const cssW = Math.max(220, Math.round(rect.width) || 260);
+    const cssH = Math.max(68, Math.round(rect.height) || 82);
+
+    if (canvas.width !== Math.round(cssW * dpr) || canvas.height !== Math.round(cssH * dpr)) {
+        canvas.width = Math.round(cssW * dpr);
+        canvas.height = Math.round(cssH * dpr);
+    }
+
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    const slotWidth = cssW / 4;
+    const trackY = 17;
+    const trackH = Math.max(36, cssH - 37);
+    const trackW = 11;
+
+    schema.bars.forEach((b, i) => {
+        const val = (metricsValues && metricsValues[i] !== undefined) ? metricsValues[i] : b.base;
+        const cx = Math.round(slotWidth * i + slotWidth / 2);
+
+        // 정규화 비율 (0.05 ~ 0.95)
+        const ratio = Math.max(0.06, Math.min(0.94, (val - b.min) / (b.max - b.min)));
+        const fillH = Math.max(4, trackH * ratio);
+        const fillY = trackY + trackH - fillH;
+
+        // 색상 판정
+        let barColor = b.color || '#38bdf8';
+        if (pdmStatus === 'WARNING') barColor = '#ef4444';
+        else if (pdmStatus === 'CAUTION') barColor = '#f59e0b';
+
+        // 1. 상단 측정 수치
+        ctx.save();
+        ctx.font = 'bold 9.5px "JetBrains Mono", monospace';
+        ctx.fillStyle = '#f1f5f9';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${val}${b.unit}`, cx, 12);
+
+        // 2. 바 배경 트랙 (Dark Pill)
+        ctx.beginPath();
+        const rx = cx - trackW / 2;
+        ctx.roundRect(rx, trackY, trackW, trackH, 3.5);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.fill();
+
+        // 3. 내부 채움 막대 (Filled Bar)
+        ctx.beginPath();
+        ctx.roundRect(rx, fillY, trackW, fillH, 3.5);
+        ctx.fillStyle = barColor;
+        ctx.fill();
+
+        // 4. 중심 기준선 틱 (Target Guideline)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.lineWidth = 1.0;
+        ctx.beginPath();
+        ctx.moveTo(rx - 2, trackY + trackH * 0.5);
+        ctx.lineTo(rx + trackW + 2, trackY + trackH * 0.5);
+        ctx.stroke();
+
+        // 5. 하단 물리량 명칭
+        ctx.font = 'bold 9.5px sans-serif';
+        ctx.fillStyle = '#94a3b8';
+        ctx.textAlign = 'center';
+        ctx.fillText(b.label, cx, cssH - 3);
+        ctx.restore();
+    });
+}
+
+// 6. 머신 카드 실시간 상태 업데이트 & PdM 텔레메트리 연동
 function updateMachine(processId, status, barcode, pDataObj) {
     const mac = document.getElementById(`mac-${processId}`);
     const dataBox = document.getElementById(`data-${processId}`);
     const cellWrap = document.getElementById(`cells-${processId}`);
+    const defectTag = document.getElementById(`defect-tag-${processId}`);
     if (!mac || !dataBox) return;
 
+    const indicator = mac.querySelector('.mac-status-indicator');
+
+    // 설비 대기(IDLE/WAIT) 처리
+    if (status === 'IDLE' || status === 'WAIT' || !barcode || barcode === '-') {
+        mac.classList.remove('run', 'error', 'pulse-active');
+        mac.classList.add('wait');
+        if (indicator) indicator.innerText = '대기';
+        dataBox.innerText = '-';
+        if (defectTag) defectTag.innerHTML = '';
+        if (cellWrap) {
+            cellWrap.innerHTML = `
+                <span class="cell-chip wait">#1</span>
+                <span class="cell-chip wait">#2</span>
+                <span class="cell-chip wait">#3</span>
+                <span class="cell-chip wait">#4</span>
+            `;
+        }
+        if (machineResetTimers[processId]) {
+            clearTimeout(machineResetTimers[processId]);
+            machineResetTimers[processId] = null;
+        }
+        return;
+    }
+
+    lastActiveTimestamp[processId] = Date.now();
     const isPass = (status === 'PASS');
     const targetClass = isPass ? 'run' : 'error';
     
@@ -127,35 +540,104 @@ function updateMachine(processId, status, barcode, pDataObj) {
         mac.classList.add(targetClass);
     }
     
-    // 바코드 텍스트 갱신
     dataBox.innerText = barcode || '-';
     
-    const indicator = mac.querySelector('.mac-status-indicator');
+    // 바코드에서 PCB 번호 추출 (예: C1-20260813-2A6-0006 -> 6)
+    let pcbNum = '';
+    if (barcode && barcode.includes('-')) {
+        const parts = barcode.split('-');
+        const lastPart = parts[parts.length - 1];
+        if (!isNaN(parseInt(lastPart))) {
+            pcbNum = parseInt(lastPart);
+        }
+    }
+    if (pDataObj && pDataObj.pcb_no) pcbNum = pDataObj.pcb_no;
+
     if (indicator) {
-        indicator.innerText = isPass ? '가동중' : '불량감지';
+        if (isPass) {
+            indicator.innerText = '가동중';
+        } else {
+            indicator.innerText = (pDataObj && pDataObj.is_inherited_fail) ? '불량 통과' : '불량감지';
+        }
+    }
+
+    // 설비카드 하단 불량 PCB 알림 태그 갱신
+    const failedCell = (pDataObj && pDataObj.failed_cell) ? pDataObj.failed_cell : (!isPass ? 2 : 0);
+    if (defectTag) {
+        if (!isPass) {
+            defectTag.innerHTML = `<span class="defect-badge-highlight" title="[불량] PCB #${pcbNum}번 기판 셀 #${failedCell} 불량 감지">⚠️ PCB #${pcbNum} 불량(셀 #${failedCell})</span>`;
+        } else {
+            defectTag.innerHTML = `<span class="pass-badge-chip">PCB #${pcbNum}</span>`;
+        }
     }
 
     // 4-UP 어레이 패널 셀 인디케이터 업데이트
     if (cellWrap) {
-        let failedCell = (pDataObj && pDataObj.failed_cell) ? pDataObj.failed_cell : (!isPass ? 2 : 0);
         let cellHtml = '';
         for (let c = 1; c <= 4; c++) {
-            if (failedCell === c) {
-                cellHtml += `<span class="cell-chip fail" title="[셀 #${c} 불량] Bad Mark 스킵 처리됨">#${c} ✖</span>`;
+            if (!isPass && failedCell === c) {
+                cellHtml += `<span class="cell-chip fail" title="[셀 #${c} 불량] Bad Mark 스킵">#${c} ✖</span>`;
             } else {
-                cellHtml += `<span class="cell-chip pass" title="[셀 #${c}] 정상 양품">#${c} ✔</span>`;
+                cellHtml += `<span class="cell-chip pass" title="[셀 #${c}] 정상">#${c} ✔</span>`;
             }
         }
         cellWrap.innerHTML = cellHtml;
     }
     
+    // PdM 텔레메트리 파싱 및 상단 게이지 + 하단 4대 막대그래프 갱신
     if (pDataObj) {
-        mac.dataset.detail = JSON.stringify(pDataObj);
-        mac.title = "클릭 시 설비 파라미터 세부 정보 확인";
-        mac.onclick = () => alert(`[${processId} 설비 파라미터]\n` + JSON.stringify(pDataObj, null, 2));
+        latestPdmData[processId] = pDataObj;
+        mac.dataset.pdm = JSON.stringify(pDataObj);
+
+        const schema = MACHINE_TELEMETRY_SCHEMAS[processId];
+        if (schema) {
+            const health = pDataObj.pdm_health !== undefined ? pDataObj.pdm_health : schema.defaultHealth;
+            
+            // 수명주기 텍스트 추출
+            let cycleVal = schema.defaultCycleVal;
+            let cycleText = schema.defaultCycleText;
+            let cycleSub = schema.defaultCycleSub;
+
+            if (pDataObj.filter_life_pct !== undefined) {
+                cycleVal = pDataObj.filter_life_pct;
+                cycleText = `D-${pDataObj.rul_filter_days || 14}`;
+            } else if (pDataObj.mask_wash_count !== undefined) {
+                cycleVal = Math.max(0, 100 - pDataObj.mask_wash_count);
+                cycleText = `${100 - pDataObj.mask_wash_count}타`;
+            } else if (pDataObj.nozzle_rul_days !== undefined) {
+                cycleVal = 85;
+                cycleText = `D-${pDataObj.nozzle_rul_days}`;
+            } else if (pDataObj.flux_trap_level_pct !== undefined) {
+                cycleVal = Math.max(0, 100 - Math.round(pDataObj.flux_trap_level_pct));
+                cycleText = `D-8`;
+            }
+
+            // 4대 물리량 막대 값 추출
+            const barVals = schema.bars.map(b => {
+                let v = pDataObj[b.key];
+                if (v === undefined && b.altKey) v = pDataObj[b.altKey];
+                if (v === undefined) v = b.base;
+                return parseFloat(Number(v).toFixed(b.decimals));
+            });
+
+            machineCurrentState[processId] = {
+                health,
+                cycleVal,
+                cycleText,
+                cycleSub,
+                bars: barVals,
+                status: pDataObj.pdm_status || (isPass ? 'NORMAL' : 'WARNING')
+            };
+
+            drawRadialGauges(processId, health, cycleVal, cycleText, cycleSub, pDataObj.pdm_status);
+            drawVerticalBars(processId, barVals, pDataObj.pdm_status);
+        }
+
+        if (activeModalProcess === processId) {
+            renderPdmModalContent(processId);
+        }
     }
 
-    // 공정 라인에 기판이 끊겼을 때 (6초 동안 신호 부재 시) 대기 상태로 자연 복귀
     if (machineResetTimers[processId]) {
         clearTimeout(machineResetTimers[processId]);
     }
@@ -174,10 +656,385 @@ function updateMachine(processId, status, barcode, pDataObj) {
                 `;
             }
         }
-    }, 6000);
+    }, 3500);
 }
 
-// 6. 실시간 고속 폴링 엔진 (0.8초 주기 실시간 자동 동기화)
+// 7. 설비 정밀 예지보전(PdM) 진단 모달 엔진 (RUL & PM 캘린더 포함)
+function openPdmModal(processId) {
+    activeModalProcess = processId;
+    const modal = document.getElementById('pdmModalOverlay');
+    if (!modal) return;
+
+    modal.classList.add('open');
+    renderPdmModalContent(processId);
+}
+window.openPdmModal = openPdmModal;
+
+function closePdmModal(e) {
+    if (e && e.target && e.target.closest('.pdm-modal-box')) return;
+    const modal = document.getElementById('pdmModalOverlay');
+    if (modal) modal.classList.remove('open');
+    activeModalProcess = null;
+}
+window.closePdmModal = closePdmModal;
+
+function renderPdmModalContent(processId) {
+    const d = latestPdmData[processId] || {};
+    const badge = document.getElementById('pdmModalBadge');
+    const title = document.getElementById('pdmModalTitle');
+    const healthScoreEl = document.getElementById('pdmHealthScore');
+    const healthBarEl = document.getElementById('pdmHealthBar');
+    const statusTagEl = document.getElementById('pdmStatusTag');
+    const sensorsGrid = document.getElementById('pdmSensorsGrid');
+    const rulSection = document.getElementById('pdmRulSection');
+    const recommendationEl = document.getElementById('pdmRecommendation');
+
+    const names = {
+        LASER: 'Laser Marker #1',
+        SPI: 'SPI 3D 납 도포 검사기 #1',
+        MOUNTER: 'High-Speed Surface Mounter #1',
+        REFLOW: 'Reflow Soldering 10-Zone Oven',
+        DIP_AOI: 'Through-Hole DIP AOI System',
+        WAVE: 'Wave Soldering Bath #1'
+    };
+
+    if (badge) badge.innerText = processId;
+    if (title) title.innerText = `${names[processId] || processId} 정밀 예지보전 진단`;
+
+    const health = d.pdm_health !== undefined ? d.pdm_health : 98;
+    if (healthScoreEl) healthScoreEl.innerHTML = `${health} <span class="score-unit">/ 100</span>`;
+    if (healthBarEl) healthBarEl.style.width = `${health}%`;
+
+    const status = d.pdm_status || 'NORMAL';
+    if (statusTagEl) {
+        if (status === 'WARNING') {
+            statusTagEl.className = 'health-status-tag tag-warning';
+            statusTagEl.innerText = '경고 (주의 관찰 필요)';
+        } else if (status === 'CAUTION') {
+            statusTagEl.className = 'health-status-tag tag-caution';
+            statusTagEl.innerText = '주의 (사전 점검 권고)';
+        } else {
+            statusTagEl.className = 'health-status-tag tag-normal';
+            statusTagEl.innerText = '정상 안정 (Good)';
+        }
+    }
+
+    // 1. 설비별 4분할 센서 그리드 렌더링
+    let sensorsHtml = '';
+    let rulHtml = '';
+
+    if (processId === 'LASER') {
+        sensorsHtml = `
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>레이저 발진 출력</span><span class="sensor-limit">목표 15.2W (±0.5)</span></div>
+                <div class="sensor-val ${d.laser_power_w < 14.7 ? 'warn' : 'good'}">${d.laser_power_w || 15.2} W</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>발진 튜브 온도</span><span class="sensor-limit">상한 38.0℃</span></div>
+                <div class="sensor-val good">${d.tube_temp_c || 31.5} ℃</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>광학계 렌즈 청결도</span><span class="sensor-limit">하한 90.0%</span></div>
+                <div class="sensor-val good">${d.lens_cleanliness_pct || 97.2} %</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>갈바노 미러 온도</span><span class="sensor-limit">상한 40.0℃</span></div>
+                <div class="sensor-val good">${d.galvano_temp_c || 32.4} ℃</div>
+            </div>
+        `;
+        rulHtml = `
+            <div class="pdm-rul-card">
+                <div class="rul-top-row">
+                    <span class="rul-title">집진기 흄(Fume) 필터 잔여 수명 (RUL)</span>
+                    <span class="rul-days-badge">잔여 D-14</span>
+                </div>
+                <div class="rul-bar-wrap">
+                    <div class="rul-bar-fill" style="width: ${d.filter_life_pct || 82}%;"></div>
+                </div>
+                <div class="rul-sub-info">
+                    <span>집진기 음압: ${d.fume_pressure_kpa || -2.4} kPa (정상)</span>
+                    <span>필터 상태: ${d.filter_life_pct || 82}% 양호</span>
+                </div>
+            </div>
+        `;
+    } else if (processId === 'SPI') {
+        sensorsHtml = `
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>납 도포 체적율 (Volume)</span><span class="sensor-limit">90 ~ 115%</span></div>
+                <div class="sensor-val ${d.volume_pct < 85 || d.volume_pct > 115 ? 'crit' : 'good'}">${d.volume_pct || 102.5} %</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>솔더 도포 높이</span><span class="sensor-limit">120 ~ 160μm</span></div>
+                <div class="sensor-val good">${d.solder_height_um || 142.0} μm</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>페이스트 점도 (Viscosity)</span><span class="sensor-limit">180 ~ 220 Pa·s</span></div>
+                <div class="sensor-val good">${d.paste_viscosity_pa_s || 202} Pa·s</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>스퀴지 인쇄 가압력</span><span class="sensor-limit">2.8 ~ 3.3 kg</span></div>
+                <div class="sensor-val good">${d.blade_pressure_kg || 3.0} kg</div>
+            </div>
+        `;
+        rulHtml = `
+            <div class="pdm-rul-card">
+                <div class="rul-top-row">
+                    <span class="rul-title">메탈마스크 초음파 세척 주기 관리</span>
+                    <span class="rul-days-badge">잔여 ${100 - (d.mask_wash_count || 84)}타</span>
+                </div>
+                <div class="rul-bar-wrap">
+                    <div class="rul-bar-fill ${d.mask_wash_count > 90 ? 'warn' : ''}" style="width: ${(d.mask_wash_count || 84)}%;"></div>
+                </div>
+                <div class="rul-sub-info">
+                    <span>인쇄 오프셋 편차: X ${d.offset_x_um || '+8.2'}μm / Y ${d.offset_y_um || '-4.5'}μm</span>
+                    <span>누적 인쇄: ${d.mask_wash_count || 84} / 100타</span>
+                </div>
+            </div>
+        `;
+    } else if (processId === 'MOUNTER') {
+        sensorsHtml = `
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>노즐 진공 흡착압</span><span class="sensor-limit">하한 -78.0 kPa</span></div>
+                <div class="sensor-val ${d.vacuum_kpa > -77.0 ? 'crit' : (d.vacuum_kpa > -80.0 ? 'warn' : 'good')}">${d.vacuum_kpa || -84.2} kPa</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>헤드 가속도 진동치</span><span class="sensor-limit">상한 0.150 G</span></div>
+                <div class="sensor-val good">${d.head_vibration_g || 0.091} G</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>X/Y 리니어 모터 온도</span><span class="sensor-limit">상한 48.0℃</span></div>
+                <div class="sensor-val good">${d.motor_temp_c || 38.5} ℃</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>실시간 픽업 성공률</span><span class="sensor-limit">관리선 99.5%</span></div>
+                <div class="sensor-val ${d.pick_rate < 96.0 ? 'crit' : 'good'}">${d.pick_rate || 99.8} %</div>
+            </div>
+        `;
+        rulHtml = `
+            <div class="pdm-rul-card">
+                <div class="rul-top-row">
+                    <span class="rul-title">마운터 노즐 팁 마모도 및 교체 주기 (RUL)</span>
+                    <span class="rul-days-badge">잔여 D-4 (84%)</span>
+                </div>
+                <div class="rul-bar-wrap">
+                    <div class="rul-bar-fill" style="width: 84%;"></div>
+                </div>
+                <div class="rul-sub-info">
+                    <span>누적 타수: ${(d.nozzle_strike_count || 168400).toLocaleString()} / 200,000타</span>
+                    <span>피더 테이프 텐션: ${d.feeder_tension_n || 4.2} N (정상)</span>
+                </div>
+            </div>
+        `;
+    } else if (processId === 'REFLOW') {
+        sensorsHtml = `
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>최고 피크 솔더링 온도</span><span class="sensor-limit">243 ~ 249 ℃</span></div>
+                <div class="sensor-val ${d.peak_temp_c > 251.0 ? 'crit' : 'good'}">${d.peak_temp_c || 246.5} ℃</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>액상선 체류 시간 (TAL)</span><span class="sensor-limit">45 ~ 60 sec</span></div>
+                <div class="sensor-val good">${d.tal_sec || 52.5} sec</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>승온 구배 (Ramp-Up)</span><span class="sensor-limit">1.5 ~ 2.2 ℃/s</span></div>
+                <div class="sensor-val good">${d.ramp_rate_c_s || 1.85} ℃/s</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>질소 챔버 산소 농도</span><span class="sensor-limit">상한 500 ppm</span></div>
+                <div class="sensor-val good">${d.oxygen_ppm || 360} ppm</div>
+            </div>
+        `;
+        rulHtml = `
+            <div class="pdm-rul-card">
+                <div class="rul-top-row">
+                    <span class="rul-title">플럭스 회수 트랩 포화도 & 클리닝 주기</span>
+                    <span class="rul-days-badge">잔여 D-8</span>
+                </div>
+                <div class="rul-bar-wrap">
+                    <div class="rul-bar-fill" style="width: ${d.flux_trap_level_pct || 42}%;"></div>
+                </div>
+                <div class="rul-sub-info">
+                    <span>냉각 구배: ${d.cooling_rate_c_s || -2.4} ℃/s (급랭 양호)</span>
+                    <span>트랩 포화도: ${d.flux_trap_level_pct || 42}% (70% 도달 시 알림)</span>
+                </div>
+            </div>
+        `;
+    } else if (processId === 'DIP_AOI') {
+        sensorsHtml = `
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>리드 핀 솔더링 품질점수</span><span class="sensor-limit">하한 90.0점</span></div>
+                <div class="sensor-val ${d.pin_soldering_score < 90.0 ? 'crit' : 'good'}">${d.pin_soldering_score || 97.2} pts</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>납 브릿지 쇼트 위험율</span><span class="sensor-limit">상한 5.0%</span></div>
+                <div class="sensor-val good">${d.bridge_risk_pct || 1.8} %</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>부품 들뜸(Lift) 높이</span><span class="sensor-limit">상한 50 μm</span></div>
+                <div class="sensor-val good">${d.lift_height_um || 18} μm</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>부품 기울어짐 각도</span><span class="sensor-limit">상한 2.0°</span></div>
+                <div class="sensor-val good">${d.comp_tilt_deg || 0.4}°</div>
+            </div>
+        `;
+        rulHtml = `
+            <div class="pdm-rul-card">
+                <div class="rul-top-row">
+                    <span class="rul-title">비전 광학계 조명 조도 & 카메라 캘리브레이션</span>
+                    <span class="rul-days-badge">잔여 D-20</span>
+                </div>
+                <div class="rul-bar-wrap">
+                    <div class="rul-bar-fill" style="width: 92%;"></div>
+                </div>
+                <div class="rul-sub-info">
+                    <span>카메라 프레임 레이트: ${d.camera_fps || 59.8} FPS</span>
+                    <span>조명 조도: 5000 Lux (100% 정상)</span>
+                </div>
+            </div>
+        `;
+    } else if (processId === 'WAVE') {
+        sensorsHtml = `
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>솔더팟 용탕 온도</span><span class="sensor-limit">252 ~ 258 ℃</span></div>
+                <div class="sensor-val ${d.pot_temp_c < 250.0 ? 'warn' : 'good'}">${d.pot_temp_c || 255.0} ℃</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>프리히터 예열 온도</span><span class="sensor-limit">120 ~ 145 ℃</span></div>
+                <div class="sensor-val good">${d.preheater_temp_c || 132.5} ℃</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>솔더 웨이브 파고 높이</span><span class="sensor-limit">8.5 ~ 9.5 mm</span></div>
+                <div class="sensor-val good">${d.wave_height_mm || 9.1} mm</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>플럭스 도포 분사량</span><span class="sensor-limit">14 ~ 18 ml/min</span></div>
+                <div class="sensor-val good">${d.flux_amount_ml_min || 16.2} ml/min</div>
+            </div>
+        `;
+        rulHtml = `
+            <div class="pdm-rul-card">
+                <div class="rul-top-row">
+                    <span class="rul-title">솔더팟 드로스(산화 슬러지) 누적율 & 드로스 청소 주기</span>
+                    <span class="rul-days-badge">잔여 D-5</span>
+                </div>
+                <div class="rul-bar-wrap">
+                    <div class="rul-bar-fill ${d.dross_level_pct > 60 ? 'warn' : ''}" style="width: ${d.dross_level_pct || 28.5}%;"></div>
+                </div>
+                <div class="rul-sub-info">
+                    <span>임펠러 펌프: ${d.pump_rpm || 1255} RPM / 속도 ${d.conveyor_speed_m_min || 1.20} m/min</span>
+                    <span>드로스 누적율: ${d.dross_level_pct || 28.5}% (70% 도달 시 청소 알림)</span>
+                </div>
+            </div>
+        `;
+    }
+
+    if (sensorsGrid) sensorsGrid.innerHTML = sensorsHtml;
+    if (rulSection) rulSection.innerHTML = rulHtml;
+
+    if (recommendationEl) {
+        recommendationEl.innerText = d.recommendation || '설비 센서 및 구동 모터 파라미터가 관리한계선(UCL/LCL) 내에서 양호하게 유지되고 있습니다.';
+    }
+
+    drawExpandedModalChart(processId);
+}
+
+// 8. 모달 대형 실시간 파라미터 관리도(SPC/UCL/LCL) 차트 드로잉
+function drawExpandedModalChart(processId) {
+    const canvas = document.getElementById('pdmModalCanvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    const history = pdmHistory[processId] || [];
+    if (history.length < 2) {
+        ctx.fillStyle = '#64748b';
+        ctx.font = '12px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('공정 가동 중 실시간 텔레메트리 수집 대기 중...', w / 2, h / 2);
+        return;
+    }
+
+    const min = Math.min(...history);
+    const max = Math.max(...history);
+    const range = (max - min) === 0 ? 2 : (max - min) * 1.3;
+    const padding = 20;
+
+    const yCenter = h / 2;
+    const yUcl = padding;
+    const yLcl = h - padding;
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+
+    // UCL
+    ctx.beginPath();
+    ctx.moveTo(padding, yUcl);
+    ctx.lineTo(w - padding, yUcl);
+    ctx.stroke();
+
+    // Center
+    ctx.beginPath();
+    ctx.moveTo(padding, yCenter);
+    ctx.lineTo(w - padding, yCenter);
+    ctx.stroke();
+
+    // LCL
+    ctx.beginPath();
+    ctx.moveTo(padding, yLcl);
+    ctx.lineTo(w - padding, yLcl);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '9px JetBrains Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('UCL', w - 4, yUcl + 3);
+    ctx.fillText('CL', w - 4, yCenter + 3);
+    ctx.fillText('LCL', w - 4, yLcl + 3);
+
+    const points = history.map((val, idx) => {
+        const x = padding + (idx / (history.length - 1)) * (w - padding * 2 - 20);
+        const y = h - padding - ((val - min) / range) * (h - padding * 2);
+        return { x, y, val };
+    });
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        const xc = (points[i - 1].x + points[i].x) / 2;
+        const yc = (points[i - 1].y + points[i].y) / 2;
+        ctx.quadraticCurveTo(points[i - 1].x, points[i - 1].y, xc, yc);
+    }
+    ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+
+    points.forEach((p, idx) => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#0f172a';
+        ctx.fill();
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        if (idx >= points.length - 3) {
+            ctx.fillStyle = '#f1f5f9';
+            ctx.font = '10px JetBrains Mono, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(p.val, p.x, p.y - 8);
+        }
+    });
+}
+
+// 9. 실시간 고속 폴링 루프 (0.8초 주기)
 async function pollLiveStream() {
     if (isPollingActive) return;
     isPollingActive = true;
@@ -189,37 +1046,52 @@ async function pollLiveStream() {
 
         if (json.status === 'success' && json.data) {
             const logs = json.data.logs || [];
-            
+            const activeWo = json.data.active_wo || null;
+
+            // 만약 현재 작업지시가 SMT_DONE 상태라면 자삽 라인(Line 1) 설비들은 항상 대기(READY) 보장
+            if (activeWo && activeWo.status === 'SMT_DONE') {
+                const smtIds = ['LASER', 'SPI', 'MOUNTER', 'REFLOW'];
+                smtIds.forEach(id => {
+                    const mac = document.getElementById(`mac-${id}`);
+                    if (mac && !mac.classList.contains('wait')) {
+                        updateMachine(id, 'IDLE', '-', null);
+                    }
+                });
+            } else if (activeWo && activeWo.status === 'DONE') {
+                resetAllMachines('ALL');
+            }
+
             if (logs.length > 0) {
                 logs.forEach(item => {
                     const proc = item.process_name;
                     const isPass = item.result_status;
                     const barcode = item.barcode;
                     const pDataStr = item.process_data;
-                    const pDataObj = pDataStr ? JSON.parse(pDataStr) : null;
+                    let pDataObj = null;
+                    try {
+                        pDataObj = pDataStr ? JSON.parse(pDataStr) : null;
+                    } catch (err) {
+                        pDataObj = null;
+                    }
                     
-                    // 설비 가동 상태 및 실시간 로그 갱신
-                    updateMachine(proc, isPass, barcode, pDataObj);
-                    addLog(proc, isPass, `[${item.barcode_status || 'ING'}] 바코드: ${barcode} ${pDataStr ? JSON.stringify(pDataObj) : ''}`);
+                    // SMT 완료 상태인데 뒤늦게 도착한 SMT 이벤트는 머신 카드를 run으로 바꾸지 않도록 대기 처리
+                    const smtProcs = ['LASER', 'SPI', 'MOUNTER', 'REFLOW'];
+                    if (activeWo && activeWo.status === 'SMT_DONE' && smtProcs.includes(proc)) {
+                        updateMachine(proc, 'IDLE', '-', null);
+                        return;
+                    }
+
+                    if (isPass === 'IDLE' || isPass === 'WAIT' || !barcode || barcode === '-') {
+                        updateMachine(proc, 'IDLE', '-', null);
+                    } else {
+                        updateMachine(proc, isPass, barcode, pDataObj);
+                        addLog(proc, isPass, `[${item.barcode_status || 'ING'}] 바코드: ${barcode} ${pDataStr ? JSON.stringify(pDataObj) : ''}`);
+                    }
                     
                     if (item.target_qty) {
                         currentTarget = parseInt(item.target_qty);
-                        document.getElementById('val-target').innerText = currentTarget;
-                    }
-
-                    // 공정 완료 이벤트 감지
-                    if (item.wo_status === 'SMT_DONE') {
-                        setTimeout(() => {
-                            resetAllMachines();
-                            addLog('SMT_LINE', 'PASS', `작업지시 [${item.wo_id || ''}] 자삽(SMT) 공정 완료 ➔ 수삽(DIP) 대기`);
-                            if (typeof loadWOList === 'function') loadWOList();
-                        }, 1000);
-                    } else if (item.wo_status === 'DONE') {
-                        setTimeout(() => {
-                            resetAllMachines();
-                            addLog('DIP_LINE', 'PASS', `작업지시 [${item.wo_id || ''}] 최종 생산 완료`);
-                            if (typeof loadWOList === 'function') loadWOList();
-                        }, 1000);
+                        const elT = document.getElementById('val-target');
+                        if (elT) elT.innerText = currentTarget;
                     }
                 });
 
@@ -227,7 +1099,6 @@ async function pollLiveStream() {
             }
         }
 
-        // 실시간 KPI 수치 동기화
         await syncKPI();
 
     } catch (e) {
@@ -237,8 +1108,28 @@ async function pollLiveStream() {
     }
 }
 
-// 7. 초기화 및 고속 실시간 루프 가동 (0.8초마다 자동 실행)
+// 10. 초기화 및 실시간 루프 시작
+document.addEventListener('DOMContentLoaded', () => {
+    initIdleHistories();
+    startIdleAmbientLoop();
+});
+
+// 즉시 실행 (DOMContentLoaded 이전 로드 대응)
+initIdleHistories();
+startIdleAmbientLoop();
+
 syncKPI().then(() => {
     pollLiveStream();
     setInterval(pollLiveStream, 800);
+});
+
+// 화면 크기 변경 시 고해상도 즉시 재렌더링
+window.addEventListener('resize', () => {
+    Object.keys(MACHINE_TELEMETRY_SCHEMAS).forEach(id => {
+        const state = machineCurrentState[id];
+        if (state) {
+            drawRadialGauges(id, state.health, state.cycleVal, state.cycleText, state.cycleSub, state.status);
+            drawVerticalBars(id, state.bars, state.status);
+        }
+    });
 });

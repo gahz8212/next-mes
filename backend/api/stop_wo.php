@@ -24,6 +24,17 @@ try {
 
     $pdo->commit();
 
+    // Node-RED 시뮬레이션 중단 요청
+    $nrHost = defined('NODERED_HOST') ? NODERED_HOST : '127.0.0.1';
+    $nrPort = defined('NODERED_PORT') ? NODERED_PORT : 1881;
+    $fp = @fsockopen($nrHost, $nrPort, $errno, $errstr, 0.5);
+    if ($fp) {
+        $stopData = json_encode(["wo_id" => $wo_id]);
+        $out = "POST /stop-sim HTTP/1.1\r\nHost: {$nrHost}:{$nrPort}\r\nContent-Type: application/json\r\nContent-Length: " . strlen($stopData) . "\r\nConnection: Close\r\n\r\n" . $stopData;
+        fwrite($fp, $out);
+        fclose($fp);
+    }
+
     echo json_encode([
         "status" => "success",
         "message" => "작업지시 [{$wo_id}] 가동이 안전하게 중단되고 대기(READY) 상태로 전환되었습니다."

@@ -240,14 +240,15 @@ html, body {
 
 /* ── Left Sidebar (WO Queue) ── */
 .wo-sidebar {
-    width: 300px;
-    min-width: 300px;
+    width: 280px;
+    min-width: 260px;
     background: var(--sidebar-bg);
     border: 1px solid var(--sidebar-border);
     border-radius: var(--radius);
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .sidebar-header {
@@ -429,20 +430,20 @@ html, body {
 .line-machines-row {
     flex: 1;
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: flex-start;
     gap: 10px;
     overflow-x: auto;
-    padding: 4px 0;
+    padding: 4px 2px;
 }
 
-/* Machine Card */
+/* Machine Card - Spacious, High-Legibility Card */
 .machine-card {
     flex: 1;
-    min-width: 120px;
-    max-width: 220px;
+    min-width: 230px;
+    max-width: 290px;
     height: 100%;
-    min-height: 80px;
+    min-height: 245px;
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
@@ -546,16 +547,61 @@ html, body {
     border-top: 1px dashed rgba(255, 255, 255, 0.08);
 }
 
+.array-strip-left {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    overflow: hidden;
+}
+
 .array-strip-label {
     font-size: 8px;
     color: var(--text-muted);
     font-weight: 700;
     letter-spacing: 0.03em;
+    flex-shrink: 0;
+}
+
+.mac-defect-tag {
+    display: inline-flex;
+    align-items: center;
+}
+
+.defect-badge-highlight {
+    font-size: 8px;
+    font-family: 'JetBrains Mono', sans-serif;
+    font-weight: 700;
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.3);
+    border: 1px solid rgba(239, 68, 68, 0.7);
+    border-radius: 3px;
+    padding: 1px 4px;
+    animation: defectBadgePulse 1s infinite alternate;
+    white-space: nowrap;
+}
+
+.pass-badge-chip {
+    font-size: 8px;
+    font-family: 'JetBrains Mono', sans-serif;
+    font-weight: 600;
+    color: #6ee7b7;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 3px;
+    padding: 0 4px;
+    white-space: nowrap;
+}
+
+@keyframes defectBadgePulse {
+    from { opacity: 0.85; box-shadow: 0 0 3px rgba(239, 68, 68, 0.4); }
+    to { opacity: 1; box-shadow: 0 0 8px rgba(239, 68, 68, 0.8); }
 }
 
 .array-cells-wrap {
     display: flex;
     gap: 3px;
+    flex-shrink: 0;
 }
 
 .cell-chip {
@@ -685,10 +731,12 @@ html, body {
     flex-shrink: 0;
 }
 
-/* ── Bottom Event Log Terminal ── */
-.event-terminal {
-    height: 180px;
-    min-height: 160px;
+/* ── Right-Side Vertical Event Log Terminal ── */
+.event-terminal-vertical {
+    width: 350px;
+    min-width: 310px;
+    max-width: 380px;
+    height: 100%;
     background: var(--sidebar-bg);
     border: 1px solid var(--sidebar-border);
     border-radius: var(--radius);
@@ -699,36 +747,59 @@ html, body {
 }
 
 .terminal-header {
-    padding: 8px 16px;
+    padding: 10px 14px;
     background: var(--surface);
     border-bottom: 1px solid var(--sidebar-border);
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 8px;
     flex-shrink: 0;
 }
 
-.terminal-title {
-    font-size: 12px;
-    font-weight: 700;
-    color: #e2e8f0;
-}
-
-.terminal-filters {
+.terminal-title-wrap {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
+.terminal-live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+    animation: livePulseDot 1.5s infinite;
+}
+
+@keyframes livePulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.8); }
+}
+
+.terminal-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #e2e8f0;
+    letter-spacing: -0.01em;
+}
+
+.terminal-filters {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .custom-filter-select {
+    flex: 1;
     background: var(--surface2);
     border: 1px solid var(--border);
     color: #e2e8f0;
-    padding: 3px 8px;
+    padding: 4px 7px;
     border-radius: var(--radius-sm);
     font-size: 11px;
     cursor: pointer;
     outline: none;
+    transition: border-color 0.15s;
 }
 .custom-filter-select:focus {
     border-color: var(--accent);
@@ -737,13 +808,13 @@ html, body {
 .terminal-stream {
     flex: 1 1 auto;
     overflow-y: auto;
-    padding: 8px 14px;
+    padding: 8px 10px;
     list-style: none;
-    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-    font-size: 11.5px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 11px;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 6px;
 }
 
 .terminal-stream::-webkit-scrollbar { width: 4px; }
@@ -751,46 +822,57 @@ html, body {
 .terminal-stream::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 4px; }
 
 .terminal-stream li {
-    padding: 3px 6px;
-    border-radius: 3px;
-    background: rgba(255, 255, 255, 0.02);
+    padding: 6px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.terminal-stream li:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.log-row-top {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .log-time {
     color: var(--text-muted);
-    font-size: 10.5px;
-    flex-shrink: 0;
+    font-size: 10px;
 }
 
 .log-tag {
-    font-size: 10px;
+    font-size: 9.5px;
     font-weight: 700;
     padding: 1px 5px;
     border-radius: 3px;
     background: rgba(59, 130, 246, 0.15);
     color: #93c5fd;
-    flex-shrink: 0;
+    letter-spacing: 0.02em;
 }
 
 .log-res {
-    font-size: 10px;
+    font-size: 9.5px;
     font-weight: 800;
     padding: 1px 5px;
     border-radius: 3px;
-    flex-shrink: 0;
+    margin-left: auto;
 }
 .log-res.pass { background: var(--success-light); color: #34d399; }
 .log-res.fail { background: var(--danger-light); color: #f87171; }
 
 .log-msg {
     color: var(--text-dim);
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 10.5px;
+    word-break: break-all;
+    line-height: 1.4;
 }
 
 /* ── Feeder Setup Modal & Poka-Yoke Interface ── */
@@ -1120,4 +1202,527 @@ html, body {
     border: 1px solid var(--border);
     cursor: not-allowed;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Machine Card Real-Time Telemetry: Top Gauge & Bottom 4-Bars
+   ═══════════════════════════════════════════════════════════════════ */
+.mac-dual-spark-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 5px 0;
+    min-height: 146px;
+}
+
+.mac-spark-box {
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 5px;
+    padding: 2px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.mac-spark-box.spark-gauge-box {
+    flex: 1;
+    min-height: 46px;
+    padding: 0 2px;
+    border-left: 3px solid #10b981;
+}
+
+.mac-spark-box.spark-bars-box {
+    flex: 1.55;
+    min-height: 84px;
+    padding: 2px;
+    border-left: 3px solid #38bdf8;
+}
+
+.gauge-canvas {
+    width: 100%;
+    height: 100%;
+    min-height: 44px;
+    display: block;
+}
+
+.bars-canvas {
+    width: 100%;
+    height: 100%;
+    min-height: 82px;
+    display: block;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   설비 정밀 예지보전(PdM) 진단 & 물리량 분석 모달 스타일
+   ═══════════════════════════════════════════════════════════════════ */
+.pdm-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 10, 20, 0.82);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    animation: pdmFadeIn 0.2s ease;
+}
+
+.pdm-modal-overlay.open {
+    display: flex;
+}
+
+@keyframes pdmFadeIn {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.pdm-modal-box {
+    background: #0f172a;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(59, 130, 246, 0.15);
+    border-radius: 14px;
+    width: 620px;
+    max-width: 95vw;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.pdm-modal-header {
+    padding: 16px 20px;
+    background: #131f33;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.pdm-header-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pdm-machine-badge {
+    padding: 5px 10px;
+    background: rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    color: #60a5fa;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.pdm-modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #f8fafc;
+    letter-spacing: -0.01em;
+}
+
+.pdm-modal-sub {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 1px;
+}
+
+.btn-close-pdm {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-dim);
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    transition: all 0.15s;
+}
+.btn-close-pdm:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.pdm-modal-body {
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow-y: auto;
+}
+
+/* Health Card */
+.pdm-health-card {
+    background: #172338;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+}
+
+.health-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.health-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+}
+
+.health-score-val {
+    font-size: 26px;
+    font-weight: 800;
+    color: #34d399;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.score-unit {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.health-status-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 4px;
+}
+.health-status-tag.tag-normal  { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); }
+.health-status-tag.tag-caution { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4); }
+.health-status-tag.tag-warning { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
+
+.health-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 3px;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.health-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #34d399);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+
+/* 4-Grid Sensors */
+.pdm-sensors-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.pdm-sensor-card {
+    background: #111c2e;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sensor-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10.5px;
+    color: var(--text-dim);
+    font-weight: 600;
+}
+
+.sensor-limit {
+    font-size: 9.5px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.sensor-val {
+    font-size: 17px;
+    font-weight: 800;
+    color: #f1f5f9;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.sensor-val.good { color: #34d399; }
+.sensor-val.warn { color: #fbbf24; }
+.sensor-val.crit { color: #f87171; }
+
+/* Chart Section */
+.pdm-chart-section {
+    background: #111c2e;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.pdm-chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pdm-chart-title {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #cbd5e1;
+}
+
+.pdm-sampling-rate {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+#pdmModalCanvas {
+    width: 100%;
+    height: 120px;
+    display: block;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+}
+
+/* AI Recommendation */
+.pdm-ai-guide {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.guide-icon {
+    font-size: 16px;
+    line-height: 1.2;
+}
+
+.guide-title {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #93c5fd;
+}
+
+.guide-text {
+    font-size: 11.5px;
+    color: #e2e8f0;
+    margin-top: 2px;
+    line-height: 1.4;
+}
+
+.pdm-modal-footer {
+    padding: 12px 20px;
+    background: #131f33;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.pdm-footer-note {
+    font-size: 10.5px;
+    color: var(--text-muted);
+}
+
+.btn-pdm-confirm {
+    padding: 7px 18px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-pdm-confirm:hover {
+    background: var(--accent-hover);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   라인 종합 설비 효율 (OEE) & 신뢰성 지표 스트립 스타일
+   ═══════════════════════════════════════════════════════════════════ */
+.line-oee-strip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.oee-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.oee-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.oee-val-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.oee-val {
+    font-size: 17px;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.oee-val.accent { color: #60a5fa; }
+.oee-val.good   { color: #34d399; }
+.oee-val.warn   { color: #fbbf24; }
+
+.oee-unit-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.oee-tag {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.oee-tag-good {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(16, 185, 129, 0.2);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.oee-tag-idle {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(100, 116, 139, 0.2);
+    color: #cbd5e1;
+    border: 1px solid rgba(100, 116, 139, 0.3);
+}
+
+.oee-sub {
+    font-size: 10px;
+    color: var(--text-dim);
+}
+
+.oee-divider {
+    width: 1px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PdM 소모품 잔여 수명(RUL) & 예방정비 D-Day 스트립 스타일
+   ═══════════════════════════════════════════════════════════════════ */
+.pdm-rul-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #111c2e;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 12px 14px;
+}
+
+.pdm-rul-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.rul-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+}
+
+.rul-title {
+    color: #cbd5e1;
+    font-weight: 600;
+}
+
+.rul-days-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.rul-bar-wrap {
+    width: 100%;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.rul-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #3b82f6, #38bdf8);
+    transition: width 0.3s ease;
+}
+
+.rul-bar-fill.warn {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.rul-sub-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9.5px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+
 

@@ -22,6 +22,8 @@ services:
     restart: always
     ports:
       - "1881:1880" # 기존 설치된 1880과 겹치지 않게 1881로 접속
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - nodered_data:/data
 

@@ -24,157 +24,138 @@ try {
         throw new Exception("잘못된 JSON 형식입니다.");
     }
 
-    $barcode = $data['barcode'] ?? null;
-    $processName = $data['process_name'] ?? null;
-    $resultStatus = $data['result_status'] ?? 'PASS'; // 기본값 추가
-    $processData = $data['process_data'] ?? null;
-
-    if (empty($barcode) || empty($processName)) {
-        http_response_code(400);
-        echo json_encode([
-            "status" => "error",
-            "message" => "필수 데이터가 누락되었습니다."
-        ], JSON_UNESCAPED_UNICODE);
-        exit();
+    // 단일 이벤트 또는 일괄(Batch) 이벤트 정규화
+    $events = [];
+    if (isset($data['events']) && is_array($data['events'])) {
+        $events = $data['events'];
+    } else if (isset($data['process_name'])) {
+        $events = [$data];
+    } else {
+        throw new Exception("이벤트 데이터가 비어있습니다.");
     }
 
-    // 트랜잭션 시작
     $pdo->beginTransaction();
 
-    // 바코드 유효성 검증
-    $stmt = $pdo->prepare("SELECT status, wo_id FROM barcode_master WHERE barcode = :barcode");
-    $stmt->execute([':barcode' => $barcode]);
-    $barcodeRow = $stmt->fetch(PDO::FETCH_ASSOC);
+    $processedCount = 0;
+    $woId = $data['wo_id'] ?? null;
 
-    if (!$barcodeRow) {
-        // 동적 재생산을 위해 등록되지 않은 바코드가 들어오면 자동 등록 (마지막 '-' 이전의 문자열을 wo_id로 추출)
-        $extractedWoId = substr($barcode, 0, strrpos($barcode, '-'));
-        $stmt = $pdo->prepare("INSERT INTO barcode_master (barcode, wo_id, status) VALUES (:barcode, (SELECT wo_id FROM work_order WHERE wo_id = :wo_id LIMIT 1), 'WAIT')");
-        $stmt->execute([':barcode' => $barcode, ':wo_id' => $extractedWoId]);
-        
-        // 다시 조회
+    foreach ($events as $ev) {
+        $barcode = $ev['barcode'] ?? null;
+        $processName = $ev['process_name'] ?? null;
+        $resultStatus = $ev['result_status'] ?? 'PASS';
+        $processData = $ev['process_data'] ?? null;
+
+        if (empty($processName)) continue;
+
+        // 1. 대기(IDLE/WAIT) 이벤트 처리
+        if ($resultStatus === 'IDLE' || $resultStatus === 'WAIT' || empty($barcode) || $barcode === '-') {
+            $historyStmt = $pdo->prepare("
+                INSERT INTO barcode_history (barcode, process_name, result_status, process_data, created_at) 
+                VALUES (:barcode, :process_name, :result_status, :process_data, NOW())
+            ");
+            $historyStmt->execute([
+                ':barcode' => '-',
+                ':process_name' => $processName,
+                ':result_status' => 'IDLE',
+                ':process_data' => $processData ? json_encode($processData) : null
+            ]);
+            $processedCount++;
+            continue;
+        }
+
+        // 2. 바코드 마스터 검증 및 등록
         $stmt = $pdo->prepare("SELECT status, wo_id FROM barcode_master WHERE barcode = :barcode");
         $stmt->execute([':barcode' => $barcode]);
         $barcodeRow = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$barcodeRow || empty($barcodeRow['wo_id'])) {
-            throw new Exception("유효하지 않은 바코드 형식입니다: " . $barcode);
+
+        if (!$barcodeRow) {
+            $extractedWoId = $woId ?: substr($barcode, 0, strrpos($barcode, '-'));
+            $stmt = $pdo->prepare("INSERT INTO barcode_master (barcode, wo_id, status) VALUES (:barcode, (SELECT wo_id FROM work_order WHERE wo_id = :wo_id LIMIT 1), 'WAIT')");
+            $stmt->execute([':barcode' => $barcode, ':wo_id' => $extractedWoId]);
+
+            $stmt = $pdo->prepare("SELECT status, wo_id FROM barcode_master WHERE barcode = :barcode");
+            $stmt->execute([':barcode' => $barcode]);
+            $barcodeRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$barcodeRow || empty($barcodeRow['wo_id'])) {
+                continue;
+            }
         }
+
+        $currentStatus = $barcodeRow['status'];
+        $bWoId = $barcodeRow["wo_id"];
+        if (!$woId) $woId = $bWoId;
+        $nextStatus = "";
+
+        // 3. 라우팅 포카요케
+        switch ($processName) {
+            case 'LASER':
+                $nextStatus = 'IN_PROCESS';
+                break;
+            case 'SPI':
+                $nextStatus = 'IN_PROCESS';
+                break;
+            case 'MOUNTER':
+                $nextStatus = 'TOP_DONE';
+                break;
+            case 'REFLOW':
+                $nextStatus = 'BOTTOM_DONE';
+                break;
+            case 'DIP_AOI':
+                $nextStatus = 'TEST_PASS';
+                break;
+            case 'WAVE':
+                $nextStatus = 'SHIPPING';
+                break;
+            default:
+                continue 2;
+        }
+
+        if ($resultStatus === 'FAIL') {
+            $nextStatus = 'FAIL';
+        }
+
+        // 4. 상태 업데이트
+        $updateStmt = $pdo->prepare("UPDATE barcode_master SET status = :status WHERE barcode = :barcode");
+        $updateStmt->execute([':status' => $nextStatus, ':barcode' => $barcode]);
+
+        // 5. 이력 기록
+        $historyStmt = $pdo->prepare("
+            INSERT INTO barcode_history (barcode, process_name, result_status, process_data, created_at) 
+            VALUES (:barcode, :process_name, :result_status, :process_data, NOW())
+        ");
+        $historyStmt->execute([
+            ':barcode' => $barcode,
+            ':process_name' => $processName,
+            ':result_status' => $resultStatus,
+            ':process_data' => $processData ? json_encode($processData) : null
+        ]);
+
+        $processedCount++;
     }
-    
-    $currentStatus = $barcodeRow['status'];
-    $woId = $barcodeRow["wo_id"];
-    $nextStatus = "";
 
-    // 2. 라우팅 검증 (포카요케) - 설비 단위(Micro Tracking)
-    switch ($processName) {
-        case 'LASER':
-            if ($currentStatus !== 'WAIT' && $currentStatus !== 'IN_PROCESS') {
-                throw new Exception("공정 순서 오류: 바코드가 대기(WAIT) 상태가 아닙니다. 현재: " . $currentStatus);
-            }
-            $nextStatus = 'IN_PROCESS';
-            break;
-        case 'SPI':
-            if ($currentStatus !== 'IN_PROCESS') {
-                throw new Exception("공정 순서 오류: 이전 공정(LASER)이 완료되지 않았습니다.");
-            }
-            $nextStatus = 'IN_PROCESS'; // 편의상 묶음
-            break;
-        case 'MOUNTER':
-            if ($currentStatus !== 'IN_PROCESS') {
-                throw new Exception("공정 순서 오류: 이전 공정(SPI)이 완료되지 않았습니다.");
-            }
-            $nextStatus = 'TOP_DONE';
-            break;
-        case 'REFLOW':
-            if ($currentStatus !== 'TOP_DONE') {
-                throw new Exception("공정 순서 오류: 이전 공정(MOUNTER)이 완료되지 않았습니다.");
-            }
-            $nextStatus = 'BOTTOM_DONE';
-            break;
-        case 'DIP_AOI':
-            if ($currentStatus !== 'BOTTOM_DONE') {
-                throw new Exception("공정 순서 오류: 이전 공정(REFLOW)이 완료되지 않았습니다.");
-            }
-            $nextStatus = 'TEST_PASS';
-            break;
-        case 'WAVE':
-            if ($currentStatus !== 'TEST_PASS') {
-                throw new Exception("공정 순서 오류: 이전 공정(DIP_AOI)이 완료되지 않았습니다.");
-            }
-            $nextStatus = 'SHIPPING';
-            break;
-        default:
-            throw new Exception("알 수 없는 공정명입니다: " . $processName);
-    }
-
-    if ($resultStatus === 'FAIL') {
-        $nextStatus = 'FAIL';
-    }
-
-    // 3. 상태 업데이트
-    $updateStmt = $pdo->prepare("UPDATE barcode_master SET status = :status WHERE barcode = :barcode");
-    $updateStmt->execute([':status' => $nextStatus, ':barcode' => $barcode]);
-
-    // 4. 이력 기록
-    $historyStmt = $pdo->prepare("
-        INSERT INTO barcode_history (barcode, process_name, result_status, process_data, created_at) 
-        VALUES (:barcode, :process_name, :result_status, :process_data, NOW())
-    ");
-    $historyStmt->execute([
-        ':barcode' => $barcode,
-        ':process_name' => $processName,
-        ':result_status' => $resultStatus,
-        ':process_data' => $processData ? json_encode($processData) : null
-    ]);
-
-    // 5. 작업지시(WO) 완료 체크
-    $woStmt = $pdo->prepare("SELECT wo_id FROM barcode_master WHERE barcode = :barcode");
-    $woStmt->execute([':barcode' => $barcode]);
-    $woId = $woStmt->fetchColumn();
-
-    if ($woId) {
-        $chkStmt = $pdo->prepare("SELECT target_qty FROM work_order WHERE wo_id = :wo_id");
+    // 6. 작업지시(WO) 완료 판정
+    // 마지막 바코드가 최종 설비에 진입하자마자가 아니라, 최종 설비 가공 완료 후 라인에서 완전히 배출(is_complete)되었을 때 완료 전환
+    $isComplete = !empty($data['is_complete']);
+    if ($woId && $isComplete) {
+        $chkStmt = $pdo->prepare("SELECT target_qty, status FROM work_order WHERE wo_id = :wo_id");
         $chkStmt->execute([':wo_id' => $woId]);
-        $targetQty = $chkStmt->fetchColumn();
+        $woInfo = $chkStmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($targetQty) {
-            if ($nextStatus === 'BOTTOM_DONE' || $nextStatus === 'FAIL') {
-                // 자삽(SMT) 완료 체크
-                $smtStmt = $pdo->prepare("SELECT COUNT(*) FROM barcode_master WHERE wo_id = :wo_id AND status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING', 'FAIL')");
-                $smtStmt->execute([':wo_id' => $woId]);
-                if ($smtStmt->fetchColumn() >= $targetQty) {
-                    $pdo->prepare("UPDATE work_order SET status = 'SMT_DONE' WHERE wo_id = :wo_id AND status = 'IN_PROGRESS'")
-                        ->execute([':wo_id' => $woId]);
-                }
-            }
-            if ($nextStatus === 'SHIPPING' || $nextStatus === 'FAIL') {
-                // 수삽(DIP) 완료 체크
-                $dipStmt = $pdo->prepare("SELECT COUNT(*) FROM barcode_master WHERE wo_id = :wo_id AND status IN ('SHIPPING', 'FAIL')");
-                $dipStmt->execute([':wo_id' => $woId]);
-                if ($dipStmt->fetchColumn() >= $targetQty) {
-                    $pdo->prepare("UPDATE work_order SET status = 'DONE', completed_at = NOW() WHERE wo_id = :wo_id")
-                        ->execute([':wo_id' => $woId]);
-                }
+        if ($woInfo) {
+            $simMode = $data['sim_mode'] ?? 'SMT';
+            if ($simMode === 'SMT' && $woInfo['status'] === 'IN_PROGRESS') {
+                $pdo->prepare("UPDATE work_order SET status = 'SMT_DONE' WHERE wo_id = :wo_id")
+                    ->execute([':wo_id' => $woId]);
+            } else if ($simMode === 'DIP' && ($woInfo['status'] === 'DIP_IN_PROGRESS' || $woInfo['status'] === 'SMT_DONE')) {
+                $pdo->prepare("UPDATE work_order SET status = 'DONE', completed_at = NOW() WHERE wo_id = :wo_id")
+                    ->execute([':wo_id' => $woId]);
             }
         }
     }
 
-    // 커밋
     $pdo->commit();
-
-    http_response_code(200);
-    echo json_encode([
-        "status" => "success",
-        "message" => "공정 이력이 성공적으로 기록되었습니다.",
-        "data" => [
-            "barcode" => $barcode,
-            "process_name" => $processName,
-            "result_status" => $resultStatus,
-            "new_status" => $nextStatus
-        ]
-    ], JSON_UNESCAPED_UNICODE);
-
+    echo json_encode(["status" => "success", "processed_events" => $processedCount], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();

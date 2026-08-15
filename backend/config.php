@@ -11,5 +11,9 @@ try {
     echo json_encode(["status" => "error", "message" => "DB Connection Failed: " . $e->getMessage()], JSON_UNESCAPED_UNICODE);
     exit;
 }
+
+// Node-RED 설정 (Docker 기본 포트: 1881)
+if (!defined('NODERED_HOST')) define('NODERED_HOST', getenv('NODERED_HOST') ?: '127.0.0.1');
+if (!defined('NODERED_PORT')) define('NODERED_PORT', intval(getenv('NODERED_PORT') ?: 1881));
 ?>
 
