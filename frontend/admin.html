@@ -1030,6 +1030,163 @@
         .noti-item-title { font-size: 12px; font-weight: 700; color: #e2e8f0; }
         .noti-item-time { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
         .noti-item-msg { font-size: 11.5px; color: var(--text-dim); line-height: 1.4; }
+
+        /* ── Collapsible Sidebars System for Admin ── */
+        .sidebar {
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s;
+        }
+        .sidebar.collapsed {
+            width: 0 !important;
+            min-width: 0 !important;
+            max-width: 0 !important;
+            opacity: 0;
+            pointer-events: none;
+            border-right: none;
+        }
+        
+        .main-area {
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .kpi-right-sidebar {
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s, margin 0.3s;
+        }
+        .kpi-right-sidebar.collapsed {
+            width: 0 !important;
+            min-width: 0 !important;
+            opacity: 0;
+            pointer-events: none;
+            margin-left: -16px; /* gap 제거 */
+        }
+        .kpi-right-sidebar .board-col {
+            height: auto;
+        }
+
+        /* Toggle buttons and floating tabs */
+        .sidebar-toggle-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            padding: 3px 6px;
+            transition: all 0.15s;
+            font-weight: bold;
+        }
+        .sidebar-toggle-btn:hover {
+            background: var(--surface);
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .floating-toggle-tab {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--sidebar-bg);
+            border: 1px solid var(--sidebar-border);
+            color: var(--text-dim);
+            padding: 14px 6px;
+            cursor: pointer;
+            z-index: 499; /* dropdown 이하 */
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+            transition: all 0.2s ease;
+        }
+        .floating-toggle-tab:hover {
+            background: var(--surface);
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 4px 25px rgba(59, 130, 246, 0.2);
+        }
+        .floating-toggle-tab.left {
+            left: 0;
+            border-left: none;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+        .floating-toggle-tab.right {
+            right: 0;
+            border-right: none;
+            border-radius: var(--radius) 0 0 var(--radius);
+        }
+        .floating-toggle-tab.visible {
+            display: flex;
+        }
+        .floating-tab-arrow {
+            font-size: 9px;
+            color: var(--accent);
+        }
+
+        /* ── Compact styling for Order Modal to avoid scrollbars ── */
+        #orderModal .modal-box {
+            padding: 16px 24px;
+        }
+        #orderModal .modal-header {
+            margin-bottom: 12px;
+        }
+        #orderModal .form-group {
+            margin-bottom: 10px;
+        }
+        #orderModal .form-label {
+            margin-bottom: 4px;
+        }
+        #orderModal .form-control {
+            padding: 8px 12px;
+            font-size: 13.5px;
+        }
+        #orderModal .btn-submit {
+            margin-top: 4px;
+            padding: 10px;
+        }
+        #orderModal select.form-control {
+            color: #111;
+            background: #f8fafc;
+        }
+        #orderModal select.form-control option {
+            color: #111;
+            background: #fff;
+        }
+
+        /* ── Compact styling for WO Modal to avoid scrollbars ── */
+        #woModal .modal-box {
+            padding: 16px 24px;
+        }
+        #woModal .modal-header {
+            margin-bottom: 12px;
+        }
+        #woModal .form-group {
+            margin-bottom: 10px;
+        }
+        #woModal .form-label {
+            margin-bottom: 4px;
+        }
+        #woModal .form-control {
+            padding: 8px 12px;
+            font-size: 13.5px;
+        }
+        #woModal .btn-submit {
+            margin-top: 4px;
+            padding: 10px;
+        }
+        #woModal select.form-control {
+            color: #111;
+            background: #f8fafc;
+        }
+        #woModal select.form-control option {
+            color: #111;
+            background: #fff;
+        }
     </style>
 </head>
 <body>
@@ -1042,9 +1199,12 @@
     <!-- ════════ SIDEBAR ════════ -->
     <nav class="sidebar" id="sidebar">
         <div class="sidebar-brand">
-            <div class="brand-logo">
-                <div class="brand-icon">⚡</div>
-                <div class="brand-name">SMT MES</div>
+            <div class="brand-logo" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="brand-icon">⚡</div>
+                    <div class="brand-name">SMT MES</div>
+                </div>
+                <button class="sidebar-toggle-btn" onclick="toggleAdminSidebar('left')" title="메뉴 접기">◀</button>
             </div>
             <div class="brand-sub">SMT / DIP 생산라인 관리</div>
         </div>
@@ -1786,9 +1946,9 @@
                 </div>
 
                 <!-- 2 Column Chart Area -->
-                <div style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:16px; padding:0 32px 16px; flex:1; min-height:0; overflow:auto;">
+                <div class="kpi-charts-wrapper" style="display:flex; gap:16px; padding:0 32px 16px; flex:1; min-height:0; overflow:hidden;">
                     <!-- Daily Trend Bar Chart -->
-                    <div class="board-col" style="overflow:visible;">
+                    <div class="board-col kpi-left-chart" style="flex:1 1 auto; min-width:0; overflow:visible;">
                         <div class="board-col-header">
                             <div class="board-col-title">
                                 <div class="col-dot blue"></div>
@@ -1801,13 +1961,16 @@
                     </div>
 
                     <!-- Line Status & Process Split -->
-                    <div style="display:flex; flex-direction:column; gap:16px;">
+                    <div class="kpi-right-sidebar" id="kpiRightSidebar" style="display:flex; flex-direction:column; gap:16px; width:380px; min-width:320px; flex-shrink:0;">
                         <!-- SMT Line Status Card -->
                         <div class="board-col" style="flex:none;">
                             <div class="board-col-header">
-                                <div class="board-col-title">
-                                    <div class="col-dot green"></div>
-                                    SMT 라인 실시간 가동 상태
+                                <div class="board-col-title" style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        <div class="col-dot green"></div>
+                                        SMT 라인 실시간 가동 상태
+                                    </div>
+                                    <button class="sidebar-toggle-btn" onclick="toggleAdminSidebar('right')" title="우측 패널 접기">▶</button>
                                 </div>
                             </div>
                             <div style="padding:14px;" id="kpi-lines-container">
@@ -3743,6 +3906,17 @@ function showPage(pageId, navBtn) {
     if (pageId === 'quality-std') loadQualityStds();
     if (pageId === 'log')         loadSystemLogs();
 
+    // 7. 우측 플로팅 탭 표시 여부 분기 (KPI 페이지이고 우측 사이드바가 접혀있을 때만 표시)
+    const tabRight = document.getElementById('floatingTabRight');
+    const sidebarRight = document.getElementById('kpiRightSidebar');
+    if (tabRight && sidebarRight) {
+        if (pageId === 'kpi' && sidebarRight.classList.contains('collapsed')) {
+            tabRight.classList.add('visible');
+        } else {
+            tabRight.classList.remove('visible');
+        }
+    }
+
     closeSidebar();
 }
 window.showPage = showPage;
@@ -3766,6 +3940,30 @@ initMaterialDates();
 initShipmentDates();
 init();
 loadNotifications();
+// 사이드바 접기/열기 함수
+function toggleAdminSidebar(side) {
+    if (side === 'left') {
+        const sidebar = document.getElementById('sidebar');
+        const tab = document.getElementById('floatingTabLeft');
+        sidebar.classList.toggle('collapsed');
+        if (sidebar.classList.contains('collapsed')) {
+            tab.classList.add('visible');
+        } else {
+            tab.classList.remove('visible');
+        }
+    } else if (side === 'right') {
+        const sidebar = document.getElementById('kpiRightSidebar');
+        const tab = document.getElementById('floatingTabRight');
+        if (sidebar) {
+            sidebar.classList.toggle('collapsed');
+            if (sidebar.classList.contains('collapsed')) {
+                tab.classList.add('visible');
+            } else {
+                tab.classList.remove('visible');
+            }
+        }
+    }
+}
 </script>
 
 <!-- ════════ MODAL: 수주 (PO) 등록/수정 ════════ -->
@@ -4089,6 +4287,16 @@ loadNotifications();
     </div>
 </div>
 
+    <!-- 좌/우 사이드바가 접혔을 때 화면 가장자리에 표시되는 플로팅 탭 -->
+    <div class="floating-toggle-tab left" id="floatingTabLeft" onclick="toggleAdminSidebar('left')" title="메뉴 열기">
+        <span class="floating-tab-arrow">▶</span>
+        <span>메뉴 열기</span>
+    </div>
+
+    <div class="floating-toggle-tab right" id="floatingTabRight" onclick="toggleAdminSidebar('right')" title="우측 분석 패널 열기">
+        <span class="floating-tab-arrow">◀</span>
+        <span>우측 분석 패널 열기</span>
+    </div>
 </body>
 </html>
 

@@ -155,3 +155,34 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
 | **RoadRunner / Swoole** | 상주 메모리 기반 비동기 코루틴 PHP 엔진 | 매우 높음 | • **기존 PHP 비즈니스 로직을 100% 재활용**<br>• FastCGI 오버헤드 없이 기존 대비 5~10배 처리 성능 |
 | **Node.js / Go (Golang)** | 비동기 이벤트 루프 (Node.js) / 경량 고루틴 (Go) | 극도로 높음 | • 실시간 센서 스트리밍 및 WebSocket 대시보드에 최적화<br>• Go의 경우 단일 바이너리 배포 및 엣지 게이트웨이로 우수 |
 | **MQTT + 메시지 큐 (EDA)** | 산업용 경량 프로토콜(MQTT) + 백엔드 분산 큐 버퍼링 | 최고 (무결성) | • 공장 네트워크 단절이나 DB 지연 시에도 센서 패킷 유실 0%<br>• 대규모 다중 설비 초고속 데이터 수집의 산업 표준 |
+
+---
+
+## 📝 2026-08-15 작업 이력 (작업자: Antigravity / Claude Sonnet 4.6)
+
+### 1. Docker DB InnoDB 손상 및 컨테이너 무한 재부팅 해결
+- **원인**: 이전 포트 충돌 사건으로 인해 `smt_mes_db` 컨테이너가 `Cannot create redo log files because data files are corrupt` 오류로 무한 재기동 반복 → 모든 API 응답이 `SQLSTATE[HY000] [2002] Connection timed out` 반환.
+- **증상**: 수주 등록 및 작업지시 등록 버튼을 눌러도 모달창이 열리지 않음. (거래처 목록 API 실패 → JS 예외 발생 → 모달 오픈 코드 미도달)
+- **해결**: 기존 손상된 도커 볼륨(`next-mes_db_data`)을 완전 삭제 후 컨테이너 재배포.
+  ```bash
+  docker compose down
+  docker volume rm next-mes_db_data
+  docker compose up -d
+  ```
+
+### 2. 통합 DB 스키마 재정비 (`database/init/02_DB_Schema.sql`)
+- 기존에 초기 스키마(`02_DB_Schema.sql`)와 Phase 1~3 마이그레이션 파일이 분리되어 있어 신규 볼륨 생성 시 `company`, `feeder_setup`, `users`, `sales_order`, `system_notification` 등 테이블 누락 문제 발생.
+- **모든 테이블 및 마이그레이션을 `02_DB_Schema.sql` 단일 파일로 통합** (18개 테이블, 시드 데이터 포함).
+- `SET NAMES utf8mb4;` 구문을 최상단에 추가하여 Docker 초기화 시 한글 데이터 이중 인코딩/깨짐 방지.
+- 포함된 주요 테이블: `company`, `item`, `product_master`, `bom_master`, `bom_detail`, `work_order`, `line_status`, `barcode_master`, `barcode_history`, `reel_master`, `feeder_setup`, `material_inout`, `shipment`, `users`, `quality_standard`, `sales_order`, `system_notification`, `system_log`
+
+### 3. UI 개선 — 수주 등록 / 작업지시 등록 모달 (`frontend/admin.html`)
+- **스크롤바 제거**: `#orderModal`, `#woModal` 전용 컴팩트 CSS 추가
+  - 모달 박스 패딩 축소: `28px` → `16px 24px`
+  - 폼 그룹 마진 축소: `16px` → `10px`
+  - 인풋 패딩 축소: `10px 14px` → `8px 12px`
+  - 저장 버튼 패딩 축소 및 상단 마진 최적화
+- **드롭다운 텍스트 가독성 개선**: `select.form-control` 텍스트 색상 및 배경 변경
+  - 텍스트: `#e2e8f0` (흰색) → `#111` (검정)
+  - 배경: `var(--surface2)` (어두운 배경) → `#f8fafc` (밝은 배경)
+

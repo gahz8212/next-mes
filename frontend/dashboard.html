@@ -71,10 +71,13 @@
     <!-- 메인 레이아웃 바디 -->
     <div class="app-body">
         <!-- 좌측 사이드바: 작업지시 대기열 -->
-        <aside class="wo-sidebar">
+        <aside class="wo-sidebar" id="woSidebar">
             <div class="sidebar-header">
                 <span class="sidebar-title">작업지시 대기열</span>
-                <span class="sidebar-count-badge" id="woCountBadge">0건</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="sidebar-count-badge" id="woCountBadge">0건</span>
+                    <button class="sidebar-toggle-btn" onclick="toggleSidebar('left')" title="대기열 접기">◀</button>
+                </div>
             </div>
             <div class="wo-list-scroll" id="wo-list">
                 <!-- 동적 렌더링 -->
@@ -324,11 +327,14 @@
         </main>
 
         <!-- 우측 사이드바: 설비 실시간 센서 이벤트 스트림 (수직 형태) -->
-        <aside class="event-terminal-vertical">
+        <aside class="event-terminal-vertical" id="eventTerminal">
             <div class="terminal-header">
-                <div class="terminal-title-wrap">
-                    <span class="terminal-live-dot"></span>
-                    <span class="terminal-title">실시간 센서 이벤트 스트림</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div class="terminal-title-wrap">
+                        <span class="terminal-live-dot"></span>
+                        <span class="terminal-title">실시간 센서 이벤트 스트림</span>
+                    </div>
+                    <button class="sidebar-toggle-btn" onclick="toggleSidebar('right')" title="이벤트 로그 접기">▶</button>
                 </div>
                 <div class="terminal-filters">
                     <select id="filter-process" class="custom-filter-select" onchange="applyLogFilter()">
@@ -917,6 +923,40 @@
 
         loadWOList();
         setInterval(loadWOList, 2000);
+
+        // 사이드바 접기/열기 함수
+        function toggleSidebar(side) {
+            if (side === 'left') {
+                const sidebar = document.getElementById('woSidebar');
+                const tab = document.getElementById('floatingTabLeft');
+                sidebar.classList.toggle('collapsed');
+                if (sidebar.classList.contains('collapsed')) {
+                    tab.classList.add('visible');
+                } else {
+                    tab.classList.remove('visible');
+                }
+            } else if (side === 'right') {
+                const sidebar = document.getElementById('eventTerminal');
+                const tab = document.getElementById('floatingTabRight');
+                sidebar.classList.toggle('collapsed');
+                if (sidebar.classList.contains('collapsed')) {
+                    tab.classList.add('visible');
+                } else {
+                    tab.classList.remove('visible');
+                }
+            }
+        }
     </script>
+
+    <!-- 좌/우 사이드바가 접혔을 때 화면 가장자리에 표시되는 플로팅 탭 -->
+    <div class="floating-toggle-tab left" id="floatingTabLeft" onclick="toggleSidebar('left')" title="작업지시 대기열 열기">
+        <span class="floating-tab-arrow">▶</span>
+        <span>대기열 열기</span>
+    </div>
+
+    <div class="floating-toggle-tab right" id="floatingTabRight" onclick="toggleSidebar('right')" title="실시간 이벤트 로그 열기">
+        <span class="floating-tab-arrow">◀</span>
+        <span>이벤트 로그 열기</span>
+    </div>
 </body>
 </html>
