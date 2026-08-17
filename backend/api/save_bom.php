@@ -7,39 +7,40 @@ $wo_id = $input['wo_id'] ?? '';
 $bom_data = $input['bom_data'] ?? []; // Array of {part_no, part_name, req_qty, location}
 $company_id = $input['company_id'] ?? '';
 $mapping = $input['mapping'] ?? [];
-$auto_inbound = !empty($input['auto_inbound']);
-
-if (!$wo_id || empty($bom_data)) {
-    echo json_encode(["status" => "error", "message" => "WO ID와 BOM 데이터가 필요합니다."]);
-    exit;
-}
-
 $item_id = !empty($input['item_id']) ? (int)$input['item_id'] : null;
 $version = trim($input['version'] ?? 'v1.0');
+
+if ((empty($wo_id) && empty($item_id)) || empty($bom_data)) {
+    echo json_encode(["status" => "error", "message" => "품목(Item) 또는 작업지시(WO)와 BOM 데이터가 필요합니다."]);
+    exit;
+}
 
 try {
     $pdo->beginTransaction();
 
-    // 1. Create a product_master for this WO if it doesn't exist
-    $product_id = "PROD-" . $wo_id;
+    // 1. Create a product_master if needed
+    $product_id = !empty($wo_id) ? "PROD-" . $wo_id : "ITEM-PROD-" . $item_id;
     $stmt = $pdo->prepare("INSERT IGNORE INTO product_master (product_id, product_name) VALUES (?, ?)");
-    $stmt->execute([$product_id, "Product for " . $wo_id]);
+    $stmt->execute([$product_id, "Product for " . ($wo_id ?: "Item #{$item_id}")]);
     
     $stmtBm = $pdo->prepare("INSERT INTO bom_master (product_id, item_id, version, created_at) VALUES (?, ?, ?, NOW())");
     $stmtBm->execute([$product_id, $item_id, $version]);
     $bom_id = $pdo->lastInsertId();
 
-    // 2. Update work_order with this bom_id
-    $stmt = $pdo->prepare("UPDATE work_order SET bom_id = ? WHERE wo_id = ?");
-    $stmt->execute([$bom_id, $wo_id]);
+    // 2. Update work_order with this bom_id if wo_id is provided
+    if (!empty($wo_id)) {
+        $stmt = $pdo->prepare("UPDATE work_order SET bom_id = ? WHERE wo_id = ?");
+        $stmt->execute([$bom_id, $wo_id]);
+    }
 
-    // 3. Insert BOM details & populate feeder_setup
+    // 3. Insert BOM details & populate feeder_setup if wo_id exists
     $detailStmt = $pdo->prepare("INSERT INTO bom_detail (bom_id, part_no, part_name, req_qty, location, feeder_slot) VALUES (?, ?, ?, ?, ?, ?)");
     
-    // feeder_setup 초기화/재구성
-    $delFeeder = $pdo->prepare("DELETE FROM feeder_setup WHERE wo_id = ? AND status != 'VERIFIED'");
-    $delFeeder->execute([$wo_id]);
-    $insFeeder = $pdo->prepare("INSERT INTO feeder_setup (wo_id, slot_no, part_no, location, req_qty, status) VALUES (?, ?, ?, ?, ?, 'PENDING') ON DUPLICATE KEY UPDATE part_no = VALUES(part_no), location = VALUES(location), req_qty = VALUES(req_qty)");
+    if (!empty($wo_id)) {
+        $delFeeder = $pdo->prepare("DELETE FROM feeder_setup WHERE wo_id = ? AND status != 'VERIFIED'");
+        $delFeeder->execute([$wo_id]);
+        $insFeeder = $pdo->prepare("INSERT INTO feeder_setup (wo_id, slot_no, part_no, location, req_qty, status) VALUES (?, ?, ?, ?, ?, 'PENDING') ON DUPLICATE KEY UPDATE part_no = VALUES(part_no), location = VALUES(location), req_qty = VALUES(req_qty)");
+    }
 
     $slotIndex = 1;
     foreach ($bom_data as $row) {
@@ -50,7 +51,9 @@ try {
         $slotNo = !empty($row['feeder_slot']) ? (int)$row['feeder_slot'] : $slotIndex++;
 
         $detailStmt->execute([$bom_id, $pNo, $pName, $qty, $loc, $slotNo]);
-        $insFeeder->execute([$wo_id, $slotNo, $pNo, $loc, $qty]);
+        if (!empty($wo_id) && isset($insFeeder)) {
+            $insFeeder->execute([$wo_id, $slotNo, $pNo, $loc, $qty]);
+        }
     }
 
     // 4. Update company bom_mapping if provided

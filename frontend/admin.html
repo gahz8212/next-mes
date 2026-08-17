@@ -1698,6 +1698,7 @@
                                 <th>품목명</th>
                                 <th>카테고리</th>
                                 <th>단위</th>
+                                <th>표준 BOM 레시피 상태</th>
                                 <th>설명</th>
                                 <th>등록일</th>
                                 <th style="text-align:right">관리</th>
@@ -2396,13 +2397,14 @@
 <div class="modal-overlay" id="bomModal">
     <div class="modal-box wide">
         <div class="modal-header">
-            <div class="modal-title">BOM 엑셀 데이터 입력</div>
+            <div class="modal-title" id="bom-modal-title">BOM 엑셀 데이터 입력</div>
             <button class="modal-close" onclick="closeModal('bomModal')">✕</button>
         </div>
 
         <p class="hint-text">엑셀에서 데이터를 드래그하여 아래 창에 붙여넣으세요.</p>
 
         <input type="hidden" id="bom_wo_id">
+        <input type="hidden" id="bom_item_id">
         <input type="hidden" id="bom_company_id">
 
         <textarea id="bomPaste" class="form-control" rows="5" placeholder="여기에 붙여넣기 (Ctrl+V)…" style="resize:vertical; font-family:monospace; font-size:12px;"></textarea>
@@ -2418,7 +2420,7 @@
             </div>
 
             <!-- 사급 자재 자동 입고 연계 옵션 (기본값: true) -->
-            <div style="margin-top:14px; padding:12px 14px; background:rgba(59,130,246,0.12); border:1.5px solid rgba(59,130,246,0.35); border-radius:var(--radius-sm);">
+            <div id="bom-auto-inbound-wrap" style="margin-top:14px; padding:12px 14px; background:rgba(59,130,246,0.12); border:1.5px solid rgba(59,130,246,0.35); border-radius:var(--radius-sm);">
                 <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13.5px; font-weight:700; color:#93c5fd;">
                     <input type="checkbox" id="bom-auto-inbound" checked style="accent-color:#3b82f6; width:16px; height:16px;">
                     <span>🏷️ 사급 자재로 창고 입고 자동 등록 (기본 선택)</span>
@@ -2851,11 +2853,17 @@
     // ── BOM logic ──
     async function openBOMModal(wo_id, company_id) {
         document.getElementById('bom_wo_id').value = wo_id;
+        document.getElementById('bom_item_id').value = '';
         document.getElementById('bom_company_id').value = company_id;
         document.getElementById('bomPaste').value = '';
         document.getElementById('bomTableContainer').style.display = 'none';
+
+        const titleEl = document.getElementById('bom-modal-title');
+        if (titleEl) titleEl.textContent = `BOM 엑셀 데이터 입력 (WO: ${wo_id})`;
         
-        // 사급 자재 자동 입고 연계 기본값: true
+        const autoInboundWrap = document.getElementById('bom-auto-inbound-wrap');
+        if (autoInboundWrap) autoInboundWrap.style.display = 'block';
+
         const autoInboundCb = document.getElementById('bom-auto-inbound');
         if (autoInboundCb) autoInboundCb.checked = true;
 
@@ -2866,7 +2874,36 @@
         if (data.status === 'success' && data.data.length > 0) {
             let tsv = '파트번호\t파트명\t제공수량\t위치\n';
             data.data.forEach(row => { 
-                tsv += `${row.part_no}\t${row.part_no}\t${row.req_qty}\t${row.location || ''}\n`; 
+                tsv += `${row.part_no}\t${row.part_name || row.part_no}\t${row.req_qty}\t${row.location || ''}\n`; 
+            });
+            document.getElementById('bomPaste').value = tsv.trim();
+            parseExcel(true);
+        }
+    }
+
+    async function openItemBOMModal(itemId, itemCode, itemName) {
+        document.getElementById('bom_wo_id').value = '';
+        document.getElementById('bom_item_id').value = itemId;
+        document.getElementById('bom_company_id').value = '';
+        document.getElementById('bomPaste').value = '';
+        document.getElementById('bomTableContainer').style.display = 'none';
+
+        const titleEl = document.getElementById('bom-modal-title');
+        if (titleEl) {
+            titleEl.innerHTML = `📋 품목 표준 BOM 등록/관리 — <span style="color:#93c5fd;">${escHtml(itemName)} (${escHtml(itemCode)})</span>`;
+        }
+
+        const autoInboundWrap = document.getElementById('bom-auto-inbound-wrap');
+        if (autoInboundWrap) autoInboundWrap.style.display = 'none';
+
+        document.getElementById('bomModal').classList.add('open');
+
+        const res = await fetch(`../backend/api/get_bom.php?item_id=${itemId}`);
+        const data = await res.json();
+        if (data.status === 'success' && data.data.length > 0) {
+            let tsv = '파트번호\t파트명\t소요수량\t실장위치\n';
+            data.data.forEach(row => { 
+                tsv += `${row.part_no}\t${row.part_name || row.part_no}\t${row.req_qty}\t${row.location || ''}\n`; 
             });
             document.getElementById('bomPaste').value = tsv.trim();
             parseExcel(true);
@@ -2981,6 +3018,7 @@
         }
 
         const wo_id = document.getElementById('bom_wo_id').value;
+        const item_id = document.getElementById('bom_item_id').value;
         const company_id = document.getElementById('bom_company_id').value;
         const auto_inbound = document.getElementById('bom-auto-inbound') ? document.getElementById('bom-auto-inbound').checked : true;
         const mappingArray = Array.from(selects).map(s => s.value);
@@ -2989,12 +3027,13 @@
         const compRes = await fetch('../backend/api/compare_bom.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ wo_id, new_items: finalData })
+            body: JSON.stringify({ wo_id, item_id, new_items: finalData })
         });
         const compData = await compRes.json();
 
         pendingBOMPayload = {
             wo_id,
+            item_id,
             bom_data: finalData,
             company_id,
             mapping: mappingArray,
@@ -3094,6 +3133,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 wo_id: payload.wo_id,
+                item_id: payload.item_id,
                 bom_data: payload.bom_data,
                 company_id: payload.company_id,
                 mapping: payload.mapping,
@@ -3107,6 +3147,7 @@
             alert(data.message || 'BOM 저장이 완료되었습니다.');
             await loadCompanies();
             loadWOList();
+            if (typeof loadItems === 'function') loadItems();
             if (typeof loadMaterials === 'function') loadMaterials();
         } else {
             alert(data.message);
@@ -3251,22 +3292,31 @@
     function renderItemTable(list) {
         const tbody = document.getElementById('item-tbody');
         if (!list.length) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:32px; color:#94a3b8; font-size:13.5px;">등록된 품목이 없습니다.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:32px; color:#94a3b8; font-size:13.5px;">등록된 품목이 없습니다.</td></tr>`;
             return;
         }
-        tbody.innerHTML = list.map(item => `
+        tbody.innerHTML = list.map(item => {
+            const hasBom = item.bom_id && item.bom_part_count > 0;
+            const bomBadge = hasBom
+                ? `<span class="status-badge" style="background:rgba(52,211,153,0.18); color:#6ee7b7; border:1px solid rgba(52,211,153,0.35); font-weight:700; font-family:'JetBrains Mono',monospace;">📋 ${escHtml(item.bom_version)} (${item.bom_part_count}종 부품)</span>`
+                : `<span class="status-badge" style="background:rgba(255,255,255,0.06); color:#94a3b8; font-size:12px;">미등록</span>`;
+
+            return `
             <tr>
                 <td><code>${escHtml(item.item_code)}</code></td>
                 <td><strong style="color:#ffffff; font-size:13.5px;">${escHtml(item.item_name)}</strong></td>
                 <td>${item.category ? `<span class="status-badge status-progress">${escHtml(item.category)}</span>` : '<span style="color:#64748b;">-</span>'}</td>
                 <td><span style="color:#f1f5f9; font-weight:600; font-size:13.5px;">${escHtml(item.unit||'EA')}</span></td>
-                <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#cbd5e1; font-size:13px;">${item.description ? escHtml(item.description) : '<span style="color:#64748b;">-</span>'}</td>
+                <td>${bomBadge}</td>
+                <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#cbd5e1; font-size:13px;">${item.description ? escHtml(item.description) : '<span style="color:#64748b;">-</span>'}</td>
                 <td style="font-size:13px; font-family:'JetBrains Mono',monospace; color:#94a3b8;">${item.created_at ? item.created_at.slice(0,10) : '-'}</td>
-                <td style="text-align:right;">
+                <td style="text-align:right; white-space:nowrap;">
+                    <button class="card-btn" style="background:rgba(59,130,246,0.2); color:#93c5fd; border:1px solid rgba(59,130,246,0.35); margin-right:4px; font-weight:700;" onclick="openItemBOMModal(${item.id}, '${escHtml(item.item_code)}', '${escHtml(item.item_name)}')">📋 BOM</button>
                     <button class="card-btn card-btn-edit" onclick="openEditItemModal(${item.id}, '${escHtml(item.item_code)}', '${escHtml(item.item_name)}', '${escHtml(item.category||'')}', '${escHtml(item.unit||'EA')}', '${escHtml(item.description||'')}')">수정</button>
                     <button class="card-btn card-btn-del" style="margin-left:4px;" onclick="deleteItem(${item.id}, '${escHtml(item.item_name)}')">삭제</button>
                 </td>
-            </tr>`).join('');
+            </tr>`;
+        }).join('');
     }
 
     function filterItemTable() {
@@ -3318,7 +3368,15 @@
         const data = await res.json();
         if (data.status === 'success') {
             closeModal('itemModal');
-            loadItems();
+            await loadItems();
+            
+            // 신규 등록 시 BOM 즉시 등록 여부 확인
+            if (!id && data.data && data.data.id) {
+                const wantBOM = confirm(`🎉 [${item_name}] 품목 등록이 완료되었습니다!\n\n지금 바로 이 품목의 표준 BOM(부품 레시피)을 등록하시겠습니까?\n\n- [확인]: 지금 바로 BOM 엑셀 등록\n- [취소]: 나중에 품목 목록의 [📋 BOM] 버튼으로 등록`);
+                if (wantBOM) {
+                    openItemBOMModal(data.data.id, item_code, item_name);
+                }
+            }
         } else {
             alert(data.message);
         }

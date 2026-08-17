@@ -250,4 +250,12 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
     - `신규 변경 취소 및 기존 표준 BOM 유지`
   - `convert_order_to_wo.php`: 수주(PO)에서 `[⚡ WO 발행]` 클릭 시 품목 마스터의 최신 공인 BOM을 자동 상속받아 마운터 피더 슬롯(`feeder_setup`)까지 1초 만에 원클릭 자동 구성.
 
+- **7) 품목 마스터 등록 시 BOM 동시 또는 나중에 등록 워크플로우 구축**:
+  - `get_items.php`: 품목별 최신 `bom_version` 및 등록된 부품 수(`bom_part_count`)를 집계하여 `[📋 v1.0 (4종 부품)]` 상태 뱃지 제공.
+  - `admin.html`:
+    - 품목 목록 각 행에 **`[📋 BOM]`** 버튼 탑재 ➔ 언제든지 해당 품목의 표준 BOM을 열람·수정·등록 가능.
+    - 품목 신규 등록 시: "지금 바로 표준 BOM을 등록하시겠습니까?" 즉시 연계 안내 팝업 제공 (확인 시 바로 BOM 엑셀 등록 모달 실행, 취소 시 나중에 등록).
+    - `save_bom.php` & `get_bom.php`: 품목 ID(`item_id`) 단독 BOM 등록 및 버전 관리 완벽 지원.
+
+
 
