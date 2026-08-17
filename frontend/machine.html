@@ -3,50 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MES 설비 전용 HMI 터미널 - Machine Station</title>
+    <title>MES 설비 HMI 터미널 - Machine Station</title>
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
-    <!-- HMI Stylesheet -->
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="css/machine.css">
+    <link rel="stylesheet" href="css/common-header.css">
 </head>
 <body>
 
     <!-- ═══════════════════════════════════════════════════════════════════
-         1. TOPBAR & ONE-TOUCH MACHINE SELECTOR TABS
+         1. UNIFIED TOPBAR HEADER
          ═══════════════════════════════════════════════════════════════════ -->
-    <header class="hmi-topbar">
-        <div class="brand-wrap">
-            <span class="brand-badge">HMI OP</span>
-            <div>
-                <div class="brand-title">MES 설비 전용 HMI 콘솔</div>
-                <div class="brand-sub">스마트 제조 현장 설비 1:1 관제 & 예방정비 스테이션</div>
+    <header class="mes-unified-header" data-current-screen="machine">
+        <!-- 1. 좌측: 브랜드 & 공정 타이틀 -->
+        <div class="mes-header-left">
+            <span class="mes-header-brand-badge badge-machine">HMI OP</span>
+            <div class="mes-header-titles">
+                <div class="mes-header-main-title">MES 설비 전용 HMI 콘솔</div>
+                <div class="mes-header-sub-title">스마트 제조 현장 설비 1:1 관제 & 예방정비 스테이션</div>
             </div>
         </div>
 
-        <!-- 설비 원터치 공정 탭 (Segmented Buttons) -->
+        <!-- 2. 중앙: 현장 공정 네비게이션 버튼 (관리자/대시보드 숨김) -->
+        <nav class="mes-header-center">
+            <a href="kitting.html" class="mes-nav-btn" data-screen="kitting">
+                <span class="nav-icon">📦</span>
+                <span>자재 피킹</span>
+            </a>
+            <a href="machine.html" class="mes-nav-btn active" data-screen="machine">
+                <span class="nav-icon">🔧</span>
+                <span>설비 HMI</span>
+            </a>
+        </nav>
+
+        <!-- 3. 우측: 현재 로그인 작업자, 로그아웃 -->
+        <div class="mes-header-right">
+            <div class="mes-user-badge">
+                <div class="user-dot"></div>
+                <span class="user-name-text" id="hdrUserName">작업자</span>
+            </div>
+            <button class="mes-logout-btn" onclick="mesLogout()">
+                로그아웃
+            </button>
+        </div>
+    </header>
+
+    <!-- 설비 원터치 공정 탭 서브 바 (Full-Width) -->
+    <div class="hmi-subbar">
+        <div class="subbar-label">설비 선택:</div>
         <nav class="machine-tabs-nav" id="machineTabsNav">
             <!-- Dynamically populated via machine.js -->
         </nav>
-
-        <!-- 상단 우측 네비게이션 & 시계 -->
-        <div class="topbar-right-controls">
-            <a href="ceo.html" class="nav-link-btn" style="border-color: rgba(245,158,11,0.4); color: #fbbf24;" title="최고경영자 브리핑 콘솔">
-                <span>👑 경영진 뷰</span>
-            </a>
-            <a href="dashboard.html" class="nav-link-btn" title="전체 라인 관제 대시보드로 이동">
-                <span>📊 라인 대시보드</span>
-            </a>
-            <a href="kitting.html" class="nav-link-btn" title="자재 키팅 단말기로 이동">
-                <span>📦 키팅 단말기</span>
-            </a>
-            <a href="admin.html" class="nav-link-btn" title="관리자 시스템으로 이동">
-                <span>⚙️ 관리자</span>
-            </a>
-            <div class="live-time-badge" id="liveClock">00:00:00</div>
-        </div>
-    </header>
+    </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════
          2. MAIN HMI 2-COLUMN INDUSTRIAL WORKSPACE
@@ -241,5 +252,7 @@
 
     <!-- HMI Control Engine Script -->
     <script src="js/machine.js"></script>
+    <!-- Header Navigation Controller -->
+    <script src="js/header.js"></script>
 </body>
 </html>

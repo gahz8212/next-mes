@@ -115,12 +115,26 @@ CREATE TABLE IF NOT EXISTS material_inout (
     part_no VARCHAR(50) NOT NULL COMMENT '자재 파트번호',
     part_name VARCHAR(100) DEFAULT NULL COMMENT '자재명',
     inout_type ENUM('IN','OUT') NOT NULL COMMENT '입고/출고',
+    supply_type ENUM('CONSIGNED', 'PROCURED') NOT NULL DEFAULT 'PROCURED' COMMENT '사급(CONSIGNED)/도급(PROCURED) 구분',
     qty DECIMAL(10,2) NOT NULL COMMENT '수량',
     unit VARCHAR(20) DEFAULT 'EA' COMMENT '단위',
     wo_id VARCHAR(50) DEFAULT NULL COMMENT '연결 작업지시',
     company_id INT DEFAULT NULL COMMENT '공급처',
     note TEXT DEFAULT NULL COMMENT '비고',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 21. 부품 교차 참조 (AVL / 대체 부품 맵핑)
+CREATE TABLE IF NOT EXISTS part_alias (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    standard_name VARCHAR(100) NOT NULL COMMENT '대표 파트명/표준 규격 (예: 칩저항 1005 10K 1%)',
+    standard_code VARCHAR(50) DEFAULT NULL COMMENT '대표 표준 코드 (예: R1005-10K-F)',
+    alias_part_no VARCHAR(100) NOT NULL UNIQUE COMMENT '실제 제조사/고객사 파트번호 (예: RC1005F103CS)',
+    vendor_name VARCHAR(100) DEFAULT NULL COMMENT '제조사/공급처 (예: 삼성전기, YAGEO, LG전자)',
+    description VARCHAR(255) DEFAULT NULL COMMENT '부품 사양/규격 메모',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_standard_name (standard_name),
+    INDEX idx_alias_part_no (alias_part_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 13. 출하 관리

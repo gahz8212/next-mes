@@ -4,7 +4,7 @@ let lastHistoryId = 0;
 let isPollingActive = false;
 const machineResetTimers = {};
 
-// ── 설비별 텔레메트리 스키마 (상단 듀얼 원그래프 + 하단 4대 물리량 막대그래프) ──
+// ── 10대 설비 텔레메트리 스키마 (상단 듀얼 원그래프 + 하단 4대 물리량 막대그래프) ──
 const MACHINE_TELEMETRY_SCHEMAS = {
     LASER: {
         defaultHealth: 98,
@@ -30,7 +30,7 @@ const MACHINE_TELEMETRY_SCHEMAS = {
             { key: 'solder_height_um', label: '높이', unit: 'μm', base: 143.5, min: 110, max: 170, decimals: 0, color: '#38bdf8' }
         ]
     },
-    MOUNTER: {
+    MOUNTER_1: {
         defaultHealth: 99,
         defaultCycleVal: 85,
         defaultCycleText: 'D-4',
@@ -40,6 +40,18 @@ const MACHINE_TELEMETRY_SCHEMAS = {
             { key: 'head_vibration_g', label: '진동', unit: 'G', base: 0.088, min: 0, max: 0.20, decimals: 3, color: '#38bdf8' },
             { key: 'motor_temp_c', label: '발열', unit: '℃', base: 37.8, min: 25, max: 55, decimals: 1, color: '#a78bfa' },
             { key: 'feeder_tension_n', label: '장력', unit: 'N', base: 4.2, min: 2.5, max: 6.0, decimals: 1, color: '#38bdf8' }
+        ]
+    },
+    MOUNTER_2: {
+        defaultHealth: 98,
+        defaultCycleVal: 78,
+        defaultCycleText: 'D-7',
+        defaultCycleSub: '비전보정',
+        bars: [
+            { key: 'align_theta_deg', label: '각도', unit: '°', base: 0.12, min: -1.0, max: 1.0, decimals: 2, color: '#10b981' },
+            { key: 'force_n', label: '가압력', unit: 'N', base: 1.85, min: 0.5, max: 4.0, decimals: 2, color: '#38bdf8' },
+            { key: 'tray_feeder_rem', label: '트레이', unit: '%', base: 86, min: 10, max: 100, decimals: 0, color: '#a78bfa' },
+            { key: 'vision_match_pct', label: '비전', unit: '%', base: 99.4, min: 80, max: 100, decimals: 1, color: '#38bdf8' }
         ]
     },
     REFLOW: {
@@ -77,26 +89,70 @@ const MACHINE_TELEMETRY_SCHEMAS = {
             { key: 'preheater_temp_c', label: '예열', unit: '℃', base: 132.5, min: 100, max: 160, decimals: 1, color: '#a78bfa' },
             { key: 'dross_level_pct', label: '드로스', unit: '%', base: 28.5, min: 0, max: 60, decimals: 0, color: '#38bdf8' }
         ]
+    },
+    ICT: {
+        defaultHealth: 99,
+        defaultCycleVal: 92,
+        defaultCycleText: 'D-20',
+        defaultCycleSub: '핀베드교체',
+        bars: [
+            { key: 'contact_res_ohm', label: '접촉저항', unit: 'mΩ', base: 45.2, min: 10, max: 120, decimals: 1, color: '#10b981' },
+            { key: 'res_accuracy_pct', label: '저항정밀', unit: '%', base: 99.8, min: 90, max: 100, decimals: 1, color: '#38bdf8' },
+            { key: 'leakage_curr_ua', label: '누설전류', unit: 'μA', base: 0.45, min: 0, max: 3.0, decimals: 2, color: '#a78bfa' },
+            { key: 'pin_wear_pct', label: '핀마모', unit: '%', base: 12, min: 0, max: 50, decimals: 0, color: '#38bdf8' }
+        ]
+    },
+    COATING: {
+        defaultHealth: 98,
+        defaultCycleVal: 84,
+        defaultCycleText: 'D-12',
+        defaultCycleSub: '노즐세척',
+        bars: [
+            { key: 'dispense_press_mpa', label: '분사압', unit: 'MPa', base: 0.35, min: 0.2, max: 0.5, decimals: 2, color: '#10b981' },
+            { key: 'film_thickness_um', label: '도포두께', unit: 'μm', base: 75.0, min: 40, max: 120, decimals: 1, color: '#38bdf8' },
+            { key: 'uv_energy_mj', label: 'UV광량', unit: 'mJ', base: 1250, min: 800, max: 1800, decimals: 0, color: '#a78bfa' },
+            { key: 'fluid_viscosity_cp', label: '액점도', unit: 'cP', base: 185, min: 120, max: 260, decimals: 0, color: '#38bdf8' }
+        ]
+    },
+    FCT: {
+        defaultHealth: 99,
+        defaultCycleVal: 95,
+        defaultCycleText: 'D-30',
+        defaultCycleSub: '지그교정',
+        bars: [
+            { key: 'mcu_volt_v', label: '전원전압', unit: 'V', base: 5.02, min: 4.5, max: 5.5, decimals: 2, color: '#10b981' },
+            { key: 'curr_draw_ma', label: '소비전류', unit: 'mA', base: 142.5, min: 80, max: 220, decimals: 1, color: '#38bdf8' },
+            { key: 'can_resp_ms', label: '통신지연', unit: 'ms', base: 4.8, min: 1.0, max: 15.0, decimals: 1, color: '#a78bfa' },
+            { key: 'fw_check_score', label: '펌웨어검증', unit: '점', base: 100, min: 80, max: 100, decimals: 0, color: '#38bdf8' }
+        ]
     }
 };
 
 const latestPdmData = {
     LASER: null,
     SPI: null,
-    MOUNTER: null,
+    MOUNTER_1: null,
+    MOUNTER_2: null,
     REFLOW: null,
     DIP_AOI: null,
-    WAVE: null
+    WAVE: null,
+    ICT: null,
+    COATING: null,
+    FCT: null
 };
 
 // 최근 실제 공정 이벤트 수신 시각 (ms)
 const lastActiveTimestamp = {
     LASER: 0,
     SPI: 0,
-    MOUNTER: 0,
+    MOUNTER_1: 0,
+    MOUNTER_2: 0,
     REFLOW: 0,
     DIP_AOI: 0,
-    WAVE: 0
+    WAVE: 0,
+    ICT: 0,
+    COATING: 0,
+    FCT: 0
 };
 
 // 현재 머신별 실시간 렌더링 캐시
@@ -255,8 +311,8 @@ window.addLog = addLog;
 
 // 4. 머신 카드 및 텔레메트리 전체 클린 리셋
 function resetAllMachines(targetLine = 'ALL') {
-    const smtIds = ['LASER', 'SPI', 'MOUNTER', 'REFLOW'];
-    const dipIds = ['DIP_AOI', 'WAVE'];
+    const smtIds = ['LASER', 'SPI', 'MOUNTER_1', 'MOUNTER_2', 'REFLOW'];
+    const dipIds = ['DIP_AOI', 'WAVE', 'ICT', 'COATING', 'FCT'];
     const machineIds = targetLine === 'SMT' ? smtIds : (targetLine === 'DIP' ? dipIds : [...smtIds, ...dipIds]);
 
     machineIds.forEach(id => {
@@ -303,7 +359,7 @@ function drawRadialGauges(processId, healthVal, cycleVal, cycleText, cycleSub, p
 
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
-    const cssW = Math.max(220, Math.round(rect.width) || 260);
+    const cssW = Math.max(160, Math.round(rect.width) || 180);
     const cssH = Math.max(44, Math.round(rect.height) || 46);
 
     if (canvas.width !== Math.round(cssW * dpr) || canvas.height !== Math.round(cssH * dpr)) {
@@ -330,11 +386,11 @@ function drawRadialGauges(processId, healthVal, cycleVal, cycleText, cycleSub, p
     }
 
     const cy = Math.round(cssH / 2);
-    const r = Math.min(18.5, Math.round((cssH - 4) / 2));
-    const strokeW = 3.4;
+    const r = Math.min(16.5, Math.round((cssH - 6) / 2));
+    const strokeW = 3.0;
 
     // ── 좌측 원그래프: 설비 건전도 (Health Index) ──
-    const leftCX = Math.round(cssW * 0.16);
+    const leftCX = Math.round(cssW * 0.17);
 
     // 배경 링
     ctx.save();
@@ -355,7 +411,7 @@ function drawRadialGauges(processId, healthVal, cycleVal, cycleText, cycleSub, p
 
     // 아크 내부 퍼센트 수치
     ctx.save();
-    ctx.font = 'bold 9.5px "JetBrains Mono", monospace';
+    ctx.font = 'bold 8.5px "JetBrains Mono", monospace';
     ctx.fillStyle = '#f8fafc';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -363,13 +419,13 @@ function drawRadialGauges(processId, healthVal, cycleVal, cycleText, cycleSub, p
 
     // 우측 텍스트 라벨 (건전도 / 상태)
     ctx.textAlign = 'left';
-    ctx.font = '9px sans-serif';
+    ctx.font = '8.5px sans-serif';
     ctx.fillStyle = '#94a3b8';
-    ctx.fillText('건전도', leftCX + r + 6, cy - 4.5);
+    ctx.fillText('건전도', leftCX + r + 4, cy - 4);
 
-    ctx.font = 'bold 9.5px sans-serif';
+    ctx.font = 'bold 9px sans-serif';
     ctx.fillStyle = healthColor;
-    ctx.fillText(statusText, leftCX + r + 6, cy + 7);
+    ctx.fillText(statusText, leftCX + r + 4, cy + 6.5);
     ctx.restore();
 
     // ── 중앙 구분선 ──
@@ -383,7 +439,7 @@ function drawRadialGauges(processId, healthVal, cycleVal, cycleText, cycleSub, p
     ctx.restore();
 
     // ── 우측 원그래프: 예방보전 주기/수명 (PM Cycle / RUL) ──
-    const rightCX = Math.round(cssW * 0.63);
+    const rightCX = Math.round(cssW * 0.65);
     const cycleColor = '#38bdf8';
 
     // 배경 링
@@ -431,7 +487,7 @@ function drawVerticalBars(processId, metricsValues, pdmStatus) {
 
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
-    const cssW = Math.max(220, Math.round(rect.width) || 260);
+    const cssW = Math.max(160, Math.round(rect.width) || 180);
     const cssH = Math.max(68, Math.round(rect.height) || 82);
 
     if (canvas.width !== Math.round(cssW * dpr) || canvas.height !== Math.round(cssH * dpr)) {
@@ -446,7 +502,7 @@ function drawVerticalBars(processId, metricsValues, pdmStatus) {
     const slotWidth = cssW / 4;
     const trackY = 17;
     const trackH = Math.max(36, cssH - 37);
-    const trackW = 11;
+    const trackW = 9.5;
 
     schema.bars.forEach((b, i) => {
         const val = (metricsValues && metricsValues[i] !== undefined) ? metricsValues[i] : b.base;
@@ -703,10 +759,14 @@ function renderPdmModalContent(processId) {
     const names = {
         LASER: 'Laser Marker #1',
         SPI: 'SPI 3D 납 도포 검사기 #1',
-        MOUNTER: 'High-Speed Surface Mounter #1',
+        MOUNTER_1: 'High-Speed Surface Mounter #1 (고속 마운터)',
+        MOUNTER_2: 'Odd-Form Surface Mounter #2 (이형 마운터)',
         REFLOW: 'Reflow Soldering 10-Zone Oven',
         DIP_AOI: 'Through-Hole DIP AOI System',
-        WAVE: 'Wave Soldering Bath #1'
+        WAVE: 'Wave Soldering Bath #1',
+        ICT: 'In-Circuit Tester #1 (ICT 회로 검사기)',
+        COATING: 'Conformal Coating & UV Curing #1 (방습 코팅기)',
+        FCT: 'Functional Circuit Tester #1 (FCT 기능 검사기)'
     };
 
     if (badge) badge.innerText = processId;
@@ -805,29 +865,29 @@ function renderPdmModalContent(processId) {
                 </div>
             </div>
         `;
-    } else if (processId === 'MOUNTER') {
+    } else if (processId === 'MOUNTER_1' || processId === 'MOUNTER') {
         sensorsHtml = `
             <div class="pdm-sensor-card">
-                <div class="sensor-header"><span>노즐 진공 흡착압</span><span class="sensor-limit">하한 -78.0 kPa</span></div>
-                <div class="sensor-val ${d.vacuum_kpa > -77.0 ? 'crit' : (d.vacuum_kpa > -80.0 ? 'warn' : 'good')}">${d.vacuum_kpa || -84.2} kPa</div>
+                <div class="sensor-header"><span>고속 노즐 진공 흡착압</span><span class="sensor-limit">하한 -78.0 kPa</span></div>
+                <div class="sensor-val ${d.vacuum_kpa > -77.0 ? 'crit' : (d.vacuum_kpa > -80.0 ? 'warn' : 'good')}">${d.vacuum_kpa || -84.5} kPa</div>
             </div>
             <div class="pdm-sensor-card">
-                <div class="sensor-header"><span>헤드 가속도 진동치</span><span class="sensor-limit">상한 0.150 G</span></div>
-                <div class="sensor-val good">${d.head_vibration_g || 0.091} G</div>
+                <div class="sensor-header"><span>초고속 헤드 진동치</span><span class="sensor-limit">상한 0.150 G</span></div>
+                <div class="sensor-val good">${d.head_vibration_g || 0.088} G</div>
             </div>
             <div class="pdm-sensor-card">
-                <div class="sensor-header"><span>X/Y 리니어 모터 온도</span><span class="sensor-limit">상한 48.0℃</span></div>
-                <div class="sensor-val good">${d.motor_temp_c || 38.5} ℃</div>
+                <div class="sensor-header"><span>리니어 모터 온도</span><span class="sensor-limit">상한 48.0℃</span></div>
+                <div class="sensor-val good">${d.motor_temp_c || 37.8} ℃</div>
             </div>
             <div class="pdm-sensor-card">
-                <div class="sensor-header"><span>실시간 픽업 성공률</span><span class="sensor-limit">관리선 99.5%</span></div>
-                <div class="sensor-val ${d.pick_rate < 96.0 ? 'crit' : 'good'}">${d.pick_rate || 99.8} %</div>
+                <div class="sensor-header"><span>피더 테이프 텐션</span><span class="sensor-limit">2.5 ~ 6.0 N</span></div>
+                <div class="sensor-val good">${d.feeder_tension_n || 4.2} N</div>
             </div>
         `;
         rulHtml = `
             <div class="pdm-rul-card">
                 <div class="rul-top-row">
-                    <span class="rul-title">마운터 노즐 팁 마모도 및 교체 주기 (RUL)</span>
+                    <span class="rul-title">고속 마운터 노즐 팁 마모도 및 교체 주기 (RUL)</span>
                     <span class="rul-days-badge">잔여 D-4 (84%)</span>
                 </div>
                 <div class="rul-bar-wrap">
@@ -835,7 +895,41 @@ function renderPdmModalContent(processId) {
                 </div>
                 <div class="rul-sub-info">
                     <span>누적 타수: ${(d.nozzle_strike_count || 168400).toLocaleString()} / 200,000타</span>
-                    <span>피더 테이프 텐션: ${d.feeder_tension_n || 4.2} N (정상)</span>
+                    <span>픽업 성공률: 99.8% (정상)</span>
+                </div>
+            </div>
+        `;
+    } else if (processId === 'MOUNTER_2') {
+        sensorsHtml = `
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>비전 회전 정렬오차 (θ)</span><span class="sensor-limit">±0.50 °</span></div>
+                <div class="sensor-val good">${d.align_theta_deg || 0.12}°</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>부품 장착 가압력</span><span class="sensor-limit">1.0 ~ 2.8 N</span></div>
+                <div class="sensor-val good">${d.force_n || 1.85} N</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>트레이 피더 잔량</span><span class="sensor-limit">하한 20%</span></div>
+                <div class="sensor-val good">${d.tray_feeder_rem || 86} %</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>비전 패턴 일치율</span><span class="sensor-limit">하한 95.0%</span></div>
+                <div class="sensor-val good">${d.vision_match_pct || 99.4} %</div>
+            </div>
+        `;
+        rulHtml = `
+            <div class="pdm-rul-card">
+                <div class="rul-top-row">
+                    <span class="rul-title">이형 마운터 비전 카메라 조명 & 얼라인먼트 교정</span>
+                    <span class="rul-days-badge">잔여 D-7 (78%)</span>
+                </div>
+                <div class="rul-bar-wrap">
+                    <div class="rul-bar-fill" style="width: 78%;"></div>
+                </div>
+                <div class="rul-sub-info">
+                    <span>IC/커넥터 정밀 얼라인먼트 오차: X 4.2μm / Y 3.1μm</span>
+                    <span>트레이 자동 공급 상태: 양호</span>
                 </div>
             </div>
         `;
@@ -843,11 +937,11 @@ function renderPdmModalContent(processId) {
         sensorsHtml = `
             <div class="pdm-sensor-card">
                 <div class="sensor-header"><span>최고 피크 솔더링 온도</span><span class="sensor-limit">243 ~ 249 ℃</span></div>
-                <div class="sensor-val ${d.peak_temp_c > 251.0 ? 'crit' : 'good'}">${d.peak_temp_c || 246.5} ℃</div>
+                <div class="sensor-val ${d.peak_temp_c > 251.0 ? 'crit' : 'good'}">${d.peak_temp_c || 245.5} ℃</div>
             </div>
             <div class="pdm-sensor-card">
                 <div class="sensor-header"><span>액상선 체류 시간 (TAL)</span><span class="sensor-limit">45 ~ 60 sec</span></div>
-                <div class="sensor-val good">${d.tal_sec || 52.5} sec</div>
+                <div class="sensor-val good">${d.tal_sec || 52.0} sec</div>
             </div>
             <div class="pdm-sensor-card">
                 <div class="sensor-header"><span>승온 구배 (Ramp-Up)</span><span class="sensor-limit">1.5 ~ 2.2 ℃/s</span></div>
@@ -855,7 +949,7 @@ function renderPdmModalContent(processId) {
             </div>
             <div class="pdm-sensor-card">
                 <div class="sensor-header"><span>질소 챔버 산소 농도</span><span class="sensor-limit">상한 500 ppm</span></div>
-                <div class="sensor-val good">${d.oxygen_ppm || 360} ppm</div>
+                <div class="sensor-val good">${d.oxygen_ppm || 375} ppm</div>
             </div>
         `;
         rulHtml = `
@@ -877,15 +971,15 @@ function renderPdmModalContent(processId) {
         sensorsHtml = `
             <div class="pdm-sensor-card">
                 <div class="sensor-header"><span>리드 핀 솔더링 품질점수</span><span class="sensor-limit">하한 90.0점</span></div>
-                <div class="sensor-val ${d.pin_soldering_score < 90.0 ? 'crit' : 'good'}">${d.pin_soldering_score || 97.2} pts</div>
+                <div class="sensor-val ${d.pin_soldering_score < 90.0 ? 'crit' : 'good'}">${d.pin_soldering_score || 98.5} pts</div>
             </div>
             <div class="pdm-sensor-card">
                 <div class="sensor-header"><span>납 브릿지 쇼트 위험율</span><span class="sensor-limit">상한 5.0%</span></div>
-                <div class="sensor-val good">${d.bridge_risk_pct || 1.8} %</div>
+                <div class="sensor-val good">${d.bridge_risk_pct || 1.2} %</div>
             </div>
             <div class="pdm-sensor-card">
                 <div class="sensor-header"><span>부품 들뜸(Lift) 높이</span><span class="sensor-limit">상한 50 μm</span></div>
-                <div class="sensor-val good">${d.lift_height_um || 18} μm</div>
+                <div class="sensor-val good">${d.lift_height_um || 18.0} μm</div>
             </div>
             <div class="pdm-sensor-card">
                 <div class="sensor-header"><span>부품 기울어짐 각도</span><span class="sensor-limit">상한 2.0°</span></div>
@@ -910,8 +1004,8 @@ function renderPdmModalContent(processId) {
     } else if (processId === 'WAVE') {
         sensorsHtml = `
             <div class="pdm-sensor-card">
-                <div class="sensor-header"><span>솔더팟 용탕 온도</span><span class="sensor-limit">252 ~ 258 ℃</span></div>
-                <div class="sensor-val ${d.pot_temp_c < 250.0 ? 'warn' : 'good'}">${d.pot_temp_c || 255.0} ℃</div>
+                <div class="sensor-header"><span>솔더팟 용탕 온도</span><span class="sensor-limit">245 ~ 258 ℃</span></div>
+                <div class="sensor-val ${d.pot_temp_c < 245.0 ? 'warn' : 'good'}">${d.pot_temp_c || 250.2} ℃</div>
             </div>
             <div class="pdm-sensor-card">
                 <div class="sensor-header"><span>프리히터 예열 온도</span><span class="sensor-limit">120 ~ 145 ℃</span></div>
@@ -938,6 +1032,108 @@ function renderPdmModalContent(processId) {
                 <div class="rul-sub-info">
                     <span>임펠러 펌프: ${d.pump_rpm || 1255} RPM / 속도 ${d.conveyor_speed_m_min || 1.20} m/min</span>
                     <span>드로스 누적율: ${d.dross_level_pct || 28.5}% (70% 도달 시 청소 알림)</span>
+                </div>
+            </div>
+        `;
+    } else if (processId === 'ICT') {
+        sensorsHtml = `
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>테스트 핀 접촉저항</span><span class="sensor-limit">20 ~ 80 mΩ</span></div>
+                <div class="sensor-val good">${d.contact_res_ohm || 45.2} mΩ</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>저항 측정 정밀도</span><span class="sensor-limit">하한 95.0%</span></div>
+                <div class="sensor-val good">${d.res_accuracy_pct || 99.8} %</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>누설 전류량</span><span class="sensor-limit">상한 1.5 μA</span></div>
+                <div class="sensor-val good">${d.leakage_curr_ua || 0.45} μA</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>핀 마모 진행률</span><span class="sensor-limit">상한 30%</span></div>
+                <div class="sensor-val good">${d.pin_wear_pct || 12} %</div>
+            </div>
+        `;
+        rulHtml = `
+            <div class="pdm-rul-card">
+                <div class="rul-top-row">
+                    <span class="rul-title">테스트 핀 접촉 건전도 및 핀베드 교체 주기</span>
+                    <span class="rul-days-badge">잔여 D-20 (92%)</span>
+                </div>
+                <div class="rul-bar-wrap">
+                    <div class="rul-bar-fill" style="width: 92%;"></div>
+                </div>
+                <div class="rul-sub-info">
+                    <span>512채널 전수 단락/오픈 검사 이상 없음</span>
+                    <span>누적 접촉: 42,100 / 100,000회</span>
+                </div>
+            </div>
+        `;
+    } else if (processId === 'COATING') {
+        sensorsHtml = `
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>노즐 분사 압력</span><span class="sensor-limit">0.30 ~ 0.40 MPa</span></div>
+                <div class="sensor-val good">${d.dispense_press_mpa || 0.35} MPa</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>도포 피막 두께</span><span class="sensor-limit">60 ~ 90 μm</span></div>
+                <div class="sensor-val good">${d.film_thickness_um || 75.0} μm</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>UV 적산 광량</span><span class="sensor-limit">1000 ~ 1500 mJ</span></div>
+                <div class="sensor-val good">${d.uv_energy_mj || 1250} mJ</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>코팅액 점도</span><span class="sensor-limit">150 ~ 220 cP</span></div>
+                <div class="sensor-val good">${d.fluid_viscosity_cp || 185} cP</div>
+            </div>
+        `;
+        rulHtml = `
+            <div class="pdm-rul-card">
+                <div class="rul-top-row">
+                    <span class="rul-title">디스펜서 분사 노즐 초음파 세척 주기</span>
+                    <span class="rul-days-badge">잔여 D-12 (84%)</span>
+                </div>
+                <div class="rul-bar-wrap">
+                    <div class="rul-bar-fill" style="width: 84%;"></div>
+                </div>
+                <div class="rul-sub-info">
+                    <span>UV 경화 램프 광량 유지율: 98.2%</span>
+                    <span>노즐 잔여 수명: 정상</span>
+                </div>
+            </div>
+        `;
+    } else if (processId === 'FCT') {
+        sensorsHtml = `
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>MCU 인가 전압</span><span class="sensor-limit">4.85 ~ 5.15 V</span></div>
+                <div class="sensor-val good">${d.mcu_volt_v || 5.02} V</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>총 소비 전류</span><span class="sensor-limit">120 ~ 170 mA</span></div>
+                <div class="sensor-val good">${d.curr_draw_ma || 142.5} mA</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>CAN 통신 응답시간</span><span class="sensor-limit">2.0 ~ 8.0 ms</span></div>
+                <div class="sensor-val good">${d.can_resp_ms || 4.8} ms</div>
+            </div>
+            <div class="pdm-sensor-card">
+                <div class="sensor-header"><span>펌웨어 검증 점수</span><span class="sensor-limit">하한 90점</span></div>
+                <div class="sensor-val good">${d.fw_check_score || 100} pts</div>
+            </div>
+        `;
+        rulHtml = `
+            <div class="pdm-rul-card">
+                <div class="rul-top-row">
+                    <span class="rul-title">FCT 테스트 지그 전원 릴레이 및 커넥터 교정</span>
+                    <span class="rul-days-badge">잔여 D-30 (95%)</span>
+                </div>
+                <div class="rul-bar-wrap">
+                    <div class="rul-bar-fill" style="width: 95%;"></div>
+                </div>
+                <div class="rul-sub-info">
+                    <span>CAN 통신 패킷 손실률: 0.00%</span>
+                    <span>완제품 최종 합격률: 99.7%</span>
                 </div>
             </div>
         `;
@@ -1064,7 +1260,7 @@ async function pollLiveStream() {
 
             // 만약 현재 작업지시가 SMT_DONE 상태라면 자삽 라인(Line 1) 설비들은 항상 대기(READY) 보장
             if (activeWo && activeWo.status === 'SMT_DONE') {
-                const smtIds = ['LASER', 'SPI', 'MOUNTER', 'REFLOW'];
+                const smtIds = ['LASER', 'SPI', 'MOUNTER_1', 'MOUNTER_2', 'REFLOW'];
                 smtIds.forEach(id => {
                     const mac = document.getElementById(`mac-${id}`);
                     if (mac && !mac.classList.contains('wait')) {
@@ -1077,7 +1273,8 @@ async function pollLiveStream() {
 
             if (logs.length > 0) {
                 logs.forEach(item => {
-                    const proc = item.process_name;
+                    let proc = item.process_name;
+                    if (proc === 'MOUNTER') proc = 'MOUNTER_1';
                     const isPass = item.result_status;
                     const barcode = item.barcode;
                     const pDataStr = item.process_data;
@@ -1089,7 +1286,7 @@ async function pollLiveStream() {
                     }
                     
                     // SMT 완료 상태인데 뒤늦게 도착한 SMT 이벤트는 머신 카드를 run으로 바꾸지 않도록 대기 처리
-                    const smtProcs = ['LASER', 'SPI', 'MOUNTER', 'REFLOW'];
+                    const smtProcs = ['LASER', 'SPI', 'MOUNTER_1', 'MOUNTER_2', 'REFLOW'];
                     if (activeWo && activeWo.status === 'SMT_DONE' && smtProcs.includes(proc)) {
                         updateMachine(proc, 'IDLE', '-', null);
                         return;

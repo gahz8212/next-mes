@@ -70,7 +70,7 @@ while (true) {
         if ($mode === 'SMT') {
             if ($stage === 'LASER') {
                 // SPI 공정으로 이동
-                $isPass = (rand(1, 100) > 4) ? 'PASS' : 'FAIL';
+                $isPass = (rand(1, 100) > 3) ? 'PASS' : 'FAIL';
                 $solderHeight = number_format(120 + rand(0, 200)/10, 1);
                 $volPct = number_format(98 + rand(0, 50)/10, 1);
                 $pData = json_encode(["solder_height_um" => $solderHeight, "volume_pct" => $volPct]);
@@ -85,36 +85,70 @@ while (true) {
                     $updB->execute([$bc]);
                 }
             } else if ($stage === 'SPI') {
-                // MOUNTER 공정으로 이동
-                $pData = json_encode(["mounted_components" => 10, "offset_x_um" => number_format(rand(0, 50)/10, 2), "offset_y_um" => number_format(rand(0, 50)/10, 2)]);
-                $insH = $pdo->prepare("INSERT INTO barcode_history (barcode, process_name, result_status, process_data, created_at) VALUES (?, 'MOUNTER', 'PASS', ?, NOW())");
+                // MOUNTER_1 (고속 마운터) 공정으로 이동
+                $pData = json_encode(["mounted_chips" => 48, "vacuum_kpa" => -84.5, "head_vibration_g" => 0.088]);
+                $insH = $pdo->prepare("INSERT INTO barcode_history (barcode, process_name, result_status, process_data, created_at) VALUES (?, 'MOUNTER_1', 'PASS', ?, NOW())");
                 $insH->execute([$bc, $pData]);
 
-                $nextActiveQueue[] = ['barcode' => $bc, 'stage' => 'MOUNTER'];
-            } else if ($stage === 'MOUNTER') {
-                // REFLOW 공정으로 이동 (SMT 최종 완료)
+                $nextActiveQueue[] = ['barcode' => $bc, 'stage' => 'MOUNTER_1'];
+            } else if ($stage === 'MOUNTER_1') {
+                // MOUNTER_2 (이형 마운터) 공정으로 이동
+                $pData = json_encode(["mounted_ic" => 6, "align_theta_deg" => 0.12, "force_n" => 1.85]);
+                $insH = $pdo->prepare("INSERT INTO barcode_history (barcode, process_name, result_status, process_data, created_at) VALUES (?, 'MOUNTER_2', 'PASS', ?, NOW())");
+                $insH->execute([$bc, $pData]);
+
+                $nextActiveQueue[] = ['barcode' => $bc, 'stage' => 'MOUNTER_2'];
+            } else if ($stage === 'MOUNTER_2') {
+                // REFLOW 공정으로 이동 (SMT 최종 솔더링)
                 $temp = number_format(245 + rand(0, 50)/10, 1);
-                $pData = json_encode(["peak_temp_c" => $temp, "time_above_liquidus_sec" => 45]);
+                $pData = json_encode(["peak_temp_c" => $temp, "tal_sec" => 52.0, "oxygen_ppm" => 375]);
                 $insH = $pdo->prepare("INSERT INTO barcode_history (barcode, process_name, result_status, process_data, created_at) VALUES (?, 'REFLOW', 'PASS', ?, NOW())");
                 $insH->execute([$bc, $pData]);
 
                 $updB = $pdo->prepare("UPDATE barcode_master SET status = 'DONE' WHERE barcode = ?");
                 $updB->execute([$bc]);
-                // Reflow 완료 후 배출됨 (nextActiveQueue에 넣지 않음)
+                // Reflow 완료 후 SMT 라인 배출
             }
         } else if ($mode === 'DIP') {
             if ($stage === 'DIP_AOI') {
-                // WAVE 공정으로 이동 (DIP 최종 완료)
-                $isPass = (rand(1, 100) > 3) ? 'PASS' : 'FAIL';
-                $temp = number_format(255 + rand(0, 40)/10, 1);
-                $pData = json_encode(["pot_temp_c" => $temp, "conveyor_speed_m_min" => 1.2]);
+                // WAVE (웨이브 솔더링) 공정으로 이동
+                $temp = number_format(250 + rand(0, 40)/10, 1);
+                $pData = json_encode(["pot_temp_c" => $temp, "wave_height_mm" => 9.15]);
+                $insH = $pdo->prepare("INSERT INTO barcode_history (barcode, process_name, result_status, process_data, created_at) VALUES (?, 'WAVE', 'PASS', ?, NOW())");
+                $insH->execute([$bc, $pData]);
 
-                $insH = $pdo->prepare("INSERT INTO barcode_history (barcode, process_name, result_status, process_data, created_at) VALUES (?, 'WAVE', ?, ?, NOW())");
+                $nextActiveQueue[] = ['barcode' => $bc, 'stage' => 'WAVE'];
+            } else if ($stage === 'WAVE') {
+                // ICT (인서킷 전기 회로 검사) 공정으로 이동
+                $isPass = (rand(1, 100) > 3) ? 'PASS' : 'FAIL';
+                $pData = json_encode(["contact_res_ohm" => 45.2, "res_accuracy_pct" => 99.8, "channels_tested" => 512]);
+                $insH = $pdo->prepare("INSERT INTO barcode_history (barcode, process_name, result_status, process_data, created_at) VALUES (?, 'ICT', ?, ?, NOW())");
+                $insH->execute([$bc, $isPass, $pData]);
+
+                if ($isPass === 'PASS') {
+                    $nextActiveQueue[] = ['barcode' => $bc, 'stage' => 'ICT'];
+                } else {
+                    $updB = $pdo->prepare("UPDATE barcode_master SET status = 'DEFECT' WHERE barcode = ?");
+                    $updB->execute([$bc]);
+                }
+            } else if ($stage === 'ICT') {
+                // COATING (방습/절연 코팅 & UV 경화) 공정으로 이동
+                $pData = json_encode(["film_thickness_um" => 75.0, "uv_energy_mj" => 1250, "dispense_press_mpa" => 0.35]);
+                $insH = $pdo->prepare("INSERT INTO barcode_history (barcode, process_name, result_status, process_data, created_at) VALUES (?, 'COATING', 'PASS', ?, NOW())");
+                $insH->execute([$bc, $pData]);
+
+                $nextActiveQueue[] = ['barcode' => $bc, 'stage' => 'COATING'];
+            } else if ($stage === 'COATING') {
+                // FCT (최종 완제품 기능 동작 검사) 공정으로 이동
+                $isPass = (rand(1, 100) > 2) ? 'PASS' : 'FAIL';
+                $pData = json_encode(["mcu_volt_v" => 5.02, "can_resp_ms" => 4.8, "curr_draw_ma" => 142.5]);
+                $insH = $pdo->prepare("INSERT INTO barcode_history (barcode, process_name, result_status, process_data, created_at) VALUES (?, 'FCT', ?, ?, NOW())");
                 $insH->execute([$bc, $isPass, $pData]);
 
                 $finalStatus = ($isPass === 'PASS') ? 'DONE' : 'DEFECT';
                 $updB = $pdo->prepare("UPDATE barcode_master SET status = ? WHERE barcode = ?");
                 $updB->execute([$finalStatus, $bc]);
+                // FCT 완료 후 최종 출하 대기
             }
         }
     }

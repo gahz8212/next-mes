@@ -1,6 +1,6 @@
 // frontend/js/machine.js - MES 설비별 독립 전용 HMI 터미널 제어 엔진
 
-// ── 1. 6개 설비 메타데이터 및 텔레메트리/TPM 스키마 ──
+// ── 1. 10대 설비 메타데이터 및 텔레메트리/TPM 스키마 ──
 const MACHINE_DEFINITIONS = {
     LASER: {
         code: 'LASER',
@@ -29,7 +29,7 @@ const MACHINE_DEFINITIONS = {
     SPI: {
         code: 'SPI',
         seqNum: '02',
-        lineType: 'SMT 라인 1호기',
+        lineType: 'SMT 라인 2호기',
         name: 'SPI 3D (납도포 검사기)',
         desc: '솔더 페이스트 3D 체적, 높이, 오프셋 인쇄 품질 전수 검사',
         defaultHealth: 97,
@@ -50,22 +50,22 @@ const MACHINE_DEFINITIONS = {
             { key: 'offset_x_um', label: 'X축 오프셋', unit: 'μm', base: 6.8, min: -20, max: 20, lcl: -15.0, ucl: 15.0, decimals: 1 }
         ]
     },
-    MOUNTER: {
-        code: 'MOUNTER',
+    MOUNTER_1: {
+        code: 'MOUNTER_1',
         seqNum: '03',
-        lineType: 'SMT 라인 1호기',
-        name: 'Chip Mounter #1 (고속 칩 마운터)',
-        desc: '0402 칩 및 초정밀 IC 전자부품 고속 마운팅 (16-Head)',
+        lineType: 'SMT 라인 3호기',
+        name: '#1 고속 칩 마운터 (Chip Shooter)',
+        desc: '0402/0603 초소형 칩 부품 초고속 실장 (16-Head Ultra Fast)',
         defaultHealth: 99,
         tpm: {
-            itemTitle: '노즐 팁 마모도 및 교체 주기 (RUL)',
+            itemTitle: '고속 노즐 팁 마모도 및 교체 주기 (RUL)',
             badgeText: 'D-4 (누적 16.8만타)',
             percent: 84,
             subLeft: '피더 텐션: 4.2 N (정상)',
             subRight: '권장 수명: 200,000타',
-            btnText: '🔧 마운터 노즐 교체 완료 (Reset)',
+            btnText: '🔧 고속 노즐 교체 완료 (Reset)',
             actionName: 'MOUNTER_NOZZLE_REPLACE',
-            aiGuide: '16개 노즐 헤드의 흡착 진공압과 픽업 성공률이 99.8%로 최상 상태를 유지하고 있습니다.'
+            aiGuide: '16개 고속 노즐 헤드의 흡착 진공압과 픽업 성공률이 99.8%로 최상 상태를 유지하고 있습니다.'
         },
         sensors: [
             { key: 'vacuum_kpa', label: '노즐 진공압', unit: 'kPa', base: -84.5, min: -100, max: -60, lcl: -95.0, ucl: -78.0, decimals: 1 },
@@ -74,10 +74,34 @@ const MACHINE_DEFINITIONS = {
             { key: 'feeder_tension_n', label: '피더 테이프장력', unit: 'N', base: 4.2, min: 2.0, max: 6.5, lcl: 2.5, ucl: 6.0, decimals: 1 }
         ]
     },
+    MOUNTER_2: {
+        code: 'MOUNTER_2',
+        seqNum: '04',
+        lineType: 'SMT 라인 4호기',
+        name: '#2 이형/범용 마운터 (Flexible)',
+        desc: '대형 IC, 커넥터, QFP, BGA 부품 비전 얼라인먼트 정밀 실장',
+        defaultHealth: 98,
+        tpm: {
+            itemTitle: '비전 카메라 조명 및 트레이 피더 정비 주기',
+            badgeText: 'D-7 (잔여 78%)',
+            percent: 78,
+            subLeft: '장착 가압력: 1.85 N (정상)',
+            subRight: '교정 주기: 14일',
+            btnText: '🎯 비전 얼라인먼트 교정 완료 (Reset)',
+            actionName: 'MOUNTER_VISION_CAL',
+            aiGuide: 'QFP/BGA 정밀 비전 카메라 인식률이 99.4%로 정상이며 트레이 피더 공급이 원활합니다.'
+        },
+        sensors: [
+            { key: 'align_theta_deg', label: '회전 정렬오차', unit: '°', base: 0.12, min: -1.0, max: 1.0, lcl: -0.5, ucl: 0.5, decimals: 2 },
+            { key: 'force_n', label: '장착 가압력', unit: 'N', base: 1.85, min: 0.5, max: 4.0, lcl: 1.0, ucl: 2.8, decimals: 2 },
+            { key: 'tray_feeder_rem', label: '트레이 피더잔량', unit: '%', base: 86, min: 10, max: 100, lcl: 20, ucl: 100, decimals: 0 },
+            { key: 'vision_match_pct', label: '비전 패턴일치율', unit: '%', base: 99.4, min: 80, max: 100, lcl: 95, ucl: 100, decimals: 1 }
+        ]
+    },
     REFLOW: {
         code: 'REFLOW',
-        seqNum: '04',
-        lineType: 'SMT 라인 1호기',
+        seqNum: '05',
+        lineType: 'SMT 라인 5호기',
         name: 'Reflow Oven (10존 질소 열풍 오븐)',
         desc: 'SMT 무연(Lead-Free) 솔더링 10-Zone 정밀 열풍 프로파일',
         defaultHealth: 98,
@@ -100,8 +124,8 @@ const MACHINE_DEFINITIONS = {
     },
     DIP_AOI: {
         code: 'DIP_AOI',
-        seqNum: '05',
-        lineType: 'DIP 수삽 라인 2호기',
+        seqNum: '06',
+        lineType: 'DIP 수삽 라인 1호기',
         name: 'DIP AOI (수삽 3D 비전 검사기)',
         desc: '수삽 자재 삽입 결함, 리드 핀 들뜸, 납 브릿지 쇼트 전수 검사',
         defaultHealth: 99,
@@ -124,9 +148,9 @@ const MACHINE_DEFINITIONS = {
     },
     WAVE: {
         code: 'WAVE',
-        seqNum: '06',
+        seqNum: '07',
         lineType: 'DIP 수삽 라인 2호기',
-        name: 'Wave Soldering (자동 납땜기)',
+        name: 'Wave Soldering (자동 웨이브 납땜기)',
         desc: 'DIP PCB 하부 자동 플럭싱, 예열 및 듀얼 솔더 웨이브 납땜',
         defaultHealth: 97,
         tpm: {
@@ -144,6 +168,78 @@ const MACHINE_DEFINITIONS = {
             { key: 'wave_height_mm', label: '웨이브 파고높이', unit: 'mm', base: 9.15, min: 6.0, max: 12.0, lcl: 8.5, ucl: 9.8, decimals: 2 },
             { key: 'preheater_temp_c', label: '예열 챔버온도', unit: '℃', base: 132.5, min: 100, max: 160, lcl: 120.0, ucl: 145.0, decimals: 1 },
             { key: 'flux_amount_ml_min', label: '플럭스 분사량', unit: 'ml/min', base: 16.2, min: 10, max: 22, lcl: 14.0, ucl: 18.0, decimals: 1 }
+        ]
+    },
+    ICT: {
+        code: 'ICT',
+        seqNum: '08',
+        lineType: 'DIP 수삽 라인 3호기',
+        name: 'ICT (인서킷 전기 회로 검사기)',
+        desc: '코팅 전 기판 쇼트, 오픈, 저항/용량 특성 핀베드 전수 전기 검사',
+        defaultHealth: 99,
+        tpm: {
+            itemTitle: '테스트 핀 접촉 건전도 및 핀베드 교체 주기',
+            badgeText: 'D-20 (92%)',
+            percent: 92,
+            subLeft: '핀 접촉저항: 45.2 mΩ (정상)',
+            subRight: '교체 주기: 100,000회 접촉',
+            btnText: '⚡ ICT 테스트 핀 정비 완료 (Reset)',
+            actionName: 'ICT_PIN_MAINT',
+            aiGuide: '전체 512개 테스트 핀의 접촉 저항이 균일하며 단락/오픈 검사 정확도가 99.8%를 기록 중입니다.'
+        },
+        sensors: [
+            { key: 'contact_res_ohm', label: '접촉 저항치', unit: 'mΩ', base: 45.2, min: 10, max: 120, lcl: 20.0, ucl: 80.0, decimals: 1 },
+            { key: 'res_accuracy_pct', label: '저항 측정정밀도', unit: '%', base: 99.8, min: 90, max: 100, lcl: 95.0, ucl: 100.0, decimals: 1 },
+            { key: 'leakage_curr_ua', label: '누설 전류량', unit: 'μA', base: 0.45, min: 0, max: 3.0, lcl: 0.0, ucl: 1.5, decimals: 2 },
+            { key: 'pin_wear_pct', label: '핀 마모 진행률', unit: '%', base: 12, min: 0, max: 50, lcl: 0, ucl: 30, decimals: 0 }
+        ]
+    },
+    COATING: {
+        code: 'COATING',
+        seqNum: '09',
+        lineType: 'DIP 수삽 라인 4호기',
+        name: 'Conformal Coating (방습 코팅기)',
+        desc: '전장/산업용 방수·절연 실리콘 코팅액 자동 도포 및 UV 초고속 경화',
+        defaultHealth: 98,
+        tpm: {
+            itemTitle: '디스펜서 분사 노즐 초음파 세척 주기',
+            badgeText: 'D-12 (84%)',
+            percent: 84,
+            subLeft: 'UV 광량: 1,250 mJ/cm² (정상 경화)',
+            subRight: '세척 주기: 7일',
+            btnText: '🧴 코팅 노즐 세척 완료 (Reset)',
+            actionName: 'COATING_NOZZLE_WASH',
+            aiGuide: '코팅 피막 두께(75μm)와 UV 램프 적산 광량이 최적 규격 범위 내에서 안정적으로 유지되고 있습니다.'
+        },
+        sensors: [
+            { key: 'dispense_press_mpa', label: '노즐 분사압력', unit: 'MPa', base: 0.35, min: 0.2, max: 0.5, lcl: 0.30, ucl: 0.40, decimals: 2 },
+            { key: 'film_thickness_um', label: '도포 피막두께', unit: 'μm', base: 75.0, min: 40, max: 120, lcl: 60.0, ucl: 90.0, decimals: 1 },
+            { key: 'uv_energy_mj', label: 'UV 적산광량', unit: 'mJ', base: 1250, min: 800, max: 1800, lcl: 1000, ucl: 1500, decimals: 0 },
+            { key: 'fluid_viscosity_cp', label: '코팅액 점도', unit: 'cP', base: 185, min: 120, max: 260, lcl: 150, ucl: 220, decimals: 0 }
+        ]
+    },
+    FCT: {
+        code: 'FCT',
+        seqNum: '10',
+        lineType: 'DIP 수삽 라인 5호기',
+        name: 'FCT (완제품 기능 동작 검사기)',
+        desc: '실제 전원 인가 후 MCU 동작, CAN/통신, 소비전류 최종 전수 검사',
+        defaultHealth: 99,
+        tpm: {
+            itemTitle: '테스트 지그 전원 릴레이 및 커넥터 건전도',
+            badgeText: 'D-30 (95%)',
+            percent: 95,
+            subLeft: 'CAN 통신 지연: 4.8 ms (초고속)',
+            subRight: '지그 교정: 30일 주기',
+            btnText: '🎯 FCT 테스트 지그 교정 완료 (Reset)',
+            actionName: 'FCT_JIG_CAL',
+            aiGuide: 'MCU 5V 인가 전압 및 통신 응답 패킷 손실률 0%로 완제품 기능 검사가 최적 가동 중입니다.'
+        },
+        sensors: [
+            { key: 'mcu_volt_v', label: 'MCU 인가전압', unit: 'V', base: 5.02, min: 4.5, max: 5.5, lcl: 4.85, ucl: 5.15, decimals: 2 },
+            { key: 'curr_draw_ma', label: '총 소비전류', unit: 'mA', base: 142.5, min: 80, max: 220, lcl: 120.0, ucl: 170.0, decimals: 1 },
+            { key: 'can_resp_ms', label: 'CAN 통신지연', unit: 'ms', base: 4.8, min: 1.0, max: 15.0, lcl: 2.0, ucl: 8.0, decimals: 1 },
+            { key: 'fw_check_score', label: '펌웨어 검증점수', unit: '점', base: 100, min: 80, max: 100, lcl: 90, ucl: 100, decimals: 0 }
         ]
     }
 };
@@ -200,7 +296,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1. URL 파라미터 확인
     const params = new URLSearchParams(window.location.search);
-    const eqParam = params.get('eq');
+    let eqParam = params.get('eq');
+    if (eqParam === 'MOUNTER') eqParam = 'MOUNTER_1';
     if (eqParam && MACHINE_DEFINITIONS[eqParam]) {
         currentEqCode = eqParam;
     }

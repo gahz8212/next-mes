@@ -170,18 +170,26 @@ html, body {
 
 .wo-dropdown {
     width: 100%;
-    background: var(--surface2);
-    border: 1.5px solid rgba(255, 255, 255, 0.12);
-    color: #fff;
-    font-size: 13px;
+    background: #1e293b;
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    font-size: 13.5px;
+    font-weight: 600;
     font-family: inherit;
-    padding: 8px 10px;
+    padding: 9px 12px;
     border-radius: var(--radius-sm);
     outline: none;
     cursor: pointer;
 }
 .wo-dropdown:focus {
     border-color: var(--accent);
+}
+.wo-dropdown option {
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 10px 12px;
 }
 
 .left-scroll-body {
@@ -344,21 +352,24 @@ html, body {
 
 .scanner-input {
     width: 100%;
-    background: var(--bg);
-    border: 2px solid var(--accent);
+    background: #ffffff !important;
+    border: 2px solid #2563eb !important;
     border-radius: var(--radius-sm);
-    color: #fff;
+    color: #111827 !important;
     font-size: 16px;
     font-family: 'JetBrains Mono', monospace;
     font-weight: 700;
     padding: 10px 14px;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
     transition: all 0.15s;
+    caret-color: #2563eb !important;
 }
 .scanner-input:focus {
-    border-color: #60a5fa;
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: #1d4ed8 !important;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.35) !important;
 }
 
 .btn-scan-submit {

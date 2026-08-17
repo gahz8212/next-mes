@@ -411,7 +411,7 @@ const CEO_MACHINE_SCHEMAS = {
             { key: 'offset_x_um', label: '오프셋', unit: 'μm', base: 6.8, min: -20, max: 20, decimals: 1, color: '#38bdf8' }
         ]
     },
-    MOUNTER: {
+    MOUNTER_1: {
         defaultHealth: 99,
         defaultCycleVal: 84,
         defaultCycleText: 'D-4',
@@ -421,6 +421,18 @@ const CEO_MACHINE_SCHEMAS = {
             { key: 'head_vibration_g', label: '진동', unit: 'G', base: 0.088, min: 0, max: 0.25, decimals: 3, color: '#38bdf8' },
             { key: 'motor_temp_c', label: '발열', unit: '℃', base: 37.8, min: 20, max: 55, decimals: 1, color: '#a78bfa' },
             { key: 'feeder_tension_n', label: '장력', unit: 'N', base: 4.2, min: 2.0, max: 6.5, decimals: 1, color: '#38bdf8' }
+        ]
+    },
+    MOUNTER_2: {
+        defaultHealth: 98,
+        defaultCycleVal: 88,
+        defaultCycleText: 'D-7',
+        defaultCycleSub: '척교정',
+        bars: [
+            { key: 'vacuum_kpa', label: '진공', unit: 'kPa', base: -81.2, min: -100, max: -60, decimals: 1, color: '#10b981' },
+            { key: 'feeder_tension_n', label: '압력', unit: 'N', base: 1.85, min: 0.5, max: 4.0, decimals: 2, color: '#38bdf8' },
+            { key: 'motor_temp_c', label: '온도', unit: '℃', base: 39.2, min: 20, max: 55, decimals: 1, color: '#a78bfa' },
+            { key: 'head_vibration_g', label: '각도', unit: '°', base: 0.12, min: -1.0, max: 1.0, decimals: 2, color: '#38bdf8' }
         ]
     },
     REFLOW: {
@@ -458,6 +470,42 @@ const CEO_MACHINE_SCHEMAS = {
             { key: 'preheater_temp_c', label: '예열', unit: '℃', base: 132.5, min: 100, max: 160, decimals: 1, color: '#a78bfa' },
             { key: 'flux_amount_ml_min', label: '분사', unit: 'ml/m', base: 16.2, min: 10, max: 22, decimals: 1, color: '#38bdf8' }
         ]
+    },
+    ICT: {
+        defaultHealth: 98,
+        defaultCycleVal: 92,
+        defaultCycleText: 'D-20',
+        defaultCycleSub: '핀베드교정',
+        bars: [
+            { key: 'contact_res_ohm', label: '접촉', unit: 'mΩ', base: 45.2, min: 10, max: 90, decimals: 1, color: '#10b981' },
+            { key: 'res_accuracy_pct', label: '정밀', unit: '%', base: 99.8, min: 90, max: 100, decimals: 1, color: '#38bdf8' },
+            { key: 'leakage_curr_ua', label: '누설', unit: 'μA', base: 0.45, min: 0, max: 2.0, decimals: 2, color: '#a78bfa' },
+            { key: 'pin_wear_pct', label: '마모', unit: '%', base: 12.0, min: 0, max: 40, decimals: 0, color: '#38bdf8' }
+        ]
+    },
+    COATING: {
+        defaultHealth: 99,
+        defaultCycleVal: 84,
+        defaultCycleText: 'D-12',
+        defaultCycleSub: '노즐세척',
+        bars: [
+            { key: 'dispense_press_mpa', label: '압력', unit: 'MPa', base: 0.35, min: 0.2, max: 0.5, decimals: 2, color: '#10b981' },
+            { key: 'film_thickness_um', label: '두께', unit: 'μm', base: 75.0, min: 50, max: 100, decimals: 1, color: '#38bdf8' },
+            { key: 'uv_energy_mj', label: '광량', unit: 'mJ', base: 1250, min: 800, max: 1600, decimals: 0, color: '#a78bfa' },
+            { key: 'fluid_viscosity_cp', label: '점도', unit: 'cP', base: 185, min: 120, max: 250, decimals: 0, color: '#38bdf8' }
+        ]
+    },
+    FCT: {
+        defaultHealth: 99,
+        defaultCycleVal: 95,
+        defaultCycleText: 'D-30',
+        defaultCycleSub: '지그교정',
+        bars: [
+            { key: 'mcu_volt_v', label: '전압', unit: 'V', base: 5.02, min: 4.5, max: 5.5, decimals: 2, color: '#10b981' },
+            { key: 'curr_draw_ma', label: '전류', unit: 'mA', base: 142.5, min: 100, max: 200, decimals: 1, color: '#38bdf8' },
+            { key: 'can_resp_ms', label: '응답', unit: 'ms', base: 4.8, min: 1.0, max: 10.0, decimals: 1, color: '#a78bfa' },
+            { key: 'fw_check_score', label: '검증', unit: '점', base: 100, min: 80, max: 100, decimals: 0, color: '#38bdf8' }
+        ]
     }
 };
 
@@ -494,9 +542,11 @@ function openCeoLineModal(lineType) {
 
     overlay.classList.add('open');
 
-    // 캔버스 즉시 드로잉
+    // 캔버스 즉시 드로잉 (각 5대씩 총 10대 풀-파이프라인)
     setTimeout(() => {
-        const targetMachines = (lineType === 'SMT') ? ['LASER', 'SPI', 'MOUNTER', 'REFLOW'] : ['DIP_AOI', 'WAVE'];
+        const targetMachines = (lineType === 'SMT') ? 
+            ['LASER', 'SPI', 'MOUNTER_1', 'MOUNTER_2', 'REFLOW'] : 
+            ['DIP_AOI', 'WAVE', 'ICT', 'COATING', 'FCT'];
         targetMachines.forEach(id => {
             const st = ceoMachineCurrentState[id];
             if (st) {
@@ -518,6 +568,7 @@ function closeCeoLineModal(e) {
     const overlay = document.getElementById('ceoLineModalOverlay');
     if (overlay) overlay.classList.remove('open');
 }
+window.closeCeoLineModal = closeCeoLineModal;
 window.closeCeoLineModal = closeCeoLineModal;
 
 document.addEventListener('keydown', (e) => {
@@ -797,7 +848,9 @@ function updateCeoMachine(processId, status, barcode, pDataObj) {
 // ── 9. 대기 중 센서 미세 변동 앰비언트 루프 (1.2초 주기) ──
 setInterval(() => {
     if (!activeCeoLineType) return;
-    const targetMachines = (activeCeoLineType === 'SMT') ? ['LASER', 'SPI', 'MOUNTER', 'REFLOW'] : ['DIP_AOI', 'WAVE'];
+    const targetMachines = (activeCeoLineType === 'SMT') ? 
+        ['LASER', 'SPI', 'MOUNTER_1', 'MOUNTER_2', 'REFLOW'] : 
+        ['DIP_AOI', 'WAVE', 'ICT', 'COATING', 'FCT'];
 
     targetMachines.forEach(id => {
         const schema = CEO_MACHINE_SCHEMAS[id];
@@ -831,13 +884,14 @@ async function pollCeoLiveStream() {
             const activeWo = json.data.active_wo || null;
 
             if (activeWo && activeWo.status === 'DONE') {
-                const allIds = ['LASER', 'SPI', 'MOUNTER', 'REFLOW', 'DIP_AOI', 'WAVE'];
+                const allIds = ['LASER', 'SPI', 'MOUNTER_1', 'MOUNTER_2', 'REFLOW', 'DIP_AOI', 'WAVE', 'ICT', 'COATING', 'FCT'];
                 allIds.forEach(id => updateCeoMachine(id, 'IDLE', '-', null));
             }
 
             if (logs.length > 0) {
                 logs.forEach(item => {
-                    const proc = item.process_name;
+                    let proc = item.process_name;
+                    if (proc === 'MOUNTER') proc = 'MOUNTER_1';
                     const isPass = item.result_status;
                     const barcode = item.barcode;
                     let pDataObj = null;

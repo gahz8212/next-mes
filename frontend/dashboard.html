@@ -3,50 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MES 작업자 라인 관제 콘솔 - SMT/DIP 전자제조</title>
+    <title>MES 라인 관제 콘솔 - SMT/DIP 전자제조</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/dashboard.css?v=20260814_6">
+    <link rel="stylesheet" href="css/common-header.css">
 </head>
 <body>
-    <!-- Topbar -->
-    <header class="worker-topbar">
-        <div class="brand-section">
-            <span class="brand-tag">MES PRO</span>
-            <div class="brand-title-wrap">
-                <div class="brand-title">생산라인 실시간 관제 콘솔</div>
-                <div class="brand-subtitle">SMT & DIP 독립 2공정 라인 모니터링</div>
+    <!-- Unified Topbar Header -->
+    <header class="mes-unified-header" data-current-screen="dashboard">
+        <!-- 1. 좌측: 브랜드 & 공정 타이틀 -->
+        <div class="mes-header-left">
+            <span class="mes-header-brand-badge">MES PRO</span>
+            <div class="mes-header-titles">
+                <div class="mes-header-main-title">생산라인 실시간 관제 콘솔</div>
+                <div class="mes-header-sub-title">SMT & DIP 독립 2공정 라인 모니터링</div>
             </div>
         </div>
 
-        <div class="topbar-actions">
-            <div class="live-badge">
-                <div class="live-dot"></div>
-                <span>LIVE FEED</span>
+        <!-- 2. 중앙: 역할/공정 순서 네비게이션 버튼 -->
+        <nav class="mes-header-center">
+            <a href="dashboard.html" class="mes-nav-btn active" data-screen="dashboard">
+                <span class="nav-icon">📊</span>
+                <span>라인 대시보드</span>
+            </a>
+            <a href="kitting.html" class="mes-nav-btn" data-screen="kitting">
+                <span class="nav-icon">📦</span>
+                <span>자재 피킹</span>
+            </a>
+            <a href="machine.html" class="mes-nav-btn" data-screen="machine">
+                <span class="nav-icon">🔧</span>
+                <span>설비 HMI</span>
+            </a>
+        </nav>
+
+        <!-- 3. 우측: 알림 센터, 현재 로그인 작업자, 로그아웃 -->
+        <div class="mes-header-right">
+            <!-- Notifications -->
+            <div class="noti-wrap">
+                <button class="noti-btn" onclick="toggleNotificationPopup(event)" title="알림 센터">
+                    🔔
+                    <span class="noti-badge" id="noti-count" style="display:none;">0</span>
+                </button>
+                <div class="noti-dropdown" id="notiDropdown">
+                    <div class="noti-header">
+                        <div class="noti-header-title">🔔 실시간 라인 알림 센터</div>
+                        <button class="noti-read-all" onclick="markAllNotificationsRead()">모두 읽음</button>
+                    </div>
+                    <div class="noti-list" id="noti-list">
+                        <div style="padding:20px; text-align:center; color:var(--hdr-muted); font-size:12px;">알림이 없습니다.</div>
+                    </div>
+                </div>
             </div>
 
-            <a href="ceo.html" class="btn-nav-admin" style="background: rgba(245,158,11,0.15); color: #fbbf24; border-color: rgba(245,158,11,0.35);">
-                👑 경영진 뷰
-            </a>
-
-            <a href="kitting.html" class="btn-nav-admin" style="background: rgba(59,130,246,0.15); color: #93c5fd; border-color: rgba(59,130,246,0.3);">
-                자재 피킹 단말기 (Kitting)
-            </a>
-
-            <a href="machine.html" class="btn-nav-admin" style="background: rgba(6,182,212,0.15); color: #67e8f9; border-color: rgba(6,182,212,0.3);">
-                설비별 HMI 콘솔
-            </a>
-
-            <div class="user-badge" id="userBadge">
-                <span>작업자:</span>
-                <span class="role-tag" id="userNameLabel">Supervisor</span>
+            <div class="mes-user-badge">
+                <div class="user-dot"></div>
+                <span class="user-name-text" id="hdrUserName">작업자</span>
             </div>
-
-            <a href="admin.html" class="btn-nav-admin" id="btnAdminNav" style="display: none;">
-                관리자 대시보드
-            </a>
-
-            <button class="btn-logout" onclick="logout()">
+            <button class="mes-logout-btn" onclick="mesLogout()">
                 로그아웃
             </button>
         </div>
@@ -79,7 +93,7 @@
     <!-- 메인 레이아웃 바디 -->
     <div class="app-body">
         <!-- 좌측 사이드바: 작업지시 대기열 -->
-        <aside class="wo-sidebar" id="woSidebar">
+        <aside class="wo-sidebar" id="woSidebar" style="position: relative;">
             <div class="sidebar-header">
                 <span class="sidebar-title">작업지시 대기열</span>
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -87,6 +101,8 @@
                     <button class="sidebar-toggle-btn" onclick="toggleSidebar('left')" title="대기열 접기">◀</button>
                 </div>
             </div>
+            <!-- 상하 가운데 위치 닫기 토글 탭 -->
+            <div class="sidebar-edge-toggle" onclick="toggleSidebar('left')" title="대기열 닫기">◀</div>
             <div class="wo-list-scroll" id="wo-list">
                 <!-- 동적 렌더링 -->
             </div>
@@ -96,11 +112,11 @@
         <main class="main-stage">
             <!-- 2단 공정 분리 컨테이너 (Line 1: SMT / Line 2: DIP) -->
             <div class="lines-wrapper">
-                <!-- 1. SMT 표면실장 라인 (Line 1) -->
+                <!-- 1. SMT 표면실장 라인 (Line 1: 5대 풀 파이프라인) -->
                 <section class="line-panel" id="linePanel-SMT">
                     <div class="line-panel-header">
                         <div class="line-panel-title">
-                            <span>Line 1: SMT 자삽/표면실장 자동화 라인</span>
+                            <span>Line 1: SMT 자삽/표면실장 자동화 라인 (5대)</span>
                         </div>
                         <span class="line-status-chip chip-smt">자삽 공정</span>
                     </div>
@@ -117,18 +133,16 @@
                                 <div class="mac-data" id="data-LASER">-</div>
                             </div>
                             <div class="mac-dual-spark-container">
-                                <!-- 상단: 건전도 & 정비주기 원그래프 듀얼 게이지 -->
                                 <div class="mac-spark-box spark-gauge-box">
                                     <canvas class="gauge-canvas" id="canvas-radial-LASER" width="260" height="56"></canvas>
                                 </div>
-                                <!-- 하단: 4대 핵심 데이터 상하 막대 그래프 -->
                                 <div class="mac-spark-box spark-bars-box">
                                     <canvas class="bars-canvas" id="canvas-bars-LASER" width="260" height="82"></canvas>
                                 </div>
                             </div>
                             <div class="array-panel-strip">
                                 <div class="array-strip-left">
-                                    <span class="array-strip-label">4-UP PANEL</span>
+                                    <span class="array-strip-label">4-UP</span>
                                     <span class="mac-defect-tag" id="defect-tag-LASER"></span>
                                 </div>
                                 <div class="array-cells-wrap" id="cells-LASER">
@@ -153,18 +167,16 @@
                                 <div class="mac-data" id="data-SPI">-</div>
                             </div>
                             <div class="mac-dual-spark-container">
-                                <!-- 상단: 건전도 & 정비주기 원그래프 듀얼 게이지 -->
                                 <div class="mac-spark-box spark-gauge-box">
                                     <canvas class="gauge-canvas" id="canvas-radial-SPI" width="260" height="56"></canvas>
                                 </div>
-                                <!-- 하단: 4대 핵심 데이터 상하 막대 그래프 -->
                                 <div class="mac-spark-box spark-bars-box">
                                     <canvas class="bars-canvas" id="canvas-bars-SPI" width="260" height="82"></canvas>
                                 </div>
                             </div>
                             <div class="array-panel-strip">
                                 <div class="array-strip-left">
-                                    <span class="array-strip-label">4-UP PANEL</span>
+                                    <span class="array-strip-label">4-UP</span>
                                     <span class="mac-defect-tag" id="defect-tag-SPI"></span>
                                 </div>
                                 <div class="array-cells-wrap" id="cells-SPI">
@@ -178,32 +190,30 @@
 
                         <div class="flow-step-arrow">▶</div>
 
-                        <!-- Machine 3: Chip Mounter -->
-                        <div class="machine-card wait" id="mac-MOUNTER" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('MOUNTER')">
+                        <!-- Machine 3: #1 High-Speed Chip Mounter -->
+                        <div class="machine-card wait" id="mac-MOUNTER_1" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('MOUNTER_1')">
                             <div class="mac-header-row">
-                                <span class="mac-title">고속 마운터</span>
+                                <span class="mac-title">#1 고속 마운터</span>
                                 <span class="mac-status-indicator">대기</span>
                             </div>
                             <div class="mac-data-box">
                                 <div class="mac-data-label">BARCODE</div>
-                                <div class="mac-data" id="data-MOUNTER">-</div>
+                                <div class="mac-data" id="data-MOUNTER_1">-</div>
                             </div>
                             <div class="mac-dual-spark-container">
-                                <!-- 상단: 건전도 & 정비주기 원그래프 듀얼 게이지 -->
                                 <div class="mac-spark-box spark-gauge-box">
-                                    <canvas class="gauge-canvas" id="canvas-radial-MOUNTER" width="260" height="56"></canvas>
+                                    <canvas class="gauge-canvas" id="canvas-radial-MOUNTER_1" width="260" height="56"></canvas>
                                 </div>
-                                <!-- 하단: 4대 핵심 데이터 상하 막대 그래프 -->
                                 <div class="mac-spark-box spark-bars-box">
-                                    <canvas class="bars-canvas" id="canvas-bars-MOUNTER" width="260" height="82"></canvas>
+                                    <canvas class="bars-canvas" id="canvas-bars-MOUNTER_1" width="260" height="82"></canvas>
                                 </div>
                             </div>
                             <div class="array-panel-strip">
                                 <div class="array-strip-left">
-                                    <span class="array-strip-label">4-UP PANEL</span>
-                                    <span class="mac-defect-tag" id="defect-tag-MOUNTER"></span>
+                                    <span class="array-strip-label">4-UP</span>
+                                    <span class="mac-defect-tag" id="defect-tag-MOUNTER_1"></span>
                                 </div>
-                                <div class="array-cells-wrap" id="cells-MOUNTER">
+                                <div class="array-cells-wrap" id="cells-MOUNTER_1">
                                     <span class="cell-chip wait">#1</span>
                                     <span class="cell-chip wait">#2</span>
                                     <span class="cell-chip wait">#3</span>
@@ -214,7 +224,41 @@
 
                         <div class="flow-step-arrow">▶</div>
 
-                        <!-- Machine 4: Reflow Oven -->
+                        <!-- Machine 4: #2 Odd-Form Flexible Mounter -->
+                        <div class="machine-card wait" id="mac-MOUNTER_2" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('MOUNTER_2')">
+                            <div class="mac-header-row">
+                                <span class="mac-title">#2 이형 마운터</span>
+                                <span class="mac-status-indicator">대기</span>
+                            </div>
+                            <div class="mac-data-box">
+                                <div class="mac-data-label">BARCODE</div>
+                                <div class="mac-data" id="data-MOUNTER_2">-</div>
+                            </div>
+                            <div class="mac-dual-spark-container">
+                                <div class="mac-spark-box spark-gauge-box">
+                                    <canvas class="gauge-canvas" id="canvas-radial-MOUNTER_2" width="260" height="56"></canvas>
+                                </div>
+                                <div class="mac-spark-box spark-bars-box">
+                                    <canvas class="bars-canvas" id="canvas-bars-MOUNTER_2" width="260" height="82"></canvas>
+                                </div>
+                            </div>
+                            <div class="array-panel-strip">
+                                <div class="array-strip-left">
+                                    <span class="array-strip-label">4-UP</span>
+                                    <span class="mac-defect-tag" id="defect-tag-MOUNTER_2"></span>
+                                </div>
+                                <div class="array-cells-wrap" id="cells-MOUNTER_2">
+                                    <span class="cell-chip wait">#1</span>
+                                    <span class="cell-chip wait">#2</span>
+                                    <span class="cell-chip wait">#3</span>
+                                    <span class="cell-chip wait">#4</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flow-step-arrow">▶</div>
+
+                        <!-- Machine 5: Reflow Oven -->
                         <div class="machine-card wait" id="mac-REFLOW" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('REFLOW')">
                             <div class="mac-header-row">
                                 <span class="mac-title">Reflow Oven</span>
@@ -225,18 +269,16 @@
                                 <div class="mac-data" id="data-REFLOW">-</div>
                             </div>
                             <div class="mac-dual-spark-container">
-                                <!-- 상단: 건전도 & 정비주기 원그래프 듀얼 게이지 -->
                                 <div class="mac-spark-box spark-gauge-box">
                                     <canvas class="gauge-canvas" id="canvas-radial-REFLOW" width="260" height="56"></canvas>
                                 </div>
-                                <!-- 하단: 4대 핵심 데이터 상하 막대 그래프 -->
                                 <div class="mac-spark-box spark-bars-box">
                                     <canvas class="bars-canvas" id="canvas-bars-REFLOW" width="260" height="82"></canvas>
                                 </div>
                             </div>
                             <div class="array-panel-strip">
                                 <div class="array-strip-left">
-                                    <span class="array-strip-label">4-UP PANEL</span>
+                                    <span class="array-strip-label">4-UP</span>
                                     <span class="mac-defect-tag" id="defect-tag-REFLOW"></span>
                                 </div>
                                 <div class="array-cells-wrap" id="cells-REFLOW">
@@ -250,17 +292,17 @@
                     </div>
                 </section>
 
-                <!-- 2. DIP 수삽 & 웨이브 솔더링 라인 (Line 2) -->
+                <!-- 2. DIP 수삽 & 후공정 라인 (Line 2: 5대 풀 파이프라인) -->
                 <section class="line-panel" id="linePanel-DIP">
                     <div class="line-panel-header">
                         <div class="line-panel-title">
-                            <span>Line 2: DIP 수삽 & 웨이브 솔더링 라인</span>
+                            <span>Line 2: DIP 수삽 & 후가공 검사 라인 (5대)</span>
                         </div>
                         <span class="line-status-chip chip-dip">수삽 공정</span>
                     </div>
 
                     <div class="line-machines-row">
-                        <!-- Machine 5: 수삽 AOI -->
+                        <!-- Machine 6: 수삽 AOI -->
                         <div class="machine-card wait" id="mac-DIP_AOI" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('DIP_AOI')">
                             <div class="mac-header-row">
                                 <span class="mac-title">수삽 AOI 검사</span>
@@ -271,18 +313,16 @@
                                 <div class="mac-data" id="data-DIP_AOI">-</div>
                             </div>
                             <div class="mac-dual-spark-container">
-                                <!-- 상단: 건전도 & 정비주기 원그래프 듀얼 게이지 -->
                                 <div class="mac-spark-box spark-gauge-box">
                                     <canvas class="gauge-canvas" id="canvas-radial-DIP_AOI" width="260" height="56"></canvas>
                                 </div>
-                                <!-- 하단: 4대 핵심 데이터 상하 막대 그래프 -->
                                 <div class="mac-spark-box spark-bars-box">
                                     <canvas class="bars-canvas" id="canvas-bars-DIP_AOI" width="260" height="82"></canvas>
                                 </div>
                             </div>
                             <div class="array-panel-strip">
                                 <div class="array-strip-left">
-                                    <span class="array-strip-label">4-UP PANEL</span>
+                                    <span class="array-strip-label">4-UP</span>
                                     <span class="mac-defect-tag" id="defect-tag-DIP_AOI"></span>
                                 </div>
                                 <div class="array-cells-wrap" id="cells-DIP_AOI">
@@ -296,7 +336,7 @@
 
                         <div class="flow-step-arrow">▶</div>
 
-                        <!-- Machine 6: Wave Soldering -->
+                        <!-- Machine 7: Wave Soldering -->
                         <div class="machine-card wait" id="mac-WAVE" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('WAVE')">
                             <div class="mac-header-row">
                                 <span class="mac-title">Wave Soldering</span>
@@ -307,21 +347,121 @@
                                 <div class="mac-data" id="data-WAVE">-</div>
                             </div>
                             <div class="mac-dual-spark-container">
-                                <!-- 상단: 건전도 & 정비주기 원그래프 듀얼 게이지 -->
                                 <div class="mac-spark-box spark-gauge-box">
                                     <canvas class="gauge-canvas" id="canvas-radial-WAVE" width="260" height="56"></canvas>
                                 </div>
-                                <!-- 하단: 4대 핵심 데이터 상하 막대 그래프 -->
                                 <div class="mac-spark-box spark-bars-box">
                                     <canvas class="bars-canvas" id="canvas-bars-WAVE" width="260" height="82"></canvas>
                                 </div>
                             </div>
                             <div class="array-panel-strip">
                                 <div class="array-strip-left">
-                                    <span class="array-strip-label">4-UP PANEL</span>
+                                    <span class="array-strip-label">4-UP</span>
                                     <span class="mac-defect-tag" id="defect-tag-WAVE"></span>
                                 </div>
                                 <div class="array-cells-wrap" id="cells-WAVE">
+                                    <span class="cell-chip wait">#1</span>
+                                    <span class="cell-chip wait">#2</span>
+                                    <span class="cell-chip wait">#3</span>
+                                    <span class="cell-chip wait">#4</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flow-step-arrow">▶</div>
+
+                        <!-- Machine 8: ICT Circuit Tester -->
+                        <div class="machine-card wait" id="mac-ICT" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('ICT')">
+                            <div class="mac-header-row">
+                                <span class="mac-title">ICT 회로 검사</span>
+                                <span class="mac-status-indicator">대기</span>
+                            </div>
+                            <div class="mac-data-box">
+                                <div class="mac-data-label">BARCODE</div>
+                                <div class="mac-data" id="data-ICT">-</div>
+                            </div>
+                            <div class="mac-dual-spark-container">
+                                <div class="mac-spark-box spark-gauge-box">
+                                    <canvas class="gauge-canvas" id="canvas-radial-ICT" width="260" height="56"></canvas>
+                                </div>
+                                <div class="mac-spark-box spark-bars-box">
+                                    <canvas class="bars-canvas" id="canvas-bars-ICT" width="260" height="82"></canvas>
+                                </div>
+                            </div>
+                            <div class="array-panel-strip">
+                                <div class="array-strip-left">
+                                    <span class="array-strip-label">4-UP</span>
+                                    <span class="mac-defect-tag" id="defect-tag-ICT"></span>
+                                </div>
+                                <div class="array-cells-wrap" id="cells-ICT">
+                                    <span class="cell-chip wait">#1</span>
+                                    <span class="cell-chip wait">#2</span>
+                                    <span class="cell-chip wait">#3</span>
+                                    <span class="cell-chip wait">#4</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flow-step-arrow">▶</div>
+
+                        <!-- Machine 9: Conformal Coating & UV -->
+                        <div class="machine-card wait" id="mac-COATING" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('COATING')">
+                            <div class="mac-header-row">
+                                <span class="mac-title">방습/절연 코팅</span>
+                                <span class="mac-status-indicator">대기</span>
+                            </div>
+                            <div class="mac-data-box">
+                                <div class="mac-data-label">BARCODE</div>
+                                <div class="mac-data" id="data-COATING">-</div>
+                            </div>
+                            <div class="mac-dual-spark-container">
+                                <div class="mac-spark-box spark-gauge-box">
+                                    <canvas class="gauge-canvas" id="canvas-radial-COATING" width="260" height="56"></canvas>
+                                </div>
+                                <div class="mac-spark-box spark-bars-box">
+                                    <canvas class="bars-canvas" id="canvas-bars-COATING" width="260" height="82"></canvas>
+                                </div>
+                            </div>
+                            <div class="array-panel-strip">
+                                <div class="array-strip-left">
+                                    <span class="array-strip-label">4-UP</span>
+                                    <span class="mac-defect-tag" id="defect-tag-COATING"></span>
+                                </div>
+                                <div class="array-cells-wrap" id="cells-COATING">
+                                    <span class="cell-chip wait">#1</span>
+                                    <span class="cell-chip wait">#2</span>
+                                    <span class="cell-chip wait">#3</span>
+                                    <span class="cell-chip wait">#4</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flow-step-arrow">▶</div>
+
+                        <!-- Machine 10: FCT Functional Circuit Test -->
+                        <div class="machine-card wait" id="mac-FCT" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('FCT')">
+                            <div class="mac-header-row">
+                                <span class="mac-title">FCT 기능 검사</span>
+                                <span class="mac-status-indicator">대기</span>
+                            </div>
+                            <div class="mac-data-box">
+                                <div class="mac-data-label">BARCODE</div>
+                                <div class="mac-data" id="data-FCT">-</div>
+                            </div>
+                            <div class="mac-dual-spark-container">
+                                <div class="mac-spark-box spark-gauge-box">
+                                    <canvas class="gauge-canvas" id="canvas-radial-FCT" width="260" height="56"></canvas>
+                                </div>
+                                <div class="mac-spark-box spark-bars-box">
+                                    <canvas class="bars-canvas" id="canvas-bars-FCT" width="260" height="82"></canvas>
+                                </div>
+                            </div>
+                            <div class="array-panel-strip">
+                                <div class="array-strip-left">
+                                    <span class="array-strip-label">4-UP</span>
+                                    <span class="mac-defect-tag" id="defect-tag-FCT"></span>
+                                </div>
+                                <div class="array-cells-wrap" id="cells-FCT">
                                     <span class="cell-chip wait">#1</span>
                                     <span class="cell-chip wait">#2</span>
                                     <span class="cell-chip wait">#3</span>
@@ -334,8 +474,10 @@
             </div>
         </main>
 
-        <!-- 우측 사이드바: 설비 실시간 센서 이벤트 스트림 (수직 형태) -->
-        <aside class="event-terminal-vertical" id="eventTerminal">
+        <!-- 우측 사이드바: 설비 실시간 센서 이벤트 스트림 (수직 형태 - 초기값: 닫힘) -->
+        <aside class="event-terminal-vertical collapsed" id="eventTerminal" style="position: relative;">
+            <!-- 상하 가운데 위치 닫기 토글 탭 -->
+            <div class="sidebar-edge-toggle" onclick="toggleSidebar('right')" title="이벤트 로그 닫기">▶</div>
             <div class="terminal-header">
                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                     <div class="terminal-title-wrap">
@@ -350,10 +492,14 @@
                         <option value="FEEDER">자재 피더 셋업</option>
                         <option value="LASER">Laser Marker</option>
                         <option value="SPI">SPI 3D 검사</option>
-                        <option value="MOUNTER">고속 마운터</option>
+                        <option value="MOUNTER_1">#1 고속 마운터</option>
+                        <option value="MOUNTER_2">#2 이형 마운터</option>
                         <option value="REFLOW">Reflow Oven</option>
                         <option value="DIP_AOI">수삽 AOI</option>
                         <option value="WAVE">Wave Soldering</option>
+                        <option value="ICT">ICT 회로 검사</option>
+                        <option value="COATING">방습 코팅기</option>
+                        <option value="FCT">FCT 기능 검사</option>
                     </select>
                     <select id="filter-status" class="custom-filter-select" onchange="applyLogFilter()">
                         <option value="ALL">전체 상태</option>
@@ -369,7 +515,7 @@
                         <span class="log-tag">SYSTEM</span>
                         <span class="log-res pass">READY</span>
                     </div>
-                    <div class="log-msg">센서 스트림 대기 중... 자재 피킹/피더 셋업 후 작업을 시작하세요.</div>
+                    <div class="log-msg">10대 풀-공정 실시간 관제 터미널이 준비되었습니다.</div>
                 </li>
             </ul>
         </aside>
@@ -961,15 +1107,18 @@
         }
     </script>
 
-    <!-- 좌/우 사이드바가 접혔을 때 화면 가장자리에 표시되는 플로팅 탭 -->
+    <!-- 좌/우 사이드바가 접혔을 때 화면 가장자리 상하 가운데에 표시되는 플로팅 탭 -->
     <div class="floating-toggle-tab left" id="floatingTabLeft" onclick="toggleSidebar('left')" title="작업지시 대기열 열기">
         <span class="floating-tab-arrow">▶</span>
         <span>대기열 열기</span>
     </div>
 
-    <div class="floating-toggle-tab right" id="floatingTabRight" onclick="toggleSidebar('right')" title="실시간 이벤트 로그 열기">
+    <div class="floating-toggle-tab right visible" id="floatingTabRight" onclick="toggleSidebar('right')" title="실시간 이벤트 로그 열기">
         <span class="floating-tab-arrow">◀</span>
         <span>이벤트 로그 열기</span>
     </div>
+
+    <!-- Header Navigation Controller -->
+    <script src="js/header.js"></script>
 </body>
 </html>

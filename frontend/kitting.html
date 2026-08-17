@@ -3,36 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MES 자재 피킹 & 피더 셋업 단말기 - SMT 라인</title>
+    <title>MES 자재 피킹 단말기 - SMT 라인</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/kitting.css">
+    <link rel="stylesheet" href="css/common-header.css">
 </head>
 <body>
-    <!-- Topbar -->
-    <header class="kitting-topbar">
-        <div class="brand-section">
-            <span class="brand-tag">KITTING OP</span>
-            <div class="brand-title-wrap">
-                <div class="brand-title">자재 피킹 & 피더 셋업 전용 단말기</div>
-                <div class="brand-subtitle">SMT 마운터 오삽 방지(포카요케) 및 MSL 추적</div>
+    <!-- Unified Topbar Header -->
+    <header class="mes-unified-header" data-current-screen="kitting">
+        <!-- 1. 좌측: 브랜드 & 공정 타이틀 -->
+        <div class="mes-header-left">
+            <span class="mes-header-brand-badge badge-kitting">KITTING OP</span>
+            <div class="mes-header-titles">
+                <div class="mes-header-main-title">자재 피킹 & 피더 셋업 전용 단말기</div>
+                <div class="mes-header-sub-title">SMT 마운터 오삽 방지(포카요케) 및 MSL 추적</div>
             </div>
         </div>
 
-        <div class="topbar-actions">
-            <a href="ceo.html" class="btn-nav-link" style="color:#fbbf24; border-color: rgba(245,158,11,0.4);">
-                👑 경영진 뷰
+        <!-- 2. 중앙: 현장 공정 네비게이션 버튼 (관리자/대시보드 숨김) -->
+        <nav class="mes-header-center">
+            <a href="kitting.html" class="mes-nav-btn active" data-screen="kitting">
+                <span class="nav-icon">📦</span>
+                <span>자재 피킹</span>
             </a>
-            <a href="dashboard.html" class="btn-nav-link">
-                라인 종합 관제 콘솔
+            <a href="machine.html" class="mes-nav-btn" data-screen="machine">
+                <span class="nav-icon">🔧</span>
+                <span>설비 HMI</span>
             </a>
-            <a href="machine.html" class="btn-nav-link" style="color:#67e8f9; border-color: rgba(6,182,212,0.3);">
-                설비별 HMI 콘솔
-            </a>
-            <a href="admin.html" class="btn-nav-link" id="btnAdminLink" style="display: none;">
-                관리자 대시보드
-            </a>
-            <button class="btn-nav-link" style="color:#f87171;" onclick="logout()">
+        </nav>
+
+        <!-- 3. 우측: 현재 로그인 작업자, 로그아웃 -->
+        <div class="mes-header-right">
+            <div class="mes-user-badge">
+                <div class="user-dot"></div>
+                <span class="user-name-text" id="hdrUserName">작업자</span>
+            </div>
+            <button class="mes-logout-btn" onclick="mesLogout()">
                 로그아웃
             </button>
         </div>
@@ -416,12 +423,19 @@
         }
 
         function releaseAndGoToDashboard() {
-            alert("피더 셋업 검증이 100% 완료되었습니다. SMT 라인 가동 콘솔로 이동합니다.");
-            window.location.href = 'dashboard.html';
+            const role = localStorage.getItem('userRole') || '';
+            if (role === 'admin' || role === 'line_lead') {
+                alert("피더 셋업 검증이 100% 완료되었습니다. SMT 라인 가동 콘솔로 이동합니다.");
+                window.location.href = 'dashboard.html';
+            } else {
+                alert("피더 셋업 검증이 100% 완료되어 SMT 인터록이 정상 해제되었습니다.\n라인 반장이 라인을 가동할 수 있습니다.");
+            }
         }
 
         // 초기화
         initWOList();
     </script>
+    <!-- Header Navigation Controller -->
+    <script src="js/header.js"></script>
 </body>
 </html>

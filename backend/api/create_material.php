@@ -10,6 +10,10 @@ if (!is_array($input)) {
 $partNo = trim($input['part_no'] ?? '');
 $partName = trim($input['part_name'] ?? '') ?: null;
 $inoutType = strtoupper(trim($input['inout_type'] ?? ''));
+$supplyType = strtoupper(trim($input['supply_type'] ?? ''));
+if (!in_array($supplyType, ['CONSIGNED', 'PROCURED'])) {
+    $supplyType = !empty($input['wo_id']) ? 'CONSIGNED' : 'PROCURED';
+}
 $qty = $input['qty'] ?? null;
 $unit = trim($input['unit'] ?? '') ?: 'EA';
 $woId = trim($input['wo_id'] ?? '') ?: null;
@@ -22,13 +26,14 @@ if (empty($partNo) || !in_array($inoutType, ['IN', 'OUT']) || !is_numeric($qty) 
 }
 
 try {
-    $sql = "INSERT INTO material_inout (part_no, part_name, inout_type, qty, unit, wo_id, company_id, note)
-            VALUES (:part_no, :part_name, :inout_type, :qty, :unit, :wo_id, :company_id, :note)";
+    $sql = "INSERT INTO material_inout (part_no, part_name, inout_type, supply_type, qty, unit, wo_id, company_id, note)
+            VALUES (:part_no, :part_name, :inout_type, :supply_type, :qty, :unit, :wo_id, :company_id, :note)";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([
         ':part_no' => $partNo,
         ':part_name' => $partName,
         ':inout_type' => $inoutType,
+        ':supply_type' => $supplyType,
         ':qty' => $qty,
         ':unit' => $unit,
         ':wo_id' => $woId,
@@ -37,7 +42,7 @@ try {
     ]);
 
     $id = (int)$pdo->lastInsertId();
-    echo json_encode(["status" => "success", "data" => ["id" => $id]], JSON_UNESCAPED_UNICODE);
+    echo json_encode(["status" => "success", "data" => ["id" => $id, "supply_type" => $supplyType]], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     echo json_encode(["status" => "error", "message" => $e->getMessage()], JSON_UNESCAPED_UNICODE);
 }

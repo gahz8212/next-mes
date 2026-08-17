@@ -104,18 +104,28 @@
         .input-box {
             width: 100%;
             padding: 12px 14px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1.5px solid #cbd5e1 !important;
             border-radius: var(--radius-sm);
-            background: var(--bg);
-            color: #fff;
-            font-size: 14px;
+            background: #ffffff !important;
+            color: #111827 !important;
+            font-size: 14.5px;
+            font-weight: 600 !important;
             outline: none;
             transition: all 0.15s;
+            caret-color: #2563eb !important;
+        }
+
+        .input-box::placeholder {
+            color: #64748b !important;
+            font-weight: normal !important;
         }
 
         .input-box:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            background: #ffffff !important;
+            color: #000000 !important;
+            font-weight: 700 !important;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25) !important;
         }
 
         .btn-login {
@@ -201,22 +211,37 @@
         }
 
         function login() {
-            const pwd = document.getElementById('pwd').value.trim();
+            const pwd = document.getElementById('pwd').value.trim().toLowerCase();
             const errBox = document.getElementById('error-msg');
             if (pwd === 'ceo') {
                 localStorage.setItem('role', 'admin');
+                localStorage.setItem('userRole', 'ceo');
+                localStorage.setItem('roleName', '경영진 (CEO)');
+                localStorage.setItem('userName', '대표이사');
                 window.location.href = 'ceo.html';
             } else if (pwd === 'admin') {
                 localStorage.setItem('role', 'admin');
+                localStorage.setItem('userRole', 'admin');
+                localStorage.setItem('roleName', '시스템 관리자');
+                localStorage.setItem('userName', 'Admin (관리자)');
                 window.location.href = 'admin.html';
             } else if (pwd === 'worker' || pwd === 'supervisor') {
                 localStorage.setItem('role', 'worker');
+                localStorage.setItem('userRole', 'supervisor');
+                localStorage.setItem('roleName', '라인 반장');
+                localStorage.setItem('userName', 'Supervisor (라인 반장)');
                 window.location.href = 'dashboard.html';
             } else if (pwd === 'kitting') {
                 localStorage.setItem('role', 'worker');
+                localStorage.setItem('userRole', 'kitting');
+                localStorage.setItem('roleName', '자재 담당자');
+                localStorage.setItem('userName', '자재 담당 (Kitting)');
                 window.location.href = 'kitting.html';
             } else if (pwd === 'machine') {
                 localStorage.setItem('role', 'worker');
+                localStorage.setItem('userRole', 'machine');
+                localStorage.setItem('roleName', '설비 조작원');
+                localStorage.setItem('userName', '설비 오퍼레이터');
                 window.location.href = 'machine.html?eq=LASER';
             } else {
                 errBox.innerText = '비밀번호가 올바르지 않습니다. (ceo / admin / supervisor / kitting / machine)';

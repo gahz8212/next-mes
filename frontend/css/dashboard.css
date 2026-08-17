@@ -432,25 +432,25 @@ html, body {
     display: flex;
     align-items: stretch;
     justify-content: flex-start;
-    gap: 10px;
+    gap: 6px;
     overflow-x: auto;
     padding: 4px 2px;
 }
 
-/* Machine Card - Spacious, High-Legibility Card */
+/* Machine Card - Optimized for 5-Column Full Pipeline */
 .machine-card {
-    flex: 1;
-    min-width: 230px;
-    max-width: 290px;
+    flex: 1 1 0;
+    min-width: 175px;
+    max-width: 1fr;
     height: 100%;
-    min-height: 245px;
+    min-height: 240px;
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 8px 10px;
+    padding: 8px 9px;
     transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
     user-select: none;
     position: relative;
@@ -797,18 +797,26 @@ html, body {
 
 .custom-filter-select {
     flex: 1;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: #e2e8f0;
-    padding: 4px 7px;
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    padding: 5px 8px;
     border-radius: var(--radius-sm);
-    font-size: 11px;
+    font-size: 12px;
+    font-weight: 600;
     cursor: pointer;
     outline: none;
     transition: border-color 0.15s;
 }
 .custom-filter-select:focus {
     border-color: var(--accent);
+}
+.custom-filter-select option {
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 10px;
 }
 
 .terminal-stream {
@@ -993,19 +1001,23 @@ html, body {
 
 .scan-input {
     flex: 1;
-    background: var(--bg);
-    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    background: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
     border-radius: var(--radius-sm);
-    color: #fff;
+    color: #111827 !important;
     font-size: 15px;
     font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
     padding: 10px 14px;
     outline: none;
     transition: all 0.15s;
+    caret-color: #2563eb !important;
 }
 .scan-input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25) !important;
 }
 
 .btn-scan-action {
@@ -1757,7 +1769,7 @@ html, body {
     margin-left: -14px; /* gap 제거 */
 }
 
-/* Sidebar Toggle Buttons inside Headers */
+/* Sidebar Toggle Buttons inside Headers & Center Edges */
 .sidebar-toggle-btn {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--border);
@@ -1776,6 +1788,41 @@ html, body {
     background: var(--surface-hover);
     color: #fff;
     border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Sidebar Center Edge Attached Toggle Button */
+.sidebar-edge-toggle {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--sidebar-bg);
+    border: 1px solid var(--sidebar-border);
+    color: var(--accent);
+    width: 18px;
+    height: 52px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 30;
+    transition: all 0.18s ease;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+    font-size: 10px;
+    font-weight: bold;
+}
+.sidebar-edge-toggle:hover {
+    background: var(--surface-hover);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+.wo-sidebar .sidebar-edge-toggle {
+    right: -9px;
+    border-radius: 0 6px 6px 0;
+}
+.event-terminal-vertical .sidebar-edge-toggle {
+    left: -9px;
+    border-radius: 6px 0 0 6px;
 }
 
 /* Floating Toggle Tabs on Screen Edges */

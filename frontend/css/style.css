@@ -371,17 +371,20 @@ tr:hover td { background-color: #F8FAFC; }
     padding: 12px 16px;
     font-size: 15px;
     font-family: inherit;
-    color: var(--text-primary);
-    background-color: var(--bg-base);
-    border: 1px solid #E2E8F0;
+    color: #111827 !important;
+    background-color: #ffffff !important;
+    border: 1.5px solid #CBD5E1 !important;
     border-radius: var(--radius-sm);
     transition: all 0.2s ease;
+    caret-color: #2563eb !important;
 }
 .form-control:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(45, 104, 254, 0.1);
-    background-color: white;
+    outline: none !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25) !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
 }
 
 /* File Drop Zone */
@@ -415,3 +418,25 @@ tr:hover td { background-color: #F8FAFC; }
 .file-input {
     display: none;
 }
+
+/* ── Global Select & Option High-Contrast Styling ── */
+select, select.form-control {
+    background-color: #1e293b !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+}
+select option, select.form-control option {
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    padding: 10px 14px !important;
+}
+select option:hover, select option:checked {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+}
+

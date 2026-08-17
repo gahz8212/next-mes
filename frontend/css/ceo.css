@@ -616,12 +616,12 @@ html, body {
     color: #fff;
 }
 
-/* 2. 대형 머신 카드 (가운데 정렬 & 완벽히 균등한 간격) */
+/* 2. 대형 머신 카드 (5대 풀-파이프라인 균등 배치) */
 .ceo-expanded-panel .line-machines-row {
     display: flex !important;
-    justify-content: center !important;
+    justify-content: space-between !important;
     align-items: center !important;
-    gap: 16px !important;
+    gap: 8px !important;
     margin-top: 16px !important;
     width: 100% !important;
     overflow-x: auto !important;
@@ -629,57 +629,57 @@ html, body {
 }
 
 .ceo-expanded-panel .machine-card {
-    flex: 0 0 310px !important;
-    width: 310px !important;
-    max-width: 310px !important;
-    padding: 18px 16px !important;
+    flex: 1 1 0 !important;
+    min-width: 220px !important;
+    max-width: 280px !important;
+    padding: 14px 12px !important;
     border-radius: 14px !important;
-    gap: 12px !important;
+    gap: 10px !important;
     box-sizing: border-box !important;
 }
 
 .ceo-expanded-panel .mac-title {
-    font-size: 15px !important;
+    font-size: 13.5px !important;
     font-weight: 800 !important;
 }
 
 .ceo-expanded-panel .mac-status-indicator {
-    font-size: 11px !important;
-    padding: 3px 8px !important;
+    font-size: 10.5px !important;
+    padding: 2px 7px !important;
 }
 
 .ceo-expanded-panel .mac-data-label {
-    font-size: 10.5px !important;
+    font-size: 10px !important;
 }
 
 .ceo-expanded-panel .mac-data {
-    font-size: 14px !important;
+    font-size: 12.5px !important;
     font-weight: 800 !important;
 }
 
 .ceo-expanded-panel .gauge-canvas {
     width: 100% !important;
-    height: 56px !important;
+    height: 52px !important;
 }
 
 .ceo-expanded-panel .bars-canvas {
     width: 100% !important;
-    height: 92px !important;
+    height: 84px !important;
 }
 
 .ceo-expanded-panel .flow-step-arrow {
     flex: 0 0 auto !important;
-    width: 24px !important;
+    width: 16px !important;
     text-align: center !important;
-    font-size: 20px !important;
+    font-size: 16px !important;
     color: rgba(56, 189, 248, 0.7) !important;
     margin: 0 !important;
     padding: 0 !important;
 }
 
 .ceo-expanded-panel .cell-chip {
-    padding: 6px 4px !important;
-    font-size: 11px !important;
+    padding: 5px 3px !important;
+    font-size: 10.5px !important;
     font-weight: 700 !important;
 }
 

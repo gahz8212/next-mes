@@ -339,30 +339,30 @@
 
                     <div class="flow-step-arrow">▶</div>
 
-                    <!-- Machine 3: Chip Mounter -->
-                    <div class="machine-card wait" id="ceo-mac-MOUNTER">
+                    <!-- Machine 3: #1 고속 마운터 -->
+                    <div class="machine-card wait" id="ceo-mac-MOUNTER_1">
                         <div class="mac-header-row">
-                            <span class="mac-title">고속 마운터</span>
-                            <span class="mac-status-indicator" id="ceo-status-MOUNTER">대기</span>
+                            <span class="mac-title">#1 고속 마운터</span>
+                            <span class="mac-status-indicator" id="ceo-status-MOUNTER_1">대기</span>
                         </div>
                         <div class="mac-data-box">
                             <div class="mac-data-label">BARCODE</div>
-                            <div class="mac-data" id="ceo-data-MOUNTER">-</div>
+                            <div class="mac-data" id="ceo-data-MOUNTER_1">-</div>
                         </div>
                         <div class="mac-dual-spark-container">
                             <div class="mac-spark-box spark-gauge-box">
-                                <canvas class="gauge-canvas" id="ceo-canvas-radial-MOUNTER" width="320" height="60"></canvas>
+                                <canvas class="gauge-canvas" id="ceo-canvas-radial-MOUNTER_1" width="320" height="60"></canvas>
                             </div>
                             <div class="mac-spark-box spark-bars-box">
-                                <canvas class="bars-canvas" id="ceo-canvas-bars-MOUNTER" width="320" height="96"></canvas>
+                                <canvas class="bars-canvas" id="ceo-canvas-bars-MOUNTER_1" width="320" height="96"></canvas>
                             </div>
                         </div>
                         <div class="array-panel-strip">
                             <div class="array-strip-left">
                                 <span class="array-strip-label">4-UP PANEL</span>
-                                <span class="mac-defect-tag" id="ceo-defect-tag-MOUNTER"></span>
+                                <span class="mac-defect-tag" id="ceo-defect-tag-MOUNTER_1"></span>
                             </div>
-                            <div class="array-cells-wrap" id="ceo-cells-MOUNTER">
+                            <div class="array-cells-wrap" id="ceo-cells-MOUNTER_1">
                                 <span class="cell-chip wait">#1</span>
                                 <span class="cell-chip wait">#2</span>
                                 <span class="cell-chip wait">#3</span>
@@ -373,7 +373,41 @@
 
                     <div class="flow-step-arrow">▶</div>
 
-                    <!-- Machine 4: Reflow Oven -->
+                    <!-- Machine 4: #2 이형 마운터 -->
+                    <div class="machine-card wait" id="ceo-mac-MOUNTER_2">
+                        <div class="mac-header-row">
+                            <span class="mac-title">#2 이형 마운터</span>
+                            <span class="mac-status-indicator" id="ceo-status-MOUNTER_2">대기</span>
+                        </div>
+                        <div class="mac-data-box">
+                            <div class="mac-data-label">BARCODE</div>
+                            <div class="mac-data" id="ceo-data-MOUNTER_2">-</div>
+                        </div>
+                        <div class="mac-dual-spark-container">
+                            <div class="mac-spark-box spark-gauge-box">
+                                <canvas class="gauge-canvas" id="ceo-canvas-radial-MOUNTER_2" width="320" height="60"></canvas>
+                            </div>
+                            <div class="mac-spark-box spark-bars-box">
+                                <canvas class="bars-canvas" id="ceo-canvas-bars-MOUNTER_2" width="320" height="96"></canvas>
+                            </div>
+                        </div>
+                        <div class="array-panel-strip">
+                            <div class="array-strip-left">
+                                <span class="array-strip-label">4-UP PANEL</span>
+                                <span class="mac-defect-tag" id="ceo-defect-tag-MOUNTER_2"></span>
+                            </div>
+                            <div class="array-cells-wrap" id="ceo-cells-MOUNTER_2">
+                                <span class="cell-chip wait">#1</span>
+                                <span class="cell-chip wait">#2</span>
+                                <span class="cell-chip wait">#3</span>
+                                <span class="cell-chip wait">#4</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flow-step-arrow">▶</div>
+
+                    <!-- Machine 5: Reflow Oven -->
                     <div class="machine-card wait" id="ceo-mac-REFLOW">
                         <div class="mac-header-row">
                             <span class="mac-title">Reflow Oven</span>
@@ -420,7 +454,7 @@
                 </div>
 
                 <div class="line-machines-row">
-                    <!-- Machine 5: 수삽 AOI -->
+                    <!-- Machine 1: 수삽 AOI -->
                     <div class="machine-card wait" id="ceo-mac-DIP_AOI">
                         <div class="mac-header-row">
                             <span class="mac-title">수삽 AOI 검사</span>
@@ -454,7 +488,7 @@
 
                     <div class="flow-step-arrow">▶</div>
 
-                    <!-- Machine 6: Wave Soldering -->
+                    <!-- Machine 2: Wave Soldering -->
                     <div class="machine-card wait" id="ceo-mac-WAVE">
                         <div class="mac-header-row">
                             <span class="mac-title">Wave Soldering</span>
@@ -485,6 +519,108 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="flow-step-arrow">▶</div>
+
+                    <!-- Machine 3: ICT 회로 검사기 -->
+                    <div class="machine-card wait" id="ceo-mac-ICT">
+                        <div class="mac-header-row">
+                            <span class="mac-title">ICT 회로 검사기</span>
+                            <span class="mac-status-indicator" id="ceo-status-ICT">대기</span>
+                        </div>
+                        <div class="mac-data-box">
+                            <div class="mac-data-label">BARCODE</div>
+                            <div class="mac-data" id="ceo-data-ICT">-</div>
+                        </div>
+                        <div class="mac-dual-spark-container">
+                            <div class="mac-spark-box spark-gauge-box">
+                                <canvas class="gauge-canvas" id="ceo-canvas-radial-ICT" width="320" height="60"></canvas>
+                            </div>
+                            <div class="mac-spark-box spark-bars-box">
+                                <canvas class="bars-canvas" id="ceo-canvas-bars-ICT" width="320" height="96"></canvas>
+                            </div>
+                        </div>
+                        <div class="array-panel-strip">
+                            <div class="array-strip-left">
+                                <span class="array-strip-label">4-UP PANEL</span>
+                                <span class="mac-defect-tag" id="ceo-defect-tag-ICT"></span>
+                            </div>
+                            <div class="array-cells-wrap" id="ceo-cells-ICT">
+                                <span class="cell-chip wait">#1</span>
+                                <span class="cell-chip wait">#2</span>
+                                <span class="cell-chip wait">#3</span>
+                                <span class="cell-chip wait">#4</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flow-step-arrow">▶</div>
+
+                    <!-- Machine 4: 방습/절연 코팅기 -->
+                    <div class="machine-card wait" id="ceo-mac-COATING">
+                        <div class="mac-header-row">
+                            <span class="mac-title">방습/절연 코팅기</span>
+                            <span class="mac-status-indicator" id="ceo-status-COATING">대기</span>
+                        </div>
+                        <div class="mac-data-box">
+                            <div class="mac-data-label">BARCODE</div>
+                            <div class="mac-data" id="ceo-data-COATING">-</div>
+                        </div>
+                        <div class="mac-dual-spark-container">
+                            <div class="mac-spark-box spark-gauge-box">
+                                <canvas class="gauge-canvas" id="ceo-canvas-radial-COATING" width="320" height="60"></canvas>
+                            </div>
+                            <div class="mac-spark-box spark-bars-box">
+                                <canvas class="bars-canvas" id="ceo-canvas-bars-COATING" width="320" height="96"></canvas>
+                            </div>
+                        </div>
+                        <div class="array-panel-strip">
+                            <div class="array-strip-left">
+                                <span class="array-strip-label">4-UP PANEL</span>
+                                <span class="mac-defect-tag" id="ceo-defect-tag-COATING"></span>
+                            </div>
+                            <div class="array-cells-wrap" id="ceo-cells-COATING">
+                                <span class="cell-chip wait">#1</span>
+                                <span class="cell-chip wait">#2</span>
+                                <span class="cell-chip wait">#3</span>
+                                <span class="cell-chip wait">#4</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flow-step-arrow">▶</div>
+
+                    <!-- Machine 5: FCT 기능 검사기 -->
+                    <div class="machine-card wait" id="ceo-mac-FCT">
+                        <div class="mac-header-row">
+                            <span class="mac-title">FCT 기능 검사기</span>
+                            <span class="mac-status-indicator" id="ceo-status-FCT">대기</span>
+                        </div>
+                        <div class="mac-data-box">
+                            <div class="mac-data-label">BARCODE</div>
+                            <div class="mac-data" id="ceo-data-FCT">-</div>
+                        </div>
+                        <div class="mac-dual-spark-container">
+                            <div class="mac-spark-box spark-gauge-box">
+                                <canvas class="gauge-canvas" id="ceo-canvas-radial-FCT" width="320" height="60"></canvas>
+                            </div>
+                            <div class="mac-spark-box spark-bars-box">
+                                <canvas class="bars-canvas" id="ceo-canvas-bars-FCT" width="320" height="96"></canvas>
+                            </div>
+                        </div>
+                        <div class="array-panel-strip">
+                            <div class="array-strip-left">
+                                <span class="array-strip-label">4-UP PANEL</span>
+                                <span class="mac-defect-tag" id="ceo-defect-tag-FCT"></span>
+                            </div>
+                            <div class="array-cells-wrap" id="ceo-cells-FCT">
+                                <span class="cell-chip wait">#1</span>
+                                <span class="cell-chip wait">#2</span>
+                                <span class="cell-chip wait">#3</span>
+                                <span class="cell-chip wait">#4</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
         </div>
@@ -492,5 +628,6 @@
 
     <!-- Script Engine -->
     <script src="js/ceo.js"></script>
+    <script src="js/header.js"></script>
 </body>
 </html>

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MES 관리자 - SMT/DIP 생산라인</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/common-header.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -514,19 +515,20 @@
         }
 
         .wo-id {
-            font-size: 13.5px;
+            font-size: 14px;
             font-weight: 700;
-            color: #e2e8f0;
+            color: #93c5fd;
             word-break: break-all;
-            font-family: 'Courier New', monospace;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
         }
 
         .wo-meta {
-            font-size: 11.5px;
-            color: var(--text-dim);
+            font-size: 13px;
+            color: #cbd5e1;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            margin-top: 2px;
         }
 
         .wo-card-actions {
@@ -539,28 +541,28 @@
         .dday {
             display: inline-flex;
             align-items: center;
-            font-size: 10px;
+            font-size: 11.5px;
             font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 4px;
+            padding: 3px 7px;
+            border-radius: 5px;
         }
-        .dday-danger { background: rgba(239,68,68,0.2); color: #f87171; }
-        .dday-warn   { background: rgba(245,158,11,0.2); color: #fbbf24; }
-        .dday-ok     { background: rgba(52,211,153,0.2); color: #34d399; }
-        .dday-done   { background: rgba(100,116,139,0.15); color: var(--text-dim); }
+        .dday-danger { background: rgba(239,68,68,0.25); color: #f87171; border: 1px solid rgba(239,68,68,0.35); }
+        .dday-warn   { background: rgba(245,158,11,0.25); color: #fbbf24; border: 1px solid rgba(245,158,11,0.35); }
+        .dday-ok     { background: rgba(52,211,153,0.25); color: #34d399; border: 1px solid rgba(52,211,153,0.35); }
+        .dday-done   { background: rgba(100,116,139,0.2); color: #94a3b8; }
 
         /* Phase badge */
         .phase-badge {
             display: inline-flex;
             align-items: center;
-            font-size: 10px;
+            font-size: 11.5px;
             font-weight: 700;
-            padding: 2px 7px;
-            border-radius: 4px;
+            padding: 3px 8px;
+            border-radius: 5px;
         }
-        .phase-smt  { background: rgba(59,130,246,0.2); color: #93c5fd; }
-        .phase-wait { background: rgba(52,211,153,0.2); color: #6ee7b7; }
-        .phase-dip  { background: rgba(245,158,11,0.2); color: #fcd34d; }
+        .phase-smt  { background: rgba(59,130,246,0.25); color: #93c5fd; border: 1px solid rgba(59,130,246,0.35); }
+        .phase-wait { background: rgba(52,211,153,0.25); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.35); }
+        .phase-dip  { background: rgba(245,158,11,0.25); color: #fcd34d; border: 1px solid rgba(245,158,11,0.35); }
 
         /* Progress */
         .wo-progress { margin-top: 10px; }
@@ -568,13 +570,14 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 11px;
-            color: var(--text-dim);
+            font-size: 12.5px;
+            color: #e2e8f0;
+            font-weight: 600;
             margin-bottom: 5px;
         }
         .progress-track {
-            height: 5px;
-            background: rgba(255,255,255,0.07);
+            height: 6px;
+            background: rgba(255,255,255,0.08);
             border-radius: 9999px;
             overflow: hidden;
         }
@@ -593,10 +596,11 @@
             margin-top: 10px;
         }
         .yield-chip {
-            font-size: 11px;
-            color: var(--text-dim);
+            font-size: 12.5px;
+            color: #cbd5e1;
+            font-weight: 500;
         }
-        .yield-chip .val { font-weight: 700; }
+        .yield-chip .val { font-weight: 700; color: #ffffff; }
         .yield-chip .val.good   { color: #34d399; }
         .yield-chip .val.fail   { color: #f87171; }
         .yield-chip .val.rate   { color: #60a5fa; }
@@ -730,20 +734,55 @@
         .form-control {
             width: 100%;
             padding: 10px 14px;
-            background: var(--surface2);
-            border: 1px solid rgba(255,255,255,0.09);
+            background: #ffffff !important;
+            border: 1.5px solid #cbd5e1 !important;
             border-radius: var(--radius-sm);
-            color: #e2e8f0;
+            color: #111827 !important;
             font-size: 14px;
+            font-weight: 600 !important;
             font-family: inherit;
             transition: border-color 0.15s, box-shadow 0.15s;
+            caret-color: #2563eb !important;
+        }
+        .form-control::placeholder {
+            color: #64748b !important;
+            font-weight: normal !important;
         }
         .form-control:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+            outline: none !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            font-weight: 700 !important;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.25) !important;
         }
-        .form-control[readonly] { background: rgba(255,255,255,0.03); color: var(--text-dim); }
+        .form-control[readonly] { background: #f1f5f9 !important; color: #475569 !important; }
+
+        /* ── High Contrast Select & Options (모든 드롭박스 시인성 극대화) ── */
+        select.form-control,
+        .filter-select,
+        select {
+            background-color: #1e293b !important;
+            color: #ffffff !important;
+            font-weight: 600 !important;
+            border: 1px solid rgba(255, 255, 255, 0.18) !important;
+            cursor: pointer;
+        }
+        select.form-control option,
+        .filter-select option,
+        select option {
+            background-color: #0f172a !important;
+            color: #ffffff !important;
+            font-size: 13.5px !important;
+            font-weight: 600 !important;
+            padding: 10px 12px !important;
+        }
+        select.form-control option:hover,
+        select.form-control option:checked,
+        select option:checked {
+            background-color: #2563eb !important;
+            color: #ffffff !important;
+        }
 
         .new-company-box {
             display: none;
@@ -874,17 +913,27 @@
         .data-search {
             flex: 1;
             padding: 9px 14px;
-            background: var(--surface);
-            border: 1px solid rgba(255,255,255,0.08);
+            background: #ffffff !important;
+            border: 1.5px solid #cbd5e1 !important;
             border-radius: var(--radius-sm);
-            color: #e2e8f0;
-            font-size: 13px;
+            color: #111827 !important;
+            font-size: 13.5px;
+            font-weight: 600 !important;
             font-family: inherit;
             transition: border-color 0.15s;
+            caret-color: #2563eb !important;
+        }
+        .data-search::placeholder {
+            color: #64748b !important;
+            font-weight: normal !important;
         }
         .data-search:focus {
-            outline: none;
-            border-color: var(--accent);
+            outline: none !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            font-weight: 700 !important;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.25) !important;
         }
 
         .data-table-wrap {
@@ -904,45 +953,71 @@
         .data-table th {
             position: sticky;
             top: 0;
-            background: var(--surface);
-            color: var(--text-muted);
-            font-size: 11.5px;
+            background: #111c2e;
+            color: #94a3b8;
+            font-size: 12.5px;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--card-border);
+            letter-spacing: 0.03em;
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
             white-space: nowrap;
             z-index: 10;
         }
         .data-table td {
-            padding: 13px 16px;
-            border-bottom: 1px solid rgba(255,255,255,0.03);
-            color: var(--text-dim);
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #f1f5f9;
+            font-size: 13.5px;
+            font-weight: 500;
             vertical-align: middle;
         }
         .data-table tbody tr:hover td {
-            background: rgba(255,255,255,0.04);
-            color: #e2e8f0;
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
         }
         .data-table tbody tr:last-child td { border-bottom: none; }
 
-        /* Status badges for tables */
+        /* Status badges for tables - 12px Bold Unified */
         .status-badge {
             display: inline-flex;
             align-items: center;
-            font-size: 10.5px;
-            font-weight: 700;
-            padding: 3px 8px;
-            border-radius: 9999px;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            padding: 4px 10px !important;
+            border-radius: 6px !important;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
         }
-        .status-ready       { background: rgba(100,116,139,0.2); color: var(--text-dim); }
-        .status-progress    { background: rgba(59,130,246,0.2); color: #93c5fd; }
-        .status-done        { background: rgba(52,211,153,0.2); color: #6ee7b7; }
-        .status-shipped     { background: rgba(16,185,129,0.25); color: #34d399; }
-        .status-received    { background: rgba(251,191,36,0.2); color: #fcd34d; }
-        .status-in-prod     { background: rgba(59,130,246,0.2); color: #93c5fd; }
-        .status-cancelled   { background: rgba(239,68,68,0.2); color: #fca5a5; }
+        .status-ready       { background: rgba(100,116,139,0.25); color: #cbd5e1; border: 1px solid rgba(100,116,139,0.35); }
+        .status-progress    { background: rgba(59,130,246,0.25); color: #93c5fd; border: 1px solid rgba(59,130,246,0.45); }
+        .status-done        { background: rgba(16,185,129,0.25); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.45); }
+        .status-shipped     { background: rgba(16,185,129,0.25); color: #34d399; border: 1px solid rgba(16,185,129,0.45); }
+        .status-received    { background: rgba(245,158,11,0.25); color: #fcd34d; border: 1px solid rgba(245,158,11,0.45); }
+        .status-in-prod     { background: rgba(59,130,246,0.25); color: #93c5fd; border: 1px solid rgba(59,130,246,0.45); }
+        .status-cancelled   { background: rgba(239,68,68,0.25); color: #fca5a5; border: 1px solid rgba(239,68,68,0.45); }
+
+        /* Unified Table Code / Mono */
+        .data-table code {
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-size: 13.5px !important;
+            font-weight: 700;
+            color: #93c5fd;
+            background: rgba(59, 130, 246, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        /* Card Button unified */
+        .card-btn {
+            font-size: 12.5px !important;
+            font-weight: 700 !important;
+            padding: 5px 11px !important;
+            border-radius: 6px !important;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
 
         /* Defect & KPI bar charts */
         .bar-row {
@@ -960,6 +1035,139 @@
         .bar-fill-blue   { background: #60a5fa; }
         .bar-count  { font-size: 12px; font-weight: 700; color: #e2e8f0; min-width: 30px; text-align: right; }
         .bar-pct    { font-size: 11px; color: var(--text-muted); min-width: 38px; text-align: right; }
+
+        /* ── Defect Page Collapsible Right Drawer Layout ── */
+        .defect-layout-container {
+            position: relative;
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .defect-main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow-y: auto;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .defect-drawer-panel {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 540px;
+            max-width: 90vw;
+            background: #0f172a;
+            border-left: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: -8px 0 32px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            z-index: 50;
+            transform: translateX(100%);
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .defect-drawer-panel.open {
+            transform: translateX(0);
+        }
+
+        .defect-drawer-handle {
+            position: absolute;
+            left: -38px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 38px;
+            height: 110px;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-right: none;
+            border-radius: 10px 0 0 10px;
+            color: #93c5fd;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            box-shadow: -4px 4px 16px rgba(0, 0, 0, 0.4);
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .defect-drawer-handle:hover {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff;
+            width: 42px;
+            left: -42px;
+        }
+
+        .defect-drawer-handle .handle-icon {
+            font-size: 13px;
+            font-weight: 700;
+            transition: transform 0.3s ease;
+        }
+
+        .defect-drawer-panel.open .defect-drawer-handle .handle-icon {
+            transform: rotate(180deg);
+        }
+
+        .defect-drawer-handle .handle-text {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-size: 11.5px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+        }
+
+        .defect-drawer-header {
+            padding: 16px 20px;
+            background: #131f33;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .defect-drawer-title {
+            font-size: 14.5px;
+            font-weight: 700;
+            color: #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .defect-drawer-close {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .defect-drawer-close:hover {
+            background: rgba(239, 68, 68, 0.25);
+            color: #fca5a5;
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        .defect-drawer-body {
+            flex: 1;
+            overflow: auto;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
 
         /* Topbar notification */
         .noti-wrap { position: relative; }
@@ -1149,14 +1357,6 @@
             margin-top: 4px;
             padding: 10px;
         }
-        #orderModal select.form-control {
-            color: #111;
-            background: #f8fafc;
-        }
-        #orderModal select.form-control option {
-            color: #111;
-            background: #fff;
-        }
 
         /* ── Compact styling for WO Modal to avoid scrollbars ── */
         #woModal .modal-box {
@@ -1178,14 +1378,6 @@
         #woModal .btn-submit {
             margin-top: 4px;
             padding: 10px;
-        }
-        #woModal select.form-control {
-            color: #111;
-            background: #f8fafc;
-        }
-        #woModal select.form-control option {
-            color: #111;
-            background: #fff;
         }
     </style>
 </head>
@@ -1213,11 +1405,11 @@
             <!-- 작업 / 수주 관리 -->
             <div class="nav-section">
                 <div class="nav-section-label">작업 / 수주 관리</div>
-                <button class="nav-item" onclick="showPage('order', this)">
+                <button class="nav-item active" onclick="showPage('order', this)">
                     <span class="nav-icon">📑</span>
                     <span>수주 (PO) 관리</span>
                 </button>
-                <button class="nav-item active" onclick="showPage('wo', this)">
+                <button class="nav-item" onclick="showPage('wo', this)">
                     <span class="nav-icon">📋</span>
                     <span>작업지시 (WO) 관리</span>
                 </button>
@@ -1255,6 +1447,10 @@
                     <span class="nav-icon">📦</span>
                     <span>품목 관리</span>
                 </button>
+                <button class="nav-item" onclick="showPage('part-alias', this)">
+                    <span class="nav-icon">🔗</span>
+                    <span>부품 교차 참조 (AVL)</span>
+                </button>
             </div>
 
             <!-- 자재 / 제품 관리 -->
@@ -1283,33 +1479,45 @@
                 </button>
             </div>
         </div>
-
-        <div class="sidebar-footer">
-            <div class="user-card">
-                <div class="user-avatar">A</div>
-                <div class="user-info">
-                    <div class="user-name">관리자</div>
-                    <div class="user-role">Admin</div>
-                </div>
-                <button class="logout-btn" onclick="doLogout()" title="로그아웃">⏻</button>
-            </div>
-        </div>
     </nav>
 
     <!-- ════════ MAIN ════════ -->
     <div class="main-area">
 
-        <!-- Top bar -->
-        <div class="topbar">
-            <div style="display:flex; align-items:center; gap:12px;">
+        <!-- Top bar (Unified Header Style) -->
+        <div class="topbar mes-unified-header" data-current-screen="admin" style="background: var(--bg); border-bottom: 1px solid var(--border);">
+            <!-- 좌측: 사이드바 토글 및 브레드크럼 -->
+            <div style="display:flex; align-items:center; gap:12px; flex-shrink:0;">
                 <button class="sidebar-toggle" onclick="openSidebar()">☰</button>
                 <div class="page-breadcrumb">
                     <span>SMT MES</span>
                     <span>›</span>
-                    <span class="current" id="breadcrumb-current">작업지시 관리</span>
+                    <span class="current" id="breadcrumb-current">수주 (PO) 관리</span>
                 </div>
             </div>
-            <div class="topbar-right">
+
+            <!-- 중앙: 역할/공정 순서 네비게이션 버튼 -->
+            <nav class="mes-header-center">
+                <a href="admin.html" class="mes-nav-btn active" data-screen="admin">
+                    <span class="nav-icon">⚙️</span>
+                    <span>관리자</span>
+                </a>
+                <a href="dashboard.html" class="mes-nav-btn" data-screen="dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span>라인 대시보드</span>
+                </a>
+                <a href="kitting.html" class="mes-nav-btn" data-screen="kitting">
+                    <span class="nav-icon">📦</span>
+                    <span>자재 피킹</span>
+                </a>
+                <a href="machine.html" class="mes-nav-btn" data-screen="machine">
+                    <span class="nav-icon">🔧</span>
+                    <span>설비 HMI</span>
+                </a>
+            </nav>
+
+            <!-- 우측: 액션 버튼, 화면명, 사용자 뱃지, 로그아웃 -->
+            <div class="mes-header-right">
                 <!-- Notifications -->
                 <div class="noti-wrap">
                     <button class="noti-btn" onclick="toggleNotificationPopup(event)" title="알림 센터">
@@ -1327,21 +1535,17 @@
                     </div>
                 </div>
 
-                <div class="live-badge">
-                    <div class="live-dot"></div>
-                    LIVE
-                </div>
-                <a class="monitor-btn" href="ceo.html" target="_blank" style="background: rgba(245,158,11,0.15); color: #fbbf24; border-color: rgba(245,158,11,0.35);">
-                    👑 경영진 뷰
-                </a>
-                <a class="monitor-btn" href="dashboard.html" target="_blank">
-                    🖥️ 공정 모니터링
-                </a>
-                <a class="monitor-btn" href="machine.html" target="_blank" style="background: rgba(6,182,212,0.15); color: #67e8f9; border-color: rgba(6,182,212,0.3);">
-                    🔧 설비 HMI
-                </a>
                 <button class="add-wo-btn" id="addWoBtn" onclick="openWOModal()">
                     + 작업지시 등록
+                </button>
+
+                <div class="mes-user-badge">
+                    <div class="user-dot"></div>
+                    <span class="user-name-text" id="hdrUserName">관리자</span>
+                </div>
+
+                <button class="mes-logout-btn" onclick="mesLogout()">
+                    로그아웃
                 </button>
             </div>
         </div>
@@ -1350,7 +1554,7 @@
         <div class="content-area">
 
             <!-- ── PAGE: WO 관리 ── -->
-            <div class="page-panel active" id="page-wo">
+            <div class="page-panel" id="page-wo">
                 <!-- KPI Strip -->
                 <div class="kpi-strip">
                     <div class="kpi-card">
@@ -1505,25 +1709,93 @@
             </div><!-- /page-item -->
 
             <!-- ══════════════════════════════════════
-                 PAGE: 불량 현황
+                 PAGE: 부품 교차 참조 (대체품 / AVL 관리)
+            ══════════════════════════════════════ -->
+            <div class="page-panel" id="page-part-alias">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title-text">🔗 부품 교차 참조 (대체품 / AVL 관리)</div>
+                        <div class="page-desc">하나의 대표 부품 규격 아래에 제조사별·고객사별 파트번호를 연결하여 자동 매핑합니다.</div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="topbar-action-btn" onclick="openPartAliasModal()">+ 단건 매핑 등록</button>
+                        <button class="topbar-action-btn" style="background:rgba(59,130,246,0.15); color:#93c5fd; border:1px solid rgba(59,130,246,0.35);" onclick="openPartAliasBatchModal()">📋 엑셀 일괄 붙여넣기</button>
+                    </div>
+                </div>
+
+                <!-- KPI -->
+                <div class="kpi-strip" style="padding:0 32px 16px;">
+                    <div class="kpi-card">
+                        <div class="kpi-label">🏛️ 대표 표준 부품수</div>
+                        <div class="kpi-val accent" id="alias-kpi-standards">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">🔗 연결된 대체 파트번호</div>
+                        <div class="kpi-val good" id="alias-kpi-total">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">🏭 등록 벤더 / 고객사수</div>
+                        <div class="kpi-val" style="color:#fbbf24;" id="alias-kpi-vendors">—</div>
+                    </div>
+                </div>
+
+                <!-- Filter & View Switch -->
+                <div style="padding:0 32px 14px; display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+                    <div style="display:flex; gap:10px; align-items:center; flex:1; max-width:480px;">
+                        <input class="data-search" id="alias-search" type="search" placeholder="대표 파트명, 파트번호, 제조사 검색…" oninput="loadPartAliases()" style="flex:1;">
+                    </div>
+                    <div style="display:flex; gap:6px; background:rgba(255,255,255,0.05); padding:4px; border-radius:6px; border:1px solid rgba(255,255,255,0.08);">
+                        <button id="btn-alias-view-grouped" class="card-btn active" style="padding:6px 12px; font-size:12px; font-weight:700;" onclick="setAliasViewMode('grouped')">📑 대표 품명별 카드 뷰</button>
+                        <button id="btn-alias-view-table" class="card-btn" style="padding:6px 12px; font-size:12px; font-weight:700;" onclick="setAliasViewMode('table')">📋 전체 목록 테이블</button>
+                    </div>
+                </div>
+
+                <!-- Container: Grouped Cards or Table -->
+                <div class="data-table-wrap" id="alias-content-wrap" style="padding:0 32px 24px;">
+                    <!-- Rendered by JS -->
+                </div>
+            </div><!-- /page-part-alias -->
+
+            <!-- ══════════════════════════════════════
+                 PAGE: 불량 현황 (3-Column Layout & Dropdown Filters)
             ══════════════════════════════════════ -->
             <div class="page-panel" id="page-defect">
                 <div class="page-header">
                     <div>
-                        <div class="page-title-text">🔬 불량 현황</div>
-                        <div class="page-desc">공정별 · 업체별 불량 발생 현황을 분석합니다.</div>
+                        <div class="page-title-text">🔬 불량 현황 분석</div>
+                        <div class="page-desc">공정별 점유율 · 업체별 점유율 · 최근 불량 이력을 한눈에 비교 분석합니다.</div>
                     </div>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <label style="font-size:12px; color:var(--text-dim);">기간</label>
-                        <input type="date" id="defect-start" class="filter-select" style="padding:6px 10px;">
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <label style="font-size:12.5px; font-weight:600; color:var(--text-dim);">기간</label>
+                        <input type="date" id="defect-start" class="filter-select" style="padding:6px 10px; font-size:13px;" onchange="loadDefects()">
                         <span style="color:var(--text-muted);">~</span>
-                        <input type="date" id="defect-end" class="filter-select" style="padding:6px 10px;">
-                        <button class="topbar-action-btn" onclick="loadDefects()">조회</button>
+                        <input type="date" id="defect-end" class="filter-select" style="padding:6px 10px; font-size:13px;" onchange="loadDefects()">
+                        
+                        <label style="font-size:12.5px; font-weight:600; color:var(--text-dim); margin-left:6px;">공정</label>
+                        <select id="defect-proc-filter" class="filter-select" style="padding:6px 10px; font-size:13px;" onchange="loadDefects()">
+                            <option value="">전체 공정</option>
+                            <option value="LASER">LASER (레이저 각인)</option>
+                            <option value="SPI">SPI (3D 납도포 검사)</option>
+                            <option value="MOUNTER">MOUNTER (칩 마운터)</option>
+                            <option value="REFLOW">REFLOW (리플로우 솔더링)</option>
+                            <option value="DIP_AOI">DIP_AOI (수삽 외관 검사)</option>
+                            <option value="WAVE">WAVE (웨이브 솔더링)</option>
+                            <option value="ICT">ICT (회로 검사)</option>
+                            <option value="COATING">COATING (방습 코팅)</option>
+                            <option value="FCT">FCT (기능 검사)</option>
+                        </select>
+
+                        <label style="font-size:12.5px; font-weight:600; color:var(--text-dim); margin-left:6px;">업체</label>
+                        <select id="defect-comp-filter" class="filter-select" style="padding:6px 10px; font-size:13px;" onchange="loadDefects()">
+                            <option value="">전체 업체</option>
+                        </select>
+
+                        <button class="topbar-action-btn" style="background:#2563eb;" onclick="loadDefects()">🔍 조회</button>
                     </div>
                 </div>
 
-                <!-- Summary KPI -->
-                <div class="kpi-strip" style="padding:0 32px 16px;">
+                <!-- Summary KPI Strip -->
+                <div class="kpi-strip" style="padding:0 32px 14px;">
                     <div class="kpi-card">
                         <div class="kpi-label">❌ 총 불량 수</div>
                         <div class="kpi-val danger" id="d-kpi-fail">—</div>
@@ -1542,38 +1814,53 @@
                     </div>
                 </div>
 
-                <!-- Two-column chart area -->
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:0 32px; flex:1; overflow:auto; min-height:0;">
-                    <!-- By process -->
-                    <div class="board-col" style="overflow:visible;">
-                        <div class="board-col-header">
-                            <div class="board-col-title"><div class="col-dot" style="background:#f87171;"></div>공정별 불량</div>
+                <!-- 3-Column Side-by-Side Area -->
+                <div style="display:grid; grid-template-columns:1fr 1fr 1.35fr; gap:16px; padding:0 32px 24px; flex:1; overflow:hidden; min-height:0;">
+                    <!-- Col 1: 공정별 불량 점유율 -->
+                    <div class="board-col" style="overflow:hidden; display:flex; flex-direction:column; background:var(--surface); border:1px solid var(--card-border); border-radius:var(--radius-sm);">
+                        <div class="board-col-header" style="padding:14px 16px; border-bottom:1px solid var(--card-border);">
+                            <div class="board-col-title" style="font-size:13.5px; font-weight:700; color:#f1f5f9;">
+                                <div class="col-dot" style="background:#f87171;"></div>
+                                <span>공정별 불량 점유율</span>
+                            </div>
                         </div>
-                        <div style="padding:16px; overflow-y:auto; max-height:420px;" id="defect-by-process"></div>
+                        <div style="padding:16px; overflow-y:auto; flex:1;" id="defect-by-process"></div>
                     </div>
-                    <!-- By company -->
-                    <div class="board-col" style="overflow:visible;">
-                        <div class="board-col-header">
-                            <div class="board-col-title"><div class="col-dot" style="background:#fbbf24;"></div>업체별 불량</div>
-                        </div>
-                        <div style="padding:16px; overflow-y:auto; max-height:420px;" id="defect-by-company"></div>
-                    </div>
-                </div>
 
-                <!-- Recent defect list -->
-                <div style="padding:16px 28px 20px;">
-                    <div style="font-size:13px; font-weight:700; color:#e2e8f0; margin-bottom:10px;">최근 불량 이력 (최대 50건)</div>
-                    <div class="data-table-wrap" style="max-height:220px;">
-                        <table class="data-table">
-                            <thead><tr>
-                                <th>바코드</th>
-                                <th>공정</th>
-                                <th>WO</th>
-                                <th>업체</th>
-                                <th>발생시각</th>
-                            </tr></thead>
-                            <tbody id="defect-recent-tbody"></tbody>
-                        </table>
+                    <!-- Col 2: 업체별 불량 점유율 -->
+                    <div class="board-col" style="overflow:hidden; display:flex; flex-direction:column; background:var(--surface); border:1px solid var(--card-border); border-radius:var(--radius-sm);">
+                        <div class="board-col-header" style="padding:14px 16px; border-bottom:1px solid var(--card-border);">
+                            <div class="board-col-title" style="font-size:13.5px; font-weight:700; color:#f1f5f9;">
+                                <div class="col-dot" style="background:#fbbf24;"></div>
+                                <span>업체별 불량 점유율</span>
+                            </div>
+                        </div>
+                        <div style="padding:16px; overflow-y:auto; flex:1;" id="defect-by-company"></div>
+                    </div>
+
+                    <!-- Col 3: 최근 불량 발생 이력 테이블 -->
+                    <div class="board-col" style="overflow:hidden; display:flex; flex-direction:column; background:var(--surface); border:1px solid var(--card-border); border-radius:var(--radius-sm);">
+                        <div class="board-col-header" style="padding:14px 16px; border-bottom:1px solid var(--card-border); display:flex; justify-content:space-between; align-items:center;">
+                            <div class="board-col-title" style="font-size:13.5px; font-weight:700; color:#f1f5f9;">
+                                <div class="col-dot" style="background:#60a5fa;"></div>
+                                <span>최근 불량 발생 이력</span>
+                            </div>
+                            <span id="defect-recent-count" style="font-size:12px; color:#93c5fd; font-weight:700; font-family:'JetBrains Mono',monospace;">0건</span>
+                        </div>
+                        <div class="data-table-wrap" style="padding:0; flex:1; overflow:auto; min-height:0;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>작업지시 (WO)</th>
+                                        <th>바코드 (순번)</th>
+                                        <th>발생 공정</th>
+                                        <th>업체명</th>
+                                        <th>발생일</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="defect-recent-tbody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div><!-- /page-defect -->
@@ -1642,7 +1929,7 @@
                 <div class="page-header">
                     <div>
                         <div class="page-title-text">🏭 자재 입출고 관리</div>
-                        <div class="page-desc">자재 입고·출고 이력을 기록하고 현황을 파악합니다.</div>
+                        <div class="page-desc">사급자재(고객사 공급)와 도급자재(자사 구매)를 구분하여 입출고 및 재고를 관리합니다.</div>
                     </div>
                     <div style="display:flex; gap:8px;">
                         <button class="topbar-action-btn" style="background:rgba(52,211,153,0.15); color:#6ee7b7; border:1px solid rgba(52,211,153,0.3);" onclick="openMaterialModal('IN')">+ 입고 등록</button>
@@ -1650,53 +1937,53 @@
                     </div>
                 </div>
 
-                <!-- KPI -->
+                <!-- KPI: Total, Consigned, Procured -->
                 <div class="kpi-strip" style="padding:0 32px 16px;">
                     <div class="kpi-card">
-                        <div class="kpi-label">📦 기간 입고량</div>
+                        <div class="kpi-label">📦 총 입고 수량</div>
                         <div class="kpi-val good" id="mat-kpi-in">—</div>
                     </div>
                     <div class="kpi-card">
-                        <div class="kpi-label">📤 기간 출고량</div>
+                        <div class="kpi-label">📤 총 출고 수량</div>
                         <div class="kpi-val danger" id="mat-kpi-out">—</div>
                     </div>
                     <div class="kpi-card">
-                        <div class="kpi-label">🔩 파트 종류</div>
-                        <div class="kpi-val accent" id="mat-kpi-parts">—</div>
+                        <div class="kpi-label">🏷️ 사급 자재 입고</div>
+                        <div class="kpi-val accent" id="mat-kpi-consigned">—</div>
                     </div>
                     <div class="kpi-card">
-                        <div class="kpi-label">📋 총 건수</div>
-                        <div class="kpi-val" id="mat-kpi-count">—</div>
+                        <div class="kpi-label">🏢 도급 자재 입고</div>
+                        <div class="kpi-val" style="color:#fbbf24;" id="mat-kpi-procured">—</div>
                     </div>
                 </div>
 
-                <!-- Filters -->
-                <div style="padding:0 32px 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                    <input class="data-search" id="mat-part-filter" type="text" placeholder="파트번호 검색…" style="max-width:200px;">
-                    <input type="date" id="mat-start" class="filter-select" style="padding:7px 10px;">
-                    <span style="color:var(--text-muted);">~</span>
-                    <input type="date" id="mat-end" class="filter-select" style="padding:7px 10px;">
-                    <button class="topbar-action-btn" onclick="loadMaterials()">조회</button>
+                <!-- Filters: Supply Type, Company, Part No, Date, View Switch -->
+                <div style="padding:0 32px 14px; display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; flex:1;">
+                        <select id="mat-supply-filter" class="filter-select" style="min-width:145px; padding:7px 12px;" onchange="loadMaterials()">
+                            <option value="">전체 자재 구분</option>
+                            <option value="CONSIGNED">🏷️ 사급자재 (고객사)</option>
+                            <option value="PROCURED">🏢 도급자재 (자사보유)</option>
+                        </select>
+                        <select id="mat-company-filter" class="filter-select" style="min-width:150px; padding:7px 12px;" onchange="loadMaterials()">
+                            <option value="">전체 업체/공급처</option>
+                        </select>
+                        <input class="data-search" id="mat-part-filter" type="text" placeholder="파트번호 또는 파트명…" style="max-width:190px;" onkeydown="if(event.key==='Enter') loadMaterials()">
+                        <input type="date" id="mat-start" class="filter-select" style="padding:7px 10px;">
+                        <span style="color:var(--text-muted);">~</span>
+                        <input type="date" id="mat-end" class="filter-select" style="padding:7px 10px;">
+                        <button class="topbar-action-btn" onclick="loadMaterials()">조회</button>
+                    </div>
+
+                    <!-- 뷰 모드 스위처 (아코디언 vs 전체 테이블) -->
+                    <div style="display:flex; gap:6px; background:rgba(255,255,255,0.05); padding:4px; border-radius:6px; border:1px solid rgba(255,255,255,0.08);">
+                        <button id="btn-mat-view-accordion" class="card-btn active" style="padding:6px 12px; font-size:12px; font-weight:700;" onclick="setMaterialViewMode('accordion')">📑 품목별 아코디언 뷰</button>
+                        <button id="btn-mat-view-table" class="card-btn" style="padding:6px 12px; font-size:12px; font-weight:700;" onclick="setMaterialViewMode('table')">📋 전체 시간순 이력 뷰</button>
+                    </div>
                 </div>
 
-                <div class="data-table-wrap">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>구분</th>
-                                <th>파트번호</th>
-                                <th>파트명</th>
-                                <th style="text-align:right">수량</th>
-                                <th>단위</th>
-                                <th>연결 WO</th>
-                                <th>공급처</th>
-                                <th>비고</th>
-                                <th>등록일시</th>
-                                <th style="text-align:right">삭제</th>
-                            </tr>
-                        </thead>
-                        <tbody id="material-tbody"></tbody>
-                    </table>
+                <div class="data-table-wrap" id="mat-content-wrap">
+                    <!-- JS 렌더링 -->
                 </div>
             </div><!-- /page-material -->
 
@@ -1777,11 +2064,13 @@
                     <button class="topbar-action-btn" onclick="openUserModal()">+ 사용자 등록</button>
                 </div>
 
-                <!-- Role legend -->
-                <div style="padding:0 32px 12px; display:flex; gap:8px; flex-wrap:wrap;">
-                    <span class="status-badge" style="background:rgba(239,68,68,0.15); color:#fca5a5; font-size:11px;">🔴 Admin — 전체 권한</span>
-                    <span class="status-badge" style="background:rgba(59,130,246,0.15); color:#93c5fd; font-size:11px;">🔵 Manager — 조회·관리</span>
-                    <span class="status-badge" style="background:rgba(100,116,139,0.2); color:#94a3b8; font-size:11px;">⚪ Worker — 현장 작업</span>
+                <!-- Role legend & Filter -->
+                <div style="padding:0 32px 14px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <span style="font-size:12px; font-weight:600; color:var(--text-dim); margin-right:4px;">권한 체계:</span>
+                    <span class="status-badge" style="background:rgba(239,68,68,0.25); color:#fca5a5; font-size:12px; font-weight:700;">⚙️ Admin — 전체 관리 권한</span>
+                    <span class="status-badge" style="background:rgba(59,130,246,0.25); color:#93c5fd; font-size:12px; font-weight:700;">📊 Supervisor — 공정 관제</span>
+                    <span class="status-badge" style="background:rgba(100,116,139,0.25); color:#e2e8f0; font-size:12px; font-weight:700;">👨‍🏭 Worker — 현장 실적 등록</span>
+                    <span class="status-badge" style="background:rgba(245,158,11,0.25); color:#fcd34d; font-size:12px; font-weight:700;">👑 CEO — 경영진 뷰</span>
                 </div>
 
                 <div class="data-table-wrap">
@@ -1846,7 +2135,7 @@
             <!-- ══════════════════════════════════════
                  PAGE: 수주 (PO) 관리
             ══════════════════════════════════════ -->
-            <div class="page-panel" id="page-order">
+            <div class="page-panel active" id="page-order">
                 <div class="page-header">
                     <div>
                         <div class="page-title-text">📑 수주 (PO) 관리</div>
@@ -2127,7 +2416,19 @@
                     <tbody id="bomBody"></tbody>
                 </table>
             </div>
-            <button class="btn-submit" style="margin-top:14px;" onclick="saveBOM()">BOM 저장</button>
+
+            <!-- 사급 자재 자동 입고 연계 옵션 (기본값: true) -->
+            <div style="margin-top:14px; padding:12px 14px; background:rgba(59,130,246,0.12); border:1.5px solid rgba(59,130,246,0.35); border-radius:var(--radius-sm);">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13.5px; font-weight:700; color:#93c5fd;">
+                    <input type="checkbox" id="bom-auto-inbound" checked style="accent-color:#3b82f6; width:16px; height:16px;">
+                    <span>🏷️ 사급 자재로 창고 입고 자동 등록 (기본 선택)</span>
+                </label>
+                <div style="font-size:11.5px; color:#cbd5e1; margin-top:4px; margin-left:24px; line-height:1.4;">
+                    💡 체크 시 BOM에 입력된 파트번호, 파트명, 제공수량이 해당 고객사의 <strong>[사급 자재 입고]</strong>로 자재 입출고 관리 화면에 즉시 자동 연계 등록됩니다.
+                </div>
+            </div>
+
+            <button class="btn-submit" style="margin-top:14px;" onclick="saveBOM()">BOM 저장 및 입고 처리</button>
         </div>
     </div>
 </div>
@@ -2165,9 +2466,9 @@
     // ── Init ──
     async function init() {
         await loadCompanies();
+        await loadOrders();
         await loadWOList();
         document.getElementById('due_date').valueAsDate = new Date();
-        setInterval(loadWOList, 10000);
     }
 
     // ── Load companies ──
@@ -2177,10 +2478,29 @@
         if (data.status === 'success') {
             companies = data.data;
             const sel = document.getElementById('companySelect');
-            sel.innerHTML = '<option value="">— 선택하세요 —</option><option value="NEW">+ 새 업체 추가</option>';
-            companies.forEach(c => {
-                sel.innerHTML += `<option value="${c.id}" data-code="${c.code}">${c.name}</option>`;
-            });
+            if (sel) {
+                sel.innerHTML = '<option value="">— 선택하세요 —</option><option value="NEW">+ 새 업체 추가</option>';
+                companies.forEach(c => {
+                    sel.innerHTML += `<option value="${c.id}" data-code="${c.code}">${c.name}</option>`;
+                });
+            }
+            // 자재 업체 필터 드롭다운 갱신
+            const matFilterSel = document.getElementById('mat-company-filter');
+            if (matFilterSel) {
+                const prev = matFilterSel.value;
+                matFilterSel.innerHTML = '<option value="">전체 업체/공급처</option>';
+                companies.forEach(c => {
+                    matFilterSel.innerHTML += `<option value="${c.id}" ${prev == c.id ? 'selected' : ''}>${c.name}</option>`;
+                });
+            }
+            // 자재 모달 업체 드롭다운 갱신
+            const matInpComp = document.getElementById('mat-inp-company');
+            if (matInpComp) {
+                matInpComp.innerHTML = '<option value="">고객사/공급처 선택</option>';
+                companies.forEach(c => {
+                    matInpComp.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                });
+            }
         }
     }
 
@@ -2534,13 +2854,20 @@
         document.getElementById('bom_company_id').value = company_id;
         document.getElementById('bomPaste').value = '';
         document.getElementById('bomTableContainer').style.display = 'none';
+        
+        // 사급 자재 자동 입고 연계 기본값: true
+        const autoInboundCb = document.getElementById('bom-auto-inbound');
+        if (autoInboundCb) autoInboundCb.checked = true;
+
         document.getElementById('bomModal').classList.add('open');
 
         const res = await fetch(`../backend/api/get_bom.php?wo_id=${wo_id}`);
         const data = await res.json();
         if (data.status === 'success' && data.data.length > 0) {
-            let tsv = '자재명\t수량\t위치\n';
-            data.data.forEach(row => { tsv += `${row.part_no}\t${row.req_qty}\t${row.location || ''}\n`; });
+            let tsv = '파트번호\t파트명\t제공수량\t위치\n';
+            data.data.forEach(row => { 
+                tsv += `${row.part_no}\t${row.part_no}\t${row.req_qty}\t${row.location || ''}\n`; 
+            });
             document.getElementById('bomPaste').value = tsv.trim();
             parseExcel(true);
         }
@@ -2566,11 +2893,12 @@
         for (let i = 0; i < numCols; i++) {
             headRow.innerHTML += `
                 <th>
-                    <select class="bom-map-select" data-col="${i}">
-                        <option value="ignore">무시(Ignore)</option>
-                        <option value="part_no">자재명(Part Name)</option>
-                        <option value="req_qty">수량(Qty)</option>
-                        <option value="location">위치(Location)</option>
+                    <select class="bom-map-select" data-col="${i}" style="background:#1e293b; color:#ffffff; font-size:12.5px; font-weight:600; padding:6px 8px;">
+                        <option value="ignore">무시 (Ignore)</option>
+                        <option value="part_no">파트번호 (Part No) *</option>
+                        <option value="part_name">파트명 (Part Name)</option>
+                        <option value="req_qty">제공/소요 수량 (Qty) *</option>
+                        <option value="location">실장 위치 (Location)</option>
                     </select>
                 </th>`;
         }
@@ -2588,10 +2916,20 @@
             if (savedMapping && i < savedMapping.length) {
                 selects[i].value = savedMapping[i];
             } else {
-                const text = firstRow[i].toLowerCase();
-                if (text.includes('자재') || text.includes('품번') || text.includes('part')) selects[i].value = 'part_no';
-                else if (text.includes('수량') || text.includes('qty')) selects[i].value = 'req_qty';
-                else if (text.includes('위치') || text.includes('loc')) selects[i].value = 'location';
+                const text = firstRow[i].toLowerCase().trim();
+                if (text.includes('품번') || text.includes('part_no') || text.includes('pn') || text.includes('p/n') || text.includes('코드') || (text.includes('part') && !text.includes('name'))) {
+                    selects[i].value = 'part_no';
+                } else if (text.includes('품명') || text.includes('자재명') || text.includes('파트명') || text.includes('부품명') || text.includes('name') || text.includes('desc')) {
+                    selects[i].value = 'part_name';
+                } else if (text.includes('수량') || text.includes('qty') || text.includes('제공') || text.includes('소요')) {
+                    selects[i].value = 'req_qty';
+                } else if (text.includes('위치') || text.includes('loc') || text.includes('ref')) {
+                    selects[i].value = 'location';
+                } else if (i === 0) {
+                    selects[i].value = 'part_no';
+                } else if (i === 1) {
+                    selects[i].value = 'req_qty';
+                }
             }
         }
 
@@ -2612,7 +2950,7 @@
         selects.forEach((sel, i) => { if (sel.value !== 'ignore') mapping[sel.value] = i; });
 
         if (mapping.part_no === undefined || mapping.req_qty === undefined) {
-            alert('자재명과 수량 열(Column)은 반드시 지정해야 합니다!');
+            alert('파트번호와 수량 열(Column)은 반드시 지정해야 합니다!');
             return;
         }
 
@@ -2620,27 +2958,43 @@
         for (let i = 1; i < bomParsedData.length; i++) {
             const row = bomParsedData[i];
             if (row.join('').trim() === '') continue;
-            finalData.push({
-                part_no: row[mapping.part_no] || '',
-                req_qty: parseFloat((row[mapping.req_qty] || '').replace(/,/g, '')) || 0,
-                location: mapping.location !== undefined ? (row[mapping.location] || '') : ''
-            });
+            const pNo = (row[mapping.part_no] || '').trim();
+            const pName = mapping.part_name !== undefined ? (row[mapping.part_name] || '').trim() : pNo;
+            const rQty = parseFloat((row[mapping.req_qty] || '').replace(/,/g, '')) || 0;
+            const loc = mapping.location !== undefined ? (row[mapping.location] || '').trim() : '';
+
+            if (pNo && rQty > 0) {
+                finalData.push({
+                    part_no: pNo,
+                    part_name: pName || pNo,
+                    req_qty: rQty,
+                    location: loc
+                });
+            }
+        }
+
+        if (finalData.length === 0) {
+            alert('유효한 BOM 부품 데이터가 없습니다. 파트번호와 수량(>0)을 확인하세요.');
+            return;
         }
 
         const wo_id = document.getElementById('bom_wo_id').value;
         const company_id = document.getElementById('bom_company_id').value;
+        const auto_inbound = document.getElementById('bom-auto-inbound') ? document.getElementById('bom-auto-inbound').checked : true;
         const mappingArray = Array.from(selects).map(s => s.value);
 
         const res = await fetch('../backend/api/save_bom.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ wo_id, bom_data: finalData, company_id, mapping: mappingArray })
+            body: JSON.stringify({ wo_id, bom_data: finalData, company_id, mapping: mappingArray, auto_inbound })
         });
         const data = await res.json();
         if (data.status === 'success') {
             closeModal('bomModal');
+            alert(data.message || 'BOM 저장이 완료되었습니다.');
             await loadCompanies();
             loadWOList();
+            if (typeof loadMaterials === 'function') loadMaterials();
         } else {
             alert(data.message);
         }
@@ -2673,18 +3027,18 @@
     function renderCompanyTable(list) {
         const tbody = document.getElementById('company-tbody');
         if (!list.length) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:32px; color:var(--text-muted);">등록된 거래처가 없습니다.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:32px; color:#94a3b8; font-size:13.5px;">등록된 거래처가 없습니다.</td></tr>`;
             return;
         }
         tbody.innerHTML = list.map(c => `
             <tr>
-                <td><strong style="color:#e2e8f0;">${c.name}</strong></td>
-                <td><code style="font-size:11px; color:#93c5fd;">${c.code || '-'}</code></td>
-                <td>${c.tel || '<span style="color:var(--text-muted);">-</span>'}</td>
-                <td>${c.email || '<span style="color:var(--text-muted);">-</span>'}</td>
-                <td style="text-align:center; color:#e2e8f0;">${c.total_wo || 0}</td>
-                <td style="text-align:center; color:#34d399;">${c.done_wo || 0}</td>
-                <td style="text-align:center; color:#60a5fa;">${c.active_wo || 0}</td>
+                <td><strong style="color:#ffffff; font-size:13.5px;">${escHtml(c.name)}</strong></td>
+                <td><code>${escHtml(c.code || '-')}</code></td>
+                <td style="color:#f1f5f9; font-size:13.5px;">${c.tel ? escHtml(c.tel) : '<span style="color:#64748b;">-</span>'}</td>
+                <td style="color:#f1f5f9; font-size:13.5px;">${c.email ? escHtml(c.email) : '<span style="color:#64748b;">-</span>'}</td>
+                <td style="text-align:center; color:#f1f5f9; font-weight:700; font-size:13.5px;">${c.total_wo || 0}</td>
+                <td style="text-align:center; color:#34d399; font-weight:700; font-size:13.5px;">${c.done_wo || 0}</td>
+                <td style="text-align:center; color:#60a5fa; font-weight:700; font-size:13.5px;">${c.active_wo || 0}</td>
                 <td style="text-align:right;">
                     <button class="card-btn card-btn-edit" onclick="openEditCompanyModal(${c.id}, '${escHtml(c.name)}', '${escHtml(c.tel||'')}', '${escHtml(c.email||'')}', '${escHtml(c.memo||'')}')">수정</button>
                     <button class="card-btn card-btn-del" style="margin-left:4px;" onclick="deleteCompany(${c.id}, '${escHtml(c.name)}')">삭제</button>
@@ -2784,17 +3138,17 @@
     function renderItemTable(list) {
         const tbody = document.getElementById('item-tbody');
         if (!list.length) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:32px; color:var(--text-muted);">등록된 품목이 없습니다.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:32px; color:#94a3b8; font-size:13.5px;">등록된 품목이 없습니다.</td></tr>`;
             return;
         }
         tbody.innerHTML = list.map(item => `
             <tr>
-                <td><code style="font-size:12px; color:#93c5fd;">${escHtml(item.item_code)}</code></td>
-                <td><strong style="color:#e2e8f0;">${escHtml(item.item_name)}</strong></td>
-                <td>${item.category ? `<span class="status-badge status-progress" style="font-size:10px;">${escHtml(item.category)}</span>` : '<span style="color:var(--text-muted);">-</span>'}</td>
-                <td><span style="color:var(--text-dim);">${escHtml(item.unit||'EA')}</span></td>
-                <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.description ? escHtml(item.description) : '<span style="color:var(--text-muted);">-</span>'}</td>
-                <td style="font-size:11px; color:var(--text-muted);">${item.created_at ? item.created_at.slice(0,10) : '-'}</td>
+                <td><code>${escHtml(item.item_code)}</code></td>
+                <td><strong style="color:#ffffff; font-size:13.5px;">${escHtml(item.item_name)}</strong></td>
+                <td>${item.category ? `<span class="status-badge status-progress">${escHtml(item.category)}</span>` : '<span style="color:#64748b;">-</span>'}</td>
+                <td><span style="color:#f1f5f9; font-weight:600; font-size:13.5px;">${escHtml(item.unit||'EA')}</span></td>
+                <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#cbd5e1; font-size:13px;">${item.description ? escHtml(item.description) : '<span style="color:#64748b;">-</span>'}</td>
+                <td style="font-size:13px; font-family:'JetBrains Mono',monospace; color:#94a3b8;">${item.created_at ? item.created_at.slice(0,10) : '-'}</td>
                 <td style="text-align:right;">
                     <button class="card-btn card-btn-edit" onclick="openEditItemModal(${item.id}, '${escHtml(item.item_code)}', '${escHtml(item.item_name)}', '${escHtml(item.category||'')}', '${escHtml(item.unit||'EA')}', '${escHtml(item.description||'')}')">수정</button>
                     <button class="card-btn card-btn-del" style="margin-left:4px;" onclick="deleteItem(${item.id}, '${escHtml(item.item_name)}')">삭제</button>
@@ -2874,22 +3228,46 @@
         const end   = new Date();
         const start = new Date(); start.setDate(start.getDate() - 30);
         const fmt = d => d.toISOString().slice(0,10);
-        document.getElementById('defect-start').value = fmt(start);
-        document.getElementById('defect-end').value   = fmt(end);
+        const startEl = document.getElementById('defect-start');
+        const endEl   = document.getElementById('defect-end');
+        if (startEl && !startEl.value) startEl.value = fmt(start);
+        if (endEl && !endEl.value)     endEl.value   = fmt(end);
     }
 
     async function loadDefects() {
-        const start = document.getElementById('defect-start').value;
-        const end   = document.getElementById('defect-end').value;
-        if (!start || !end) { initDefectDates(); return; }
+        let start = document.getElementById('defect-start')?.value;
+        let end   = document.getElementById('defect-end')?.value;
+        if (!start || !end) {
+            initDefectDates();
+            start = document.getElementById('defect-start')?.value;
+            end   = document.getElementById('defect-end')?.value;
+        }
 
-        const res = await fetch(`../backend/api/get_defects.php?start_date=${start}&end_date=${end}`);
+        const proc = document.getElementById('defect-proc-filter')?.value || '';
+        const comp = document.getElementById('defect-comp-filter')?.value || '';
+
+        // 업체 필터 옵션 초기화 (회사 목록 연동)
+        const compSel = document.getElementById('defect-comp-filter');
+        if (compSel && compSel.options.length <= 1 && typeof companies !== 'undefined' && companies.length > 0) {
+            companies.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.name;
+                opt.textContent = c.name;
+                compSel.appendChild(opt);
+            });
+        }
+
+        let url = `../backend/api/get_defects.php?start_date=${start}&end_date=${end}`;
+        if (proc) url += `&process=${encodeURIComponent(proc)}`;
+        if (comp) url += `&company_name=${encodeURIComponent(comp)}`;
+
+        const res = await fetch(url);
         const data = await res.json();
         if (data.status !== 'success') return;
 
         const s = data.data.summary;
-        document.getElementById('d-kpi-fail').textContent = s.total_fail ?? 0;
-        document.getElementById('d-kpi-pass').textContent = s.total_pass ?? 0;
+        document.getElementById('d-kpi-fail').textContent = (s.total_fail ?? 0).toLocaleString();
+        document.getElementById('d-kpi-pass').textContent = (s.total_pass ?? 0).toLocaleString();
         const rate = s.fail_rate ?? 0;
         const rateEl = document.getElementById('d-kpi-rate');
         rateEl.textContent = rate + '%';
@@ -2899,29 +3277,59 @@
         const byProc = data.data.by_process || [];
         document.getElementById('d-kpi-top').textContent = byProc.length ? byProc[0].process_name : '—';
 
-        // Bar charts
-        renderDefectBars('defect-by-process', byProc, 'bar-fill-red', s.total_fail);
-        renderDefectBars('defect-by-company', data.data.by_company || [], 'bar-fill-yellow', s.total_fail);
+        // 1. 공정별 불량 점유율 바 차트
+        renderDefectBars('defect-by-process', byProc, 'bar-fill-red', s.total_fail, 'process');
+        
+        // 2. 업체별 불량 점유율 바 차트
+        renderDefectBars('defect-by-company', data.data.by_company || [], 'bar-fill-yellow', s.total_fail, 'company');
 
-        // Recent table
+        // 3. 최근 불량 발생 이력 테이블
         const tbody = document.getElementById('defect-recent-tbody');
         const recent = data.data.recent || [];
+        
+        // 정렬: 1. 발생일 내림차순(DESC) -> 2. 업체명 오름차순(ASC) -> 3. 바코드 오름차순(ASC)
+        recent.sort((a, b) => {
+            const dateA = (a.created_at || '').slice(0, 10);
+            const dateB = (b.created_at || '').slice(0, 10);
+            if (dateA !== dateB) return dateB.localeCompare(dateA);
+            const compA = a.company_name || '';
+            const compB = b.company_name || '';
+            if (compA !== compB) return compA.localeCompare(compB, 'ko');
+            const barA = a.barcode || '';
+            const barB = b.barcode || '';
+            return barA.localeCompare(barB);
+        });
+
+        const countEl = document.getElementById('defect-recent-count');
+        if (countEl) countEl.textContent = `${recent.length}건`;
+
         tbody.innerHTML = recent.length === 0
-            ? `<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">불량 이력이 없습니다.</td></tr>`
-            : recent.map(r => `
+            ? `<tr><td colspan="5" style="text-align:center; padding:32px; color:#94a3b8; font-size:13.5px;">해당 조건의 불량 이력이 없습니다.</td></tr>`
+            : recent.map(r => {
+                let seq = r.barcode || '';
+                if (r.wo_id && r.barcode && r.barcode.startsWith(r.wo_id)) {
+                    seq = r.barcode.substring(r.wo_id.length).replace(/^[-_]/, '');
+                } else if (r.barcode && r.barcode.includes('-')) {
+                    const parts = r.barcode.split('-');
+                    seq = parts[parts.length - 1];
+                }
+                const dateOnly = r.created_at ? r.created_at.slice(0, 10) : '-';
+
+                return `
                 <tr>
-                    <td><code style="font-size:11px;">${escHtml(r.barcode)}</code></td>
-                    <td><span class="status-badge status-progress" style="font-size:10px;">${escHtml(r.process_name)}</span></td>
-                    <td style="color:#93c5fd; font-size:11.5px;">${escHtml(r.wo_id)}</td>
-                    <td>${escHtml(r.company_name || '-')}</td>
-                    <td style="font-size:11px; color:var(--text-muted);">${r.created_at ? r.created_at.slice(0,19) : '-'}</td>
-                </tr>`).join('');
+                    <td><span style="color:#93c5fd; font-weight:700; font-family:'JetBrains Mono',monospace; font-size:13px;">${escHtml(r.wo_id || '—')}</span></td>
+                    <td><code title="전체 바코드: ${escHtml(r.barcode)}">${escHtml(seq ? '#' + seq : r.barcode)}</code></td>
+                    <td><span class="status-badge status-progress">${escHtml(r.process_name)}</span></td>
+                    <td style="color:#ffffff; font-weight:600; font-size:13.5px;">${escHtml(r.company_name || '-')}</td>
+                    <td style="font-size:13px; font-family:'JetBrains Mono',monospace; color:#cbd5e1; white-space:nowrap;">${dateOnly}</td>
+                </tr>`;
+            }).join('');
     }
 
-    function renderDefectBars(containerId, items, fillClass, totalFail) {
+    function renderDefectBars(containerId, items, fillClass, totalFail, filterType) {
         const el = document.getElementById(containerId);
         if (!items.length) {
-            el.innerHTML = `<div class="empty-msg">데이터가 없습니다.</div>`;
+            el.innerHTML = `<div style="text-align:center; padding:32px; color:#94a3b8; font-size:13px;">불량 데이터가 없습니다.</div>`;
             return;
         }
         const max = Math.max(...items.map(i => i.fail_count));
@@ -2930,13 +3338,23 @@
             const pct   = max > 0 ? Math.round(i.fail_count / max * 100) : 0;
             const ratio = totalFail > 0 ? (i.fail_count / totalFail * 100).toFixed(1) + '%' : '-';
             return `
-                <div class="bar-row">
-                    <div class="bar-label" title="${escHtml(label)}">${escHtml(label)}</div>
-                    <div class="bar-track"><div class="bar-fill ${fillClass}" style="width:${pct}%"></div></div>
-                    <div class="bar-count">${i.fail_count}</div>
-                    <div class="bar-pct">${ratio}</div>
+                <div class="bar-row" style="cursor:pointer; padding:4px 6px; border-radius:6px; transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'" onclick="quickFilterDefect('${filterType}', '${escHtml(label)}')">
+                    <div class="bar-label" style="font-size:13px; font-weight:600; color:#f1f5f9;" title="${escHtml(label)}">${escHtml(label)}</div>
+                    <div class="bar-track" style="height:10px;"><div class="bar-fill ${fillClass}" style="width:${pct}%"></div></div>
+                    <div class="bar-count" style="font-size:13px; font-weight:700; color:#ffffff;">${i.fail_count}</div>
+                    <div class="bar-pct" style="font-size:12.5px; font-weight:600; color:#93c5fd;">${ratio}</div>
                 </div>`;
         }).join('');
+    }
+
+    function quickFilterDefect(type, value) {
+        if (type === 'process') {
+            const sel = document.getElementById('defect-proc-filter');
+            if (sel) { sel.value = value; loadDefects(); }
+        } else if (type === 'company') {
+            const sel = document.getElementById('defect-comp-filter');
+            if (sel) { sel.value = value; loadDefects(); }
+        }
     }
 
     // ════════════════════════════════════════════════
@@ -2990,7 +3408,7 @@
         const today = new Date().toISOString().slice(0,10);
 
         if (!orders.length) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:32px; color:var(--text-muted);">해당 월에 납기 일정이 없습니다.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:32px; color:#94a3b8; font-size:13.5px;">해당 월에 납기 일정이 없습니다.</td></tr>`;
             return;
         }
 
@@ -3005,22 +3423,22 @@
             if      (o.status === 'READY')           statusBadge = `<span class="status-badge status-ready">대기</span>`;
             else if (o.status === 'IN_PROGRESS')     statusBadge = `<span class="status-badge status-progress">자삽(SMT)</span>`;
             else if (o.status === 'SMT_DONE')        statusBadge = `<span class="status-badge status-progress">자삽완료</span>`;
-            else if (o.status === 'DIP_IN_PROGRESS') statusBadge = `<span class="status-badge status-progress" style="background:rgba(245,158,11,0.2);color:#fcd34d;">수삽(DIP)</span>`;
+            else if (o.status === 'DIP_IN_PROGRESS') statusBadge = `<span class="status-badge status-progress" style="background:rgba(245,158,11,0.25);color:#fcd34d;">수삽(DIP)</span>`;
             else if (o.status === 'DONE')            statusBadge = `<span class="status-badge status-done">완료</span>`;
 
             return `
                 <tr>
-                    <td style="font-weight:600; color:#e2e8f0; white-space:nowrap;">${o.due_date || '—'}</td>
-                    <td><code style="font-size:11px; color:#93c5fd;">${o.wo_id}</code></td>
-                    <td>${escHtml(o.company_name || '-')}</td>
-                    <td style="text-align:right; color:#e2e8f0;">${parseInt(o.target_qty).toLocaleString()}</td>
-                    <td style="text-align:right;">
-                        <span style="color:#e2e8f0;">${pct}%</span>
+                    <td style="font-weight:700; color:#ffffff; font-family:'JetBrains Mono',monospace; font-size:13.5px; white-space:nowrap;">${o.due_date || '—'}</td>
+                    <td><code>${o.wo_id}</code></td>
+                    <td style="color:#ffffff; font-weight:600; font-size:13.5px;">${escHtml(o.company_name || '-')}</td>
+                    <td style="text-align:right; font-weight:700; color:#f1f5f9; font-size:13.5px;">${parseInt(o.target_qty).toLocaleString()} <span style="font-size:11.5px; color:#94a3b8;">EA</span></td>
+                    <td style="text-align:right; font-size:13.5px;">
+                        <span style="color:#f1f5f9; font-weight:700;">${pct}%</span>
                         <div class="progress-track" style="width:60px; display:inline-block; vertical-align:middle; margin-left:6px;">
                             <div class="progress-fill ${isDone?'done':''}" style="width:${pct}%"></div>
                         </div>
                     </td>
-                    <td style="text-align:right; color:${parseFloat(yRate)>=95?'#34d399':parseFloat(yRate)>=80?'#fbbf24':'#f87171'};">${yRate}</td>
+                    <td style="text-align:right; font-weight:700; font-size:13.5px; color:${parseFloat(yRate)>=95?'#34d399':parseFloat(yRate)>=80?'#fbbf24':'#f87171'};">${yRate}</td>
                     <td>${statusBadge}</td>
                     <td>${ddayBadge}</td>
                 </tr>`;
@@ -3047,72 +3465,282 @@ function initMaterialDates() {
     document.getElementById('mat-end').value   = fmt(now);
 }
 
+let materialData = { summary: {}, records: [], grouped: [] };
+let materialViewMode = 'accordion'; // 'accordion' or 'table'
+let openedAccordionParts = new Set(); // 펼쳐진 파트번호 집합
+
+function setMaterialViewMode(mode) {
+    materialViewMode = mode;
+    const btnAcc = document.getElementById('btn-mat-view-accordion');
+    const btnTbl = document.getElementById('btn-mat-view-table');
+    if (btnAcc) btnAcc.classList.toggle('active', mode === 'accordion');
+    if (btnTbl) btnTbl.classList.toggle('active', mode === 'table');
+    renderMaterials();
+}
+
+function toggleMaterialAccordion(partNo) {
+    if (openedAccordionParts.has(partNo)) {
+        openedAccordionParts.delete(partNo);
+    } else {
+        openedAccordionParts.add(partNo);
+    }
+    renderMaterials();
+}
+
 async function loadMaterials() {
-    const start   = document.getElementById('mat-start').value;
-    const end     = document.getElementById('mat-end').value;
-    const partNo  = document.getElementById('mat-part-filter').value.trim();
-    const res  = await fetch(`../backend/api/get_materials.php?start_date=${start}&end_date=${end}&part_no=${encodeURIComponent(partNo)}`);
+    const start      = document.getElementById('mat-start').value;
+    const end        = document.getElementById('mat-end').value;
+    const partNo     = document.getElementById('mat-part-filter').value.trim();
+    const supplyType = document.getElementById('mat-supply-filter').value;
+    const companyId  = document.getElementById('mat-company-filter').value;
+
+    const url = `../backend/api/get_materials.php?start_date=${start}&end_date=${end}&part_no=${encodeURIComponent(partNo)}&supply_type=${supplyType}&company_id=${companyId}`;
+    const res  = await fetch(url);
     const data = await res.json();
     if (data.status !== 'success') return;
-    const { summary, records } = data.data;
+    
+    materialData = data.data;
+    const { summary } = materialData;
 
-    document.getElementById('mat-kpi-in').textContent    = (summary.total_in    || 0).toLocaleString();
-    document.getElementById('mat-kpi-out').textContent   = (summary.total_out   || 0).toLocaleString();
-    document.getElementById('mat-kpi-parts').textContent = summary.part_count   || 0;
-    document.getElementById('mat-kpi-count').textContent = summary.record_count || 0;
+    document.getElementById('mat-kpi-in').textContent        = (summary.total_in        || 0).toLocaleString();
+    document.getElementById('mat-kpi-out').textContent       = (summary.total_out       || 0).toLocaleString();
+    document.getElementById('mat-kpi-consigned').textContent = (summary.total_consigned || 0).toLocaleString();
+    document.getElementById('mat-kpi-procured').textContent  = (summary.total_procured  || 0).toLocaleString();
 
-    const tbody = document.getElementById('material-tbody');
-    if (!records.length) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text-muted);">입출고 이력이 없습니다.</td></tr>`;
+    // 초기 로드 시 첫 번째 품목은 자동으로 펼쳐두기
+    if (openedAccordionParts.size === 0 && materialData.grouped && materialData.grouped.length > 0) {
+        openedAccordionParts.add(materialData.grouped[0].part_no);
+    }
+
+    renderMaterials();
+}
+
+function renderMaterials() {
+    const wrap = document.getElementById('mat-content-wrap');
+    if (!wrap) return;
+
+    if (materialViewMode === 'accordion') {
+        renderMaterialAccordion(wrap);
+    } else {
+        renderMaterialTable(wrap);
+    }
+}
+
+function renderMaterialAccordion(container) {
+    const groups = materialData.grouped || [];
+    if (!groups.length) {
+        container.innerHTML = `<div style="text-align:center; padding:48px 20px; color:#94a3b8; font-size:13.5px; background:var(--surface); border:1px solid var(--card-border); border-radius:var(--radius);">
+            입출고 이력이 없습니다. 상단 [+ 입고 등록]을 통해 자재를 등록해 보세요.
+        </div>`;
         return;
     }
-    tbody.innerHTML = records.map(r => {
-        const isIn = r.inout_type === 'IN';
-        const typeBadge = isIn
-            ? `<span class="status-badge status-done" style="font-size:10px;">▲ 입고</span>`
-            : `<span class="status-badge" style="background:rgba(248,113,113,0.15);color:#fca5a5;font-size:10px;">▼ 출고</span>`;
-        return `<tr>
-            <td>${typeBadge}</td>
-            <td><code style="font-size:11px;color:#93c5fd;">${escHtml(r.part_no)}</code></td>
-            <td>${escHtml(r.part_name||'—')}</td>
-            <td style="text-align:right;color:#e2e8f0;font-weight:700;">${parseFloat(r.qty).toLocaleString()}</td>
-            <td>${escHtml(r.unit||'EA')}</td>
-            <td style="font-size:11px;color:#93c5fd;">${r.wo_id ? escHtml(r.wo_id) : '<span style="color:var(--text-muted);">—</span>'}</td>
-            <td>${escHtml(r.company_name||'—')}</td>
-            <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.note||'—')}</td>
-            <td style="font-size:11px;color:var(--text-muted);">${r.created_at ? r.created_at.slice(0,16) : '—'}</td>
-            <td style="text-align:right;"><button class="card-btn card-btn-del" onclick="deleteMaterial(${r.id})">삭제</button></td>
-        </tr>`;
-    }).join('');
+
+    container.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:12px;">
+            ${groups.map(g => {
+                const isOpen = openedAccordionParts.has(g.part_no);
+                const stockColor = g.current_stock > 0 ? '#34d399' : (g.current_stock === 0 ? '#94a3b8' : '#f87171');
+                
+                return `
+                <div style="background:var(--surface); border:1px solid ${isOpen ? 'rgba(59,130,246,0.45)' : 'var(--card-border)'}; border-radius:var(--radius-sm); overflow:hidden; transition:all 0.2s ease; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+                    <!-- 아코디언 헤더 바 (클릭 시 토글) -->
+                    <div onclick="toggleMaterialAccordion('${escHtml(g.part_no)}')" style="padding:14px 18px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; background:${isOpen ? 'rgba(30,41,59,0.95)' : 'rgba(30,41,59,0.5)'}; border-bottom:${isOpen ? '1px solid rgba(255,255,255,0.08)' : 'none'}; user-select:none;">
+                        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                            <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:rgba(255,255,255,0.08); font-size:11px; color:#93c5fd; transition:transform 0.2s ease; transform:${isOpen ? 'rotate(90deg)' : 'rotate(0deg)'};">▶</span>
+                            <span style="font-family:'JetBrains Mono',monospace; font-weight:800; font-size:14px; color:#fcd34d; background:rgba(245,158,11,0.15); padding:3px 8px; border-radius:4px; border:1px solid rgba(245,158,11,0.3);">
+                                ${escHtml(g.part_no)}
+                            </span>
+                            <strong style="font-size:14.5px; color:#ffffff;">${escHtml(g.part_name)}</strong>
+                            <span style="font-size:12px; color:#94a3b8;">(${g.history_count}건 이력)</span>
+                        </div>
+
+                        <!-- 우측 요약 지표 (입고/출고/현재고) -->
+                        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                            <div style="font-size:12.5px; color:#cbd5e1;">
+                                <span style="color:#94a3b8;">총 입고:</span> <strong style="color:#6ee7b7;">${g.total_in.toLocaleString()}</strong>
+                            </div>
+                            <div style="font-size:12.5px; color:#cbd5e1;">
+                                <span style="color:#94a3b8;">총 출고:</span> <strong style="color:#fca5a5;">${g.total_out.toLocaleString()}</strong>
+                            </div>
+                            ${g.consigned_in > 0 ? `<div style="font-size:12px; background:rgba(59,130,246,0.18); color:#93c5fd; padding:2px 7px; border-radius:4px; border:1px solid rgba(59,130,246,0.3);">🏷️ 사급 ${g.consigned_in.toLocaleString()}</div>` : ''}
+                            ${g.procured_in > 0 ? `<div style="font-size:12px; background:rgba(245,158,11,0.18); color:#fcd34d; padding:2px 7px; border-radius:4px; border:1px solid rgba(245,158,11,0.3);">🏢 도급 ${g.procured_in.toLocaleString()}</div>` : ''}
+                            <div style="padding:4px 10px; border-radius:6px; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:6px;">
+                                <span style="font-size:11.5px; color:#94a3b8; font-weight:700;">현재고:</span>
+                                <strong style="font-size:14px; font-weight:800; color:${stockColor}; font-family:'JetBrains Mono',monospace;">
+                                    ${g.current_stock.toLocaleString()} ${escHtml(g.unit)}
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 아코디언 바디 (펼쳐졌을 때 세부 테이블) -->
+                    ${isOpen ? `
+                    <div style="padding:12px 16px; background:rgba(15,23,42,0.6);">
+                        <table class="data-table" style="font-size:13px;">
+                            <thead>
+                                <tr style="background:rgba(255,255,255,0.03);">
+                                    <th style="padding:8px 10px;">구분</th>
+                                    <th style="padding:8px 10px;">소유 구분</th>
+                                    <th style="padding:8px 10px;">파트명</th>
+                                    <th style="padding:8px 10px; text-align:right;">수량</th>
+                                    <th style="padding:8px 10px;">단위</th>
+                                    <th style="padding:8px 10px;">업체 / 공급처</th>
+                                    <th style="padding:8px 10px;">연결 WO</th>
+                                    <th style="padding:8px 10px;">비고 / 위치</th>
+                                    <th style="padding:8px 10px;">일자</th>
+                                    <th style="padding:8px 10px; text-align:right;">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${g.items.map(r => {
+                                    const isIn = r.inout_type === 'IN';
+                                    const inoutBadge = isIn
+                                        ? `<span class="status-badge status-done" style="font-size:11.5px; padding:3px 7px;">▲ 입고</span>`
+                                        : `<span class="status-badge" style="background:rgba(239,68,68,0.25); color:#fca5a5; border:1px solid rgba(239,68,68,0.45); font-size:11.5px; padding:3px 7px;">▼ 출고</span>`;
+                                    const isConsigned = r.supply_type === 'CONSIGNED';
+                                    const supplyBadge = isConsigned
+                                        ? `<span class="status-badge" style="background:rgba(59,130,246,0.25); color:#93c5fd; border:1px solid rgba(59,130,246,0.45); font-size:11.5px; padding:3px 7px;">🏷️ 사급</span>`
+                                        : `<span class="status-badge" style="background:rgba(245,158,11,0.25); color:#fcd34d; border:1px solid rgba(245,158,11,0.45); font-size:11.5px; padding:3px 7px;">🏢 도급</span>`;
+                                    
+                                    return `
+                                    <tr>
+                                        <td>${inoutBadge}</td>
+                                        <td>${supplyBadge}</td>
+                                        <td><strong style="color:#ffffff; font-size:13px;">${escHtml(r.part_name || g.part_name || '—')}</strong></td>
+                                        <td style="text-align:right; font-weight:700; color:#f1f5f9;">${parseFloat(r.qty).toLocaleString()}</td>
+                                        <td style="color:#cbd5e1;">${escHtml(r.unit || 'EA')}</td>
+                                        <td><strong style="color:${isConsigned ? '#93c5fd' : '#ffffff'};">${escHtml(r.company_name || '자사재고')}</strong></td>
+                                        <td>${r.wo_id ? `<code style="color:#38bdf8; font-size:12px;">${escHtml(r.wo_id)}</code>` : '<span style="color:#64748b;">—</span>'}</td>
+                                        <td style="color:#cbd5e1;">${escHtml(r.note || '—')}</td>
+                                        <td style="font-size:12.5px; font-family:'JetBrains Mono',monospace; color:#94a3b8;">${r.created_at ? r.created_at.slice(0, 10) : '—'}</td>
+                                        <td style="text-align:right;">
+                                            <button class="card-btn card-btn-del" style="font-size:11px; padding:3px 6px;" onclick="deleteMaterial(${r.id})">삭제</button>
+                                        </td>
+                                    </tr>`;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    ` : ''}
+                </div>`;
+            }).join('')}
+        </div>
+    `;
+}
+
+function renderMaterialTable(container) {
+    const records = materialData.records || [];
+    if (!records.length) {
+        container.innerHTML = `<table class="data-table"><tbody><tr><td style="text-align:center; padding:32px; color:#94a3b8;">입출고 이력이 없습니다.</td></tr></tbody></table>`;
+        return;
+    }
+    container.innerHTML = `
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>입출고</th>
+                    <th>자재 구분</th>
+                    <th>파트번호</th>
+                    <th>파트명</th>
+                    <th style="text-align:right">수량</th>
+                    <th>단위</th>
+                    <th>연결 WO</th>
+                    <th>업체 / 공급처</th>
+                    <th>비고</th>
+                    <th>등록일자</th>
+                    <th style="text-align:right">삭제</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${records.map(r => {
+                    const isIn = r.inout_type === 'IN';
+                    const inoutBadge = isIn
+                        ? `<span class="status-badge status-done">▲ 입고</span>`
+                        : `<span class="status-badge" style="background:rgba(239,68,68,0.25);color:#fca5a5;border:1px solid rgba(239,68,68,0.45);">▼ 출고</span>`;
+                    
+                    const isConsigned = r.supply_type === 'CONSIGNED';
+                    const supplyBadge = isConsigned
+                        ? `<span class="status-badge" style="background:rgba(59,130,246,0.25);color:#93c5fd;border:1px solid rgba(59,130,246,0.45);">🏷️ 사급</span>`
+                        : `<span class="status-badge" style="background:rgba(245,158,11,0.25);color:#fcd34d;border:1px solid rgba(245,158,11,0.45);">🏢 도급</span>`;
+
+                    return `<tr>
+                        <td>${inoutBadge}</td>
+                        <td>${supplyBadge}</td>
+                        <td><code>${escHtml(r.part_no)}</code></td>
+                        <td><strong style="color:#ffffff;font-size:13.5px;">${escHtml(r.part_name||'—')}</strong></td>
+                        <td style="text-align:right;color:#f1f5f9;font-weight:700;font-size:13.5px;">${parseFloat(r.qty).toLocaleString()}</td>
+                        <td style="color:#f1f5f9;font-weight:600;font-size:13.5px;">${escHtml(r.unit||'EA')}</td>
+                        <td>${r.wo_id ? `<code style="color:#38bdf8;">${escHtml(r.wo_id)}</code>` : '<span style="color:#64748b;">—</span>'}</td>
+                        <td><strong style="color:${isConsigned ? '#93c5fd' : '#ffffff'};font-weight:600;font-size:13.5px;">${escHtml(r.company_name||'자사재고')}</strong></td>
+                        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#cbd5e1;font-size:13px;">${escHtml(r.note||'—')}</td>
+                        <td style="font-size:13px;font-family:'JetBrains Mono',monospace;color:#94a3b8;">${r.created_at ? r.created_at.slice(0, 10) : '—'}</td>
+                        <td style="text-align:right;"><button class="card-btn card-btn-del" onclick="deleteMaterial(${r.id})">삭제</button></td>
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function onSupplyTypeChange() {
+    const selected = document.querySelector('input[name="mat-supply-type"]:checked')?.value || 'CONSIGNED';
+    const isConsigned = selected === 'CONSIGNED';
+    const hintEl = document.getElementById('mat-supply-hint');
+    const compLabelEl = document.getElementById('mat-company-label');
+    const woInp = document.getElementById('mat-inp-wo');
+
+    if (isConsigned) {
+        if (hintEl) hintEl.innerHTML = '💡 <strong>사급자재</strong>: 발주 고객사(원청사)가 제공한 자재로 특정 고객사/WO에 귀속됩니다.';
+        if (compLabelEl) compLabelEl.innerHTML = '발주 고객사 (원청사) <span style="color:#f87171;">*</span>';
+        if (woInp) woInp.placeholder = '예: WO-20260813-001 (특정 WO 귀속)';
+    } else {
+        if (hintEl) hintEl.innerHTML = '💡 <strong>도급자재</strong>: 우리 공장이 직접 구매한 자재로 공용 창고 재고로 적재됩니다.';
+        if (compLabelEl) compLabelEl.innerHTML = '부품 협력사 / 공급처 <span style="color:#94a3b8; font-size:11px;">(선택)</span>';
+        if (woInp) woInp.placeholder = '공용 재고 (비워둠 또는 연계 WO)';
+    }
 }
 
 let materialModalType = 'IN';
 function openMaterialModal(type) {
     materialModalType = type;
-    document.getElementById('mat-modal-type').textContent = type === 'IN' ? '입고 등록' : '출고 등록';
+    document.getElementById('mat-modal-type').textContent = type === 'IN' ? '자재 입고 등록' : '자재 출고 등록';
     document.getElementById('mat-modal-header').style.borderBottom = type === 'IN'
         ? '2px solid rgba(52,211,153,0.4)' : '2px solid rgba(248,113,113,0.4)';
     document.getElementById('mat-type').value = type;
+    
     // Reset form
     ['mat-inp-partno','mat-inp-partname','mat-inp-qty','mat-inp-wo','mat-inp-note'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('mat-inp-unit').value = 'EA';
     document.getElementById('mat-inp-company').value = '';
+    
+    // Default supply type: CONSIGNED
+    const rad = document.querySelector('input[name="mat-supply-type"][value="CONSIGNED"]');
+    if (rad) rad.checked = true;
+    onSupplyTypeChange();
+
     document.getElementById('materialModal').classList.add('open');
 }
 
 async function saveMaterial() {
-    const part_no    = document.getElementById('mat-inp-partno').value.trim();
-    const part_name  = document.getElementById('mat-inp-partname').value.trim();
-    const inout_type = document.getElementById('mat-type').value;
-    const qty        = parseFloat(document.getElementById('mat-inp-qty').value);
-    const unit       = document.getElementById('mat-inp-unit').value;
-    const wo_id      = document.getElementById('mat-inp-wo').value.trim();
-    const company_id = document.getElementById('mat-inp-company').value;
-    const note       = document.getElementById('mat-inp-note').value.trim();
+    const part_no     = document.getElementById('mat-inp-partno').value.trim();
+    const part_name   = document.getElementById('mat-inp-partname').value.trim();
+    const inout_type  = document.getElementById('mat-type').value;
+    const supply_type = document.querySelector('input[name="mat-supply-type"]:checked')?.value || 'CONSIGNED';
+    const qty         = parseFloat(document.getElementById('mat-inp-qty').value);
+    const unit        = document.getElementById('mat-inp-unit').value;
+    const wo_id       = document.getElementById('mat-inp-wo').value.trim();
+    const company_id  = document.getElementById('mat-inp-company').value;
+    const note        = document.getElementById('mat-inp-note').value.trim();
+
     if (!part_no || !qty || qty <= 0) { alert('파트번호와 수량(>0)은 필수입니다.'); return; }
+    if (supply_type === 'CONSIGNED' && !company_id) {
+        alert('사급자재는 발주 고객사를 반드시 선택해야 합니다.');
+        return;
+    }
+
     const res = await fetch('../backend/api/create_material.php', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ part_no, part_name, inout_type, qty, unit, wo_id: wo_id||null, company_id: company_id||null, note })
+        body: JSON.stringify({ part_no, part_name, inout_type, supply_type, qty, unit, wo_id: wo_id||null, company_id: company_id||null, note })
     });
     const data = await res.json();
     if (data.status === 'success') { closeModal('materialModal'); loadMaterials(); }
@@ -3156,24 +3784,24 @@ async function loadShipments() {
 
     const tbody = document.getElementById('shipment-tbody');
     if (!records.length) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted);">출하 이력이 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8;font-size:13.5px;">출하 이력이 없습니다.</td></tr>`;
         return;
     }
 
     const statusMap = {
-        PENDING:   `<span class="status-badge status-progress" style="background:rgba(251,191,36,0.15);color:#fcd34d;">⏳ 대기</span>`,
+        PENDING:   `<span class="status-badge status-received">⏳ 대기</span>`,
         SHIPPED:   `<span class="status-badge status-done">✅ 출하완료</span>`,
-        CANCELLED: `<span class="status-badge status-ready">🚫 취소</span>`,
+        CANCELLED: `<span class="status-badge status-cancelled">🚫 취소</span>`,
     };
 
     tbody.innerHTML = records.map(r => `<tr>
-        <td style="font-weight:600;color:#e2e8f0;">${r.ship_date || '—'}</td>
-        <td><code style="font-size:11px;color:#93c5fd;">${escHtml(r.wo_id)}</code></td>
-        <td>${escHtml(r.company_name||'—')}</td>
-        <td style="text-align:right;color:#e2e8f0;font-weight:700;">${parseInt(r.ship_qty).toLocaleString()}</td>
-        <td style="font-size:11.5px;">${escHtml(r.invoice_no||'—')}</td>
+        <td style="font-weight:700;color:#ffffff;font-family:'JetBrains Mono',monospace;font-size:13.5px;white-space:nowrap;">${r.ship_date || '—'}</td>
+        <td><code>${escHtml(r.wo_id)}</code></td>
+        <td><strong style="color:#ffffff;font-size:13.5px;">${escHtml(r.company_name||'—')}</strong></td>
+        <td style="text-align:right;color:#f1f5f9;font-weight:700;font-size:13.5px;">${parseInt(r.ship_qty).toLocaleString()}</td>
+        <td><code style="color:#60a5fa;">${escHtml(r.invoice_no||'—')}</code></td>
         <td>${statusMap[r.status] || r.status}</td>
-        <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.note||'—')}</td>
+        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#cbd5e1;font-size:13px;">${escHtml(r.note||'—')}</td>
         <td style="text-align:right;">
             ${r.status === 'PENDING' ? `<button class="card-btn card-btn-edit" onclick="updateShipStatus(${r.id},'SHIPPED')">출하처리</button>
             <button class="card-btn card-btn-del" style="margin-left:4px;" onclick="updateShipStatus(${r.id},'CANCELLED')">취소</button>` : ''}
@@ -3226,22 +3854,24 @@ async function loadUsers() {
     const users = data.data;
     const tbody = document.getElementById('users-tbody');
     if (!users.length) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted);">등록된 사용자가 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8;font-size:13.5px;">등록된 사용자가 없습니다.</td></tr>`;
         return;
     }
     const roleMap = {
-        admin:   `<span class="status-badge" style="background:rgba(239,68,68,0.15);color:#fca5a5;">🔴 Admin</span>`,
-        manager: `<span class="status-badge status-progress">🔵 Manager</span>`,
-        worker:  `<span class="status-badge status-ready">⚪ Worker</span>`,
+        admin:      `<span class="status-badge" style="background:rgba(239,68,68,0.25);color:#fca5a5;border:1px solid rgba(239,68,68,0.45);">🔴 Admin</span>`,
+        manager:    `<span class="status-badge status-progress">🔵 Manager</span>`,
+        supervisor: `<span class="status-badge status-progress">📊 Supervisor</span>`,
+        worker:     `<span class="status-badge status-ready">⚪ Worker</span>`,
+        ceo:        `<span class="status-badge" style="background:rgba(245,158,11,0.25);color:#fcd34d;border:1px solid rgba(245,158,11,0.45);">👑 CEO</span>`
     };
     tbody.innerHTML = users.map(u => `<tr>
-        <td><strong style="color:#e2e8f0;">${escHtml(u.name)}</strong></td>
-        <td><code style="font-size:12px;color:#93c5fd;">${escHtml(u.username)}</code></td>
+        <td><strong style="color:#ffffff;font-size:13.5px;">${escHtml(u.name)}</strong></td>
+        <td><code>${escHtml(u.username)}</code></td>
         <td>${roleMap[u.role] || u.role}</td>
-        <td>${escHtml(u.department||'—')}</td>
-        <td>${parseInt(u.is_active) ? `<span class="status-badge status-done" style="font-size:10px;">활성</span>` : `<span class="status-badge status-ready" style="font-size:10px;">비활성</span>`}</td>
-        <td style="font-size:11px;color:var(--text-muted);">${u.last_login ? u.last_login.slice(0,16) : '—'}</td>
-        <td style="font-size:11px;color:var(--text-muted);">${u.created_at ? u.created_at.slice(0,10) : '—'}</td>
+        <td style="color:#f1f5f9;font-size:13.5px;">${escHtml(u.department||'—')}</td>
+        <td>${parseInt(u.is_active) ? `<span class="status-badge status-done">활성</span>` : `<span class="status-badge status-ready">비활성</span>`}</td>
+        <td style="font-size:13px;font-family:'JetBrains Mono',monospace;color:#cbd5e1;">${u.last_login ? u.last_login.slice(0,16) : '—'}</td>
+        <td style="font-size:13px;font-family:'JetBrains Mono',monospace;color:#94a3b8;">${u.created_at ? u.created_at.slice(0,10) : '—'}</td>
         <td style="text-align:right;">
             <button class="card-btn card-btn-edit" onclick="openEditUserModal(${u.id},'${escHtml(u.username)}','${escHtml(u.name)}','${u.role}','${escHtml(u.department||'')}',${u.is_active})">수정</button>
             <button class="card-btn card-btn-del" style="margin-left:4px;" onclick="deleteUser(${u.id},'${escHtml(u.name)}')">삭제</button>
@@ -3308,9 +3938,179 @@ async function deleteUser(id, name) {
 }
 
 // ════════════════════════════════════════════════
-//  PHASE 2: 품질 검사 기준
+//  PHASE 2: 품질 검사 기준 (스마트 프리셋 연동)
 // ════════════════════════════════════════════════
+const QUALITY_STD_TEMPLATES = {
+    'SPI': {
+        name: 'SPI (3D 납도포 검사)',
+        items: [
+            { item: '솔더 페이스트 도포 체적율', unit: '%', std: '100 ± 20', tight: '100 ± 10', loose: '100 ± 30', desc: '80~120% 정상 범위' },
+            { item: '솔더 도포 높이 편차', unit: '㎛', std: '120 ± 15', tight: '120 ± 8', loose: '120 ± 25', desc: '스텐실 마스크 두께 기준' },
+            { item: '솔더 도포 면적율', unit: '%', std: '100 ± 15', tight: '100 ± 8', loose: '100 ± 20', desc: '패드 면적 대비 도포율' },
+            { item: '솔더 도포 좌표 오프셋', unit: 'mm', std: '± 0.05', tight: '± 0.02', loose: '± 0.10', desc: '패드 중심점 정렬 오차' },
+            { item: '인접 패드 솔더 브릿지', unit: 'EA', std: '0', tight: '0', loose: '0', desc: '미세 피치 단락' }
+        ]
+    },
+    'MOUNTER': {
+        name: 'MOUNTER (칩 마운터)',
+        items: [
+            { item: '부품 실장 위치 편차 (XY Offset)', unit: 'mm', std: '± 0.05', tight: '± 0.02', loose: '± 0.10', desc: '칩 센터 좌표 오차' },
+            { item: '부품 실장 각도 편차 (Rotation)', unit: 'deg', std: '± 1.0', tight: '± 0.5', loose: '± 2.0', desc: '부품 회전 각도 편차' },
+            { item: '부품 누락/미실장 (Missing Parts)', unit: 'EA', std: '0', tight: '0', loose: '0', desc: '부품 누락' },
+            { item: '부품 세움 불량 (Tombstone)', unit: 'EA', std: '0', tight: '0', loose: '0', desc: '맨하탄 현상' }
+        ]
+    },
+    'REFLOW': {
+        name: 'REFLOW (리플로우 솔더링)',
+        items: [
+            { item: '납땜 최고 피크 온도 (Peak Temp)', unit: '℃', std: '245 ± 5', tight: '245 ± 3', loose: '245 ± 10', desc: '무연 솔더 최적 온도' },
+            { item: '220℃ 이상 유지 시간 (TAL)', unit: 'sec', std: '60 ± 15', tight: '60 ± 8', loose: '60 ± 20', desc: '용융 유지 시간' },
+            { item: '예열 구간 승온 속도 (Preheat Slope)', unit: '℃/sec', std: '1.5 ± 0.5', tight: '1.5 ± 0.2', loose: '1.5 ± 1.0', desc: '급열 방지 승온율' },
+            { item: '냉각 구간 강온 속도 (Cooling Slope)', unit: '℃/sec', std: '2.5 ± 1.0', tight: '2.5 ± 0.5', loose: '2.5 ± 1.5', desc: '결정립 미세화 냉각율' }
+        ]
+    },
+    'DIP_AOI': {
+        name: 'DIP_AOI (수삽 외관 검사)',
+        items: [
+            { item: '리드핀 납 브릿지/쇼트', unit: 'EA', std: '0', tight: '0', loose: '0', desc: '핀간 단락' },
+            { item: '납땜 필렛 형성율 (Fillet Ratio)', unit: '%', std: '≥ 75', tight: '≥ 85', loose: '≥ 60', desc: '원주형 필렛 형성' },
+            { item: '부품 역삽/오삽 (Reverse/Wrong)', unit: 'EA', std: '0', tight: '0', loose: '0', desc: '극성 및 부품 혼입' },
+            { item: '핀 돌출 길이 (Pin Protrusion)', unit: 'mm', std: '1.5 ± 0.5', tight: '1.5 ± 0.2', loose: '1.5 ± 0.8', desc: 'PCB 하단 돌출 길이' }
+        ]
+    },
+    'WAVE': {
+        name: 'WAVE (웨이브 솔더링)',
+        items: [
+            { item: '솔더 팟 납조 온도 (Pot Temp)', unit: '℃', std: '255 ± 5', tight: '255 ± 3', loose: '255 ± 10', desc: '웨이브 납조 온도' },
+            { item: '컨베이어 통과 속도 (Line Speed)', unit: 'm/min', std: '1.2 ± 0.2', tight: '1.2 ± 0.1', loose: '1.2 ± 0.4', desc: '접촉 시간 제어' },
+            { item: '플럭스 도포량 (Flux Spray)', unit: 'mg/㎠', std: '25 ± 5', tight: '25 ± 2', loose: '25 ± 10', desc: '균일 도포량' }
+        ]
+    },
+    'ICT': {
+        name: 'ICT (회로 검사)',
+        items: [
+            { item: '전원-접지간 단락 저항 (Short)', unit: 'kΩ', std: '> 100', tight: '> 500', loose: '> 50', desc: '전원 절연 저항' },
+            { item: '접촉 단자 저항 (Contact R)', unit: 'Ω', std: '≤ 0.5', tight: '≤ 0.2', loose: '≤ 1.0', desc: '테스트 핀 접촉' },
+            { item: '저항 오차율 (R Tolerance)', unit: '%', std: '± 5.0', tight: '± 1.0', loose: '± 10.0', desc: '부품 스펙 공차' },
+            { item: '테스트 핀 접촉률 (Contact Rate)', unit: '%', std: '100', tight: '100', loose: '100', desc: '전체 핀 통전' }
+        ]
+    },
+    'COATING': {
+        name: 'COATING (방습 코팅)',
+        items: [
+            { item: '방습 코팅 도포 두께 (Thickness)', unit: '㎛', std: '50 ± 15', tight: '50 ± 8', loose: '50 ± 25', desc: '경화 후 절연 두께' },
+            { item: 'UV 경화 에너지 (UV Energy)', unit: 'mJ/㎠', std: '500 ± 50', tight: '500 ± 20', loose: '500 ± 100', desc: '경화 노광량' }
+        ]
+    },
+    'FCT': {
+        name: 'FCT (기능 검사)',
+        items: [
+            { item: '메인 전원 출력 전압 (VCC 3.3V)', unit: 'V', std: '3.30 ± 0.05', tight: '3.30 ± 0.02', loose: '3.30 ± 0.10', desc: '동작 정전압' },
+            { item: '대기 동작 전류 (Standby Current)', unit: 'mA', std: '≤ 15', tight: '≤ 10', loose: '≤ 25', desc: '아이들 소모 전류' },
+            { item: '통신 응답 속도 (Latency)', unit: 'ms', std: '≤ 50', tight: '≤ 20', loose: '≤ 100', desc: 'CAN/RS485 응답' }
+        ]
+    },
+    'LASER': {
+        name: 'LASER (레이저 각인)',
+        items: [
+            { item: '2D 바코드 판독 등급 (Grade)', unit: 'Grade', std: '≥ B (ISO 15415)', tight: '≥ A', loose: '≥ C', desc: '바코드 품질 등급' },
+            { item: '각인 깊이 (Depth)', unit: '㎛', std: '20 ± 5', tight: '20 ± 2', loose: '20 ± 10', desc: '동박 손상 방지' }
+        ]
+    }
+};
+
 let qualityStdsData = [];
+let currentQstdItemPreset = null;
+
+function onQualityProcessChange() {
+    const rawProc = document.getElementById('qs-process')?.value.trim() || '';
+    let procKey = Object.keys(QUALITY_STD_TEMPLATES).find(k => rawProc.toUpperCase().includes(k) || k.includes(rawProc.toUpperCase()));
+    
+    const itemListEl = document.getElementById('qs-item-list');
+    if (!itemListEl) return;
+    itemListEl.innerHTML = '';
+    
+    if (procKey && QUALITY_STD_TEMPLATES[procKey]) {
+        QUALITY_STD_TEMPLATES[procKey].items.forEach(it => {
+            const opt = document.createElement('option');
+            opt.value = it.item;
+            opt.textContent = `${it.item} (${it.unit})`;
+            itemListEl.appendChild(opt);
+        });
+    }
+}
+
+function onQualityItemChange() {
+    const rawProc = document.getElementById('qs-process')?.value.trim() || '';
+    const rawItem = document.getElementById('qs-item')?.value.trim() || '';
+    
+    let procKey = Object.keys(QUALITY_STD_TEMPLATES).find(k => rawProc.toUpperCase().includes(k) || k.includes(rawProc.toUpperCase()));
+    
+    currentQstdItemPreset = null;
+    if (procKey && QUALITY_STD_TEMPLATES[procKey]) {
+        const found = QUALITY_STD_TEMPLATES[procKey].items.find(it => it.item.toLowerCase() === rawItem.toLowerCase() || rawItem.toLowerCase().includes(it.item.toLowerCase()));
+        if (found) {
+            currentQstdItemPreset = found;
+        }
+    }
+
+    const stdListEl = document.getElementById('qs-std-list');
+    if (stdListEl) stdListEl.innerHTML = '';
+
+    const guideEl = document.getElementById('qs-preset-guide');
+
+    if (currentQstdItemPreset) {
+        if (stdListEl) {
+            const optStd = document.createElement('option');
+            optStd.value = currentQstdItemPreset.std;
+            optStd.textContent = `[표준] ${currentQstdItemPreset.std} ${currentQstdItemPreset.unit}`;
+            stdListEl.appendChild(optStd);
+
+            const optTight = document.createElement('option');
+            optTight.value = currentQstdItemPreset.tight;
+            optTight.textContent = `[타이트 / 정밀] ${currentQstdItemPreset.tight} ${currentQstdItemPreset.unit}`;
+            stdListEl.appendChild(optTight);
+
+            const optLoose = document.createElement('option');
+            optLoose.value = currentQstdItemPreset.loose;
+            optLoose.textContent = `[여유 / 넓게] ${currentQstdItemPreset.loose} ${currentQstdItemPreset.unit}`;
+            stdListEl.appendChild(optLoose);
+        }
+
+        if (guideEl) guideEl.textContent = `추천: ${currentQstdItemPreset.desc || ''}`;
+
+        const stdInput = document.getElementById('qs-std');
+        const unitInput = document.getElementById('qs-unit');
+        if (stdInput && !stdInput.value) stdInput.value = currentQstdItemPreset.std;
+        if (unitInput && !unitInput.value) unitInput.value = currentQstdItemPreset.unit;
+
+        updatePresetChipButtons(currentQstdItemPreset);
+    } else {
+        if (guideEl) guideEl.textContent = '검사항목 선택 시 추천값이 표시됩니다';
+    }
+}
+
+function updatePresetChipButtons(preset) {
+    const btnStd = document.getElementById('btn-preset-std');
+    const btnTight = document.getElementById('btn-preset-tight');
+    const btnLoose = document.getElementById('btn-preset-loose');
+    if (btnStd) btnStd.title = `표준: ${preset.std} ${preset.unit}`;
+    if (btnTight) btnTight.title = `타이트: ${preset.tight} ${preset.unit}`;
+    if (btnLoose) btnLoose.title = `여유: ${preset.loose} ${preset.unit}`;
+}
+
+function applyQualityPreset(type) {
+    if (!currentQstdItemPreset) {
+        onQualityItemChange();
+    }
+    if (!currentQstdItemPreset) {
+        alert('먼저 공정과 검사 항목을 선택해 주세요.');
+        return;
+    }
+    const val = currentQstdItemPreset[type] || currentQstdItemPreset.std;
+    document.getElementById('qs-std').value = val;
+    document.getElementById('qs-unit').value = currentQstdItemPreset.unit;
+}
 
 async function loadQualityStds() {
     const res  = await fetch('../backend/api/get_quality_standards.php');
@@ -3340,17 +4140,17 @@ function filterQualityStds() {
 function renderQstdTable(list) {
     const tbody = document.getElementById('qstd-tbody');
     if (!list.length) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted);">등록된 검사 기준이 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;font-size:13.5px;">등록된 검사 기준이 없습니다. 우측 상단 [+ 기준 등록]을 눌러 추가해 보세요.</td></tr>`;
         return;
     }
     tbody.innerHTML = list.map(q => `<tr>
-        <td><span class="status-badge status-progress" style="font-size:10px;">${escHtml(q.process_name)}</span></td>
-        <td style="color:#e2e8f0;font-weight:600;">${escHtml(q.check_item)}</td>
-        <td>${escHtml(q.standard_value||'—')}</td>
-        <td style="color:var(--text-dim);">${escHtml(q.unit||'—')}</td>
+        <td><span class="status-badge status-progress">${escHtml(q.process_name)}</span></td>
+        <td><strong style="color:#ffffff;font-size:13.5px;">${escHtml(q.check_item)}</strong></td>
+        <td><span style="color:#f1f5f9;font-weight:700;font-size:13.5px;">${escHtml(q.standard_value||'—')}</span></td>
+        <td><span style="color:#cbd5e1;font-weight:600;font-size:13.5px;">${escHtml(q.unit||'—')}</span></td>
         <td style="text-align:center;">${parseInt(q.is_active)
-            ? `<span class="status-badge status-done" style="font-size:10px;">활성</span>`
-            : `<span class="status-badge status-ready" style="font-size:10px;">비활성</span>`}</td>
+            ? `<span class="status-badge status-done">활성</span>`
+            : `<span class="status-badge status-ready">비활성</span>`}</td>
         <td style="text-align:right;">
             <button class="card-btn card-btn-edit" onclick="openEditQstdModal(${q.id},'${escHtml(q.process_name)}','${escHtml(q.check_item)}','${escHtml(q.standard_value||'')}','${escHtml(q.unit||'')}',${q.is_active})">수정</button>
             <button class="card-btn card-btn-del" style="margin-left:4px;" onclick="deleteQstd(${q.id},'${escHtml(q.check_item)}')">삭제</button>
@@ -3366,6 +4166,9 @@ function openQualityStdModal() {
     document.getElementById('qs-unit').value = '';
     document.getElementById('qs-active').checked = true;
     document.getElementById('qs-modal-title').textContent = '검사 기준 등록';
+    currentQstdItemPreset = null;
+    const guideEl = document.getElementById('qs-preset-guide');
+    if (guideEl) guideEl.textContent = '검사항목 선택 시 추천값이 표시됩니다';
     document.getElementById('qualityStdModal').classList.add('open');
 }
 
@@ -3377,6 +4180,8 @@ function openEditQstdModal(id, proc, item, std, unit, isActive) {
     document.getElementById('qs-unit').value = unit;
     document.getElementById('qs-active').checked = !!parseInt(isActive);
     document.getElementById('qs-modal-title').textContent = '검사 기준 수정';
+    onQualityProcessChange();
+    onQualityItemChange();
     document.getElementById('qualityStdModal').classList.add('open');
 }
 
@@ -3446,7 +4251,7 @@ function renderOrderTable(list) {
     const tbody = document.getElementById('order-tbody');
     if (!tbody) return;
     if (!list.length) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text-muted);">등록된 수주 내역이 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px;color:#94a3b8;font-size:13.5px;">등록된 수주 내역이 없습니다.</td></tr>`;
         return;
     }
 
@@ -3461,24 +4266,24 @@ function renderOrderTable(list) {
         const hasWO = !!o.wo_id;
         const totalWon = o.total_price ? '₩ ' + Math.round(o.total_price).toLocaleString() : '—';
         return `<tr>
-            <td><strong style="color:#e2e8f0;"><code style="color:#93c5fd;font-size:12px;">${escHtml(o.order_no)}</code></strong></td>
-            <td>${escHtml(o.company_name || '—')}</td>
+            <td><code>${escHtml(o.order_no)}</code></td>
+            <td><strong style="color:#ffffff;font-size:13.5px;">${escHtml(o.company_name || '—')}</strong></td>
             <td>
-                <div style="font-weight:600;color:#e2e8f0;">${escHtml(o.item_name || '—')}</div>
-                ${o.item_code ? `<div style="font-size:10.5px;color:var(--text-muted);">${escHtml(o.item_code)}</div>` : ''}
+                <div style="font-weight:700;color:#ffffff;font-size:13.5px;">${escHtml(o.item_name || '—')}</div>
+                ${o.item_code ? `<div style="font-size:12px;font-family:'JetBrains Mono',monospace;color:#94a3b8;">${escHtml(o.item_code)}</div>` : ''}
             </td>
-            <td style="text-align:right;font-weight:700;color:#e2e8f0;">${parseInt(o.order_qty).toLocaleString()} <span style="font-size:11px;color:var(--text-muted);">EA</span></td>
-            <td style="text-align:right;color:#6ee7b7;font-weight:600;">${totalWon}</td>
-            <td style="white-space:nowrap;font-weight:600;color:#e2e8f0;">${o.due_date || '—'}</td>
+            <td style="text-align:right;font-weight:700;color:#f1f5f9;font-size:13.5px;">${parseInt(o.order_qty).toLocaleString()} <span style="font-size:11.5px;color:#94a3b8;">EA</span></td>
+            <td style="text-align:right;color:#34d399;font-weight:700;font-size:13.5px;">${totalWon}</td>
+            <td style="white-space:nowrap;font-weight:700;font-family:'JetBrains Mono',monospace;color:#ffffff;font-size:13.5px;">${o.due_date || '—'}</td>
             <td>${statusBadgeMap[o.status] || o.status}</td>
             <td>
                 ${hasWO 
-                    ? `<span style="font-size:11px;color:#60a5fa;font-weight:700;cursor:pointer;" onclick="showPage('wo');" title="WO 관리로 이동">${escHtml(o.wo_id)}</span>` 
-                    : `<span style="color:var(--text-muted);font-size:11px;">미발행</span>`}
+                    ? `<code style="cursor:pointer;background:rgba(59,130,246,0.2);" onclick="showPage('wo');" title="WO 관리로 이동">${escHtml(o.wo_id)}</code>` 
+                    : `<span style="color:#64748b;font-size:13px;">미발행</span>`}
             </td>
             <td style="text-align:right;white-space:nowrap;">
                 ${!hasWO && o.status === 'RECEIVED' ? `
-                    <button class="topbar-action-btn" style="padding:4px 9px;font-size:11px;background:#2563eb;" onclick="convertOrderToWO(${o.id}, '${escHtml(o.order_no)}')">⚡ WO 발행</button>
+                    <button class="topbar-action-btn" style="padding:5px 10px;font-size:12px;font-weight:700;background:#2563eb;" onclick="convertOrderToWO(${o.id}, '${escHtml(o.order_no)}')">⚡ WO 발행</button>
                 ` : ''}
                 <button class="card-btn card-btn-edit" style="margin-left:4px;" onclick="openEditOrderModal(${o.id}, '${escHtml(o.order_no)}', ${o.company_id}, '${escHtml(o.item_code||'')}', '${escHtml(o.item_name||'')}', ${o.order_qty}, ${o.unit_price}, '${o.due_date}', '${o.status}', '${escHtml(o.memo||'')}', '${o.order_date||''}')">수정</button>
                 ${!hasWO ? `<button class="card-btn card-btn-del" style="margin-left:4px;" onclick="deleteOrder(${o.id}, '${escHtml(o.order_no)}')">삭제</button>` : ''}
@@ -3838,16 +4643,16 @@ function renderLogTable(logs) {
     const tbody = document.getElementById('log-tbody');
     if (!tbody) return;
     if (!logs.length) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text-muted);">로그 이력이 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:32px;color:#94a3b8;font-size:13.5px;">로그 이력이 없습니다.</td></tr>`;
         return;
     }
 
     tbody.innerHTML = logs.map(l => `
         <tr>
-            <td style="font-size:11.5px;color:var(--text-muted);white-space:nowrap;">${l.created_at || '—'}</td>
-            <td><strong style="color:#e2e8f0;">${escHtml(l.username || 'system')}</strong></td>
-            <td><span class="status-badge status-progress" style="font-size:10px;">${escHtml(l.action_type)}</span></td>
-            <td style="color:var(--text-dim);font-size:12.5px;">${escHtml(l.description)}</td>
+            <td style="font-size:13px;font-family:'JetBrains Mono',monospace;color:#cbd5e1;white-space:nowrap;">${l.created_at || '—'}</td>
+            <td><strong style="color:#ffffff;font-size:13.5px;">${escHtml(l.username || 'system')}</strong></td>
+            <td><span class="status-badge status-progress">${escHtml(l.action_type)}</span></td>
+            <td style="color:#f1f5f9;font-size:13.5px;line-height:1.5;">${escHtml(l.description)}</td>
         </tr>
     `).join('');
 }
@@ -3863,6 +4668,7 @@ const ALL_PAGE_TITLES = {
     defect: '불량 현황 분석',
     company: '거래처 마스터 관리',
     item: '품목 마스터 관리',
+    'part-alias': '부품 교차 참조 (대체품 / AVL 관리)',
     material: '자재 입출고 관리',
     shipment: '출하 관리',
     users: '사용자 / 권한 관리',
@@ -3903,9 +4709,16 @@ function showPage(pageId, navBtn) {
     if (pageId === 'order')       loadOrders();
     if (pageId === 'plan')        loadPlan();
     if (pageId === 'kpi')         loadKpiAnalytics();
-    if (pageId === 'defect')      loadDefects();
+    if (pageId === 'defect') {
+        if (!companies || !companies.length) {
+            loadCompanies().then(() => loadDefects());
+        } else {
+            loadDefects();
+        }
+    }
     if (pageId === 'company')     loadCompanyStats();
     if (pageId === 'item')        loadItems();
+    if (pageId === 'part-alias')  loadPartAliases();
     if (pageId === 'material')    loadMaterials();
     if (pageId === 'shipment')    loadShipments();
     if (pageId === 'users')       loadUsers();
@@ -3970,6 +4783,267 @@ function toggleAdminSidebar(side) {
         }
     }
 }
+
+// ════════════════════════════════════════════════
+//  PHASE 4: 부품 교차 참조 (대체품 / AVL 관리)
+// ════════════════════════════════════════════════
+let partAliasData = { summary: {}, records: [], grouped: [] };
+let aliasViewMode = 'grouped'; // 'grouped' or 'table'
+
+async function loadPartAliases() {
+    const search = document.getElementById('alias-search')?.value.trim() || '';
+    const res = await fetch(`../backend/api/get_part_aliases.php?search=${encodeURIComponent(search)}`);
+    const data = await res.json();
+    if (data.status !== 'success') return;
+    
+    partAliasData = data.data;
+
+    // KPI 카드
+    const stdEl = document.getElementById('alias-kpi-standards');
+    const totEl = document.getElementById('alias-kpi-total');
+    const venEl = document.getElementById('alias-kpi-vendors');
+    if (stdEl) stdEl.textContent = (partAliasData.summary.total_standards || 0).toLocaleString();
+    if (totEl) totEl.textContent = (partAliasData.summary.total_aliases   || 0).toLocaleString();
+    if (venEl) venEl.textContent = (partAliasData.summary.total_vendors   || 0).toLocaleString();
+
+    // Datalist 갱신 (모달 입력 시 자동완성)
+    const dl = document.getElementById('alias-stdname-datalist');
+    if (dl && partAliasData.grouped) {
+        dl.innerHTML = partAliasData.grouped.map(g => `<option value="${escHtml(g.standard_name)}">`).join('');
+    }
+
+    renderPartAliases();
+}
+
+function setAliasViewMode(mode) {
+    aliasViewMode = mode;
+    const btnGrp = document.getElementById('btn-alias-view-grouped');
+    const btnTbl = document.getElementById('btn-alias-view-table');
+    if (btnGrp) btnGrp.classList.toggle('active', mode === 'grouped');
+    if (btnTbl) btnTbl.classList.toggle('active', mode === 'table');
+    renderPartAliases();
+}
+
+function renderPartAliases() {
+    const wrap = document.getElementById('alias-content-wrap');
+    if (!wrap) return;
+
+    if (aliasViewMode === 'grouped') {
+        renderPartAliasGrouped(wrap);
+    } else {
+        renderPartAliasTable(wrap);
+    }
+}
+
+function renderPartAliasGrouped(container) {
+    const groups = partAliasData.grouped || [];
+    if (!groups.length) {
+        container.innerHTML = `<div style="text-align:center; padding:48px 20px; color:#94a3b8; font-size:13.5px; background:var(--surface); border:1px solid var(--card-border); border-radius:var(--radius);">
+            등록된 부품 교차 매핑 데이터가 없습니다. 상단 [+ 단건 매핑 등록] 또는 [📋 엑셀 일괄 붙여넣기]로 등록해 보세요.
+        </div>`;
+        return;
+    }
+
+    container.innerHTML = `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(360px, 1fr)); gap:16px;">
+        ${groups.map(g => `
+            <div style="background:var(--surface); border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:16px 18px; display:flex; flex-direction:column; gap:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
+                    <div>
+                        <div style="font-size:14px; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:6px;">
+                            <span>🏛️</span>
+                            <span>${escHtml(g.standard_name)}</span>
+                        </div>
+                        ${g.standard_code ? `<div style="font-size:11.5px; font-family:'JetBrains Mono',monospace; color:#93c5fd; margin-top:2px;">코드: ${escHtml(g.standard_code)}</div>` : ''}
+                    </div>
+                    <button class="card-btn card-btn-edit" style="font-size:11.5px; padding:4px 8px; white-space:nowrap;" onclick="openPartAliasModalFor('${escHtml(g.standard_name)}','${escHtml(g.standard_code||'')}')">+ 대체 P/N 추가</button>
+                </div>
+                
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <div style="font-size:11.5px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.03em;">연결된 제조사 / 고객사 파트번호 (${g.aliases.length}개):</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                        ${g.aliases.map(a => `
+                            <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(30,41,59,0.8); border:1px solid rgba(255,255,255,0.12); padding:5px 10px; border-radius:6px; font-size:12px;">
+                                <span style="color:#fbbf24; font-weight:700; font-size:11px;">[${escHtml(a.vendor_name||'공용')}]</span>
+                                <code style="color:#ffffff; font-weight:700;">${escHtml(a.alias_part_no)}</code>
+                                <button onclick="deletePartAlias(${a.id},'${escHtml(a.alias_part_no)}')" style="background:none; border:none; color:#f87171; cursor:pointer; font-size:12px; padding:0 2px; margin-left:2px;" title="삭제">✕</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ${g.description ? `<div style="font-size:11.5px; color:#94a3b8; border-top:1px dashed rgba(255,255,255,0.06); padding-top:6px;">📝 ${escHtml(g.description)}</div>` : ''}
+            </div>
+        `).join('')}
+    </div>`;
+}
+
+function renderPartAliasTable(container) {
+    const records = partAliasData.records || [];
+    if (!records.length) {
+        container.innerHTML = `<table class="data-table"><tbody><tr><td style="text-align:center; padding:32px; color:#94a3b8;">데이터가 없습니다.</td></tr></tbody></table>`;
+        return;
+    }
+    container.innerHTML = `
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>대표 파트명 (사내 표준)</th>
+                    <th>대표 코드</th>
+                    <th>실제 파트번호 (P/N)</th>
+                    <th>제조사 / 공급처</th>
+                    <th>사양 및 비고</th>
+                    <th>등록일시</th>
+                    <th style="text-align:right">삭제</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${records.map(r => `
+                    <tr>
+                        <td><strong style="color:#ffffff; font-size:13.5px;">${escHtml(r.standard_name)}</strong></td>
+                        <td><code style="color:#93c5fd;">${escHtml(r.standard_code||'—')}</code></td>
+                        <td><strong style="color:#fcd34d; font-family:'JetBrains Mono',monospace; font-size:13.5px;">${escHtml(r.alias_part_no)}</strong></td>
+                        <td><span class="status-badge" style="background:rgba(59,130,246,0.2); color:#93c5fd; font-weight:700;">${escHtml(r.vendor_name||'공용')}</span></td>
+                        <td style="color:#cbd5e1; font-size:13px;">${escHtml(r.description||'—')}</td>
+                        <td style="font-size:12.5px; font-family:'JetBrains Mono',monospace; color:#94a3b8;">${r.created_at ? r.created_at.slice(0,10) : '—'}</td>
+                        <td style="text-align:right;">
+                            <button class="card-btn card-btn-del" onclick="deletePartAlias(${r.id},'${escHtml(r.alias_part_no)}')">삭제</button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function openPartAliasModal() {
+    document.getElementById('alias-id').value = '';
+    document.getElementById('alias-inp-stdname').value = '';
+    document.getElementById('alias-inp-stdcode').value = '';
+    document.getElementById('alias-inp-partno').value = '';
+    document.getElementById('alias-inp-vendor').value = '';
+    document.getElementById('alias-inp-desc').value = '';
+    document.getElementById('alias-modal-title').textContent = '부품 교차 매핑 등록';
+    document.getElementById('partAliasModal').classList.add('open');
+}
+
+function openPartAliasModalFor(stdName, stdCode) {
+    openPartAliasModal();
+    document.getElementById('alias-inp-stdname').value = stdName;
+    document.getElementById('alias-inp-stdcode').value = stdCode;
+    document.getElementById('alias-inp-partno').focus();
+}
+
+function openPartAliasBatchModal() {
+    document.getElementById('aliasBatchPaste').value = '';
+    document.getElementById('partAliasBatchModal').classList.add('open');
+}
+
+async function savePartAlias() {
+    const id            = document.getElementById('alias-id').value;
+    const standard_name = document.getElementById('alias-inp-stdname').value.trim();
+    const standard_code = document.getElementById('alias-inp-stdcode').value.trim();
+    const alias_part_no = document.getElementById('alias-inp-partno').value.trim();
+    const vendor_name   = document.getElementById('alias-inp-vendor').value.trim();
+    const description   = document.getElementById('alias-inp-desc').value.trim();
+
+    if (!standard_name || !alias_part_no) {
+        alert('대표 품명과 실제 파트번호는 필수입니다.');
+        return;
+    }
+
+    const body = { standard_name, standard_code: standard_code||null, alias_part_no, vendor_name: vendor_name||null, description: description||null };
+    if (id) body.id = parseInt(id);
+
+    const res = await fetch('../backend/api/save_part_alias.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+        closeModal('partAliasModal');
+        loadPartAliases();
+    } else {
+        alert(data.message);
+    }
+}
+
+async function savePartAliasBatch() {
+    const raw = document.getElementById('aliasBatchPaste').value.trim();
+    if (!raw) { alert('붙여넣을 데이터가 없습니다.'); return; }
+
+    const lines = raw.split('\n');
+    const batch = [];
+    lines.forEach(line => {
+        const parts = line.split('\t');
+        if (parts.length >= 2) {
+            const stdName = parts[0].trim();
+            const aliasPn = parts[1].trim();
+            const vendor  = parts[2] ? parts[2].trim() : '';
+            const desc    = parts[3] ? parts[3].trim() : '';
+            if (stdName && aliasPn && stdName !== '대표품명' && stdName !== 'standard_name') {
+                batch.push({ standard_name: stdName, alias_part_no: aliasPn, vendor_name: vendor, description: desc });
+            }
+        }
+    });
+
+    if (batch.length === 0) {
+        alert('유효한 데이터 행을 찾을 수 없습니다. [대표품명 (탭) 파트번호] 형식으로 붙여넣어 주세요.');
+        return;
+    }
+
+    const res = await fetch('../backend/api/save_part_alias.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ batch })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+        closeModal('partAliasBatchModal');
+        alert(data.message || '일괄 등록이 완료되었습니다.');
+        loadPartAliases();
+    } else {
+        alert(data.message);
+    }
+}
+
+async function deletePartAlias(id, aliasPn) {
+    if (!confirm(`대체 파트번호 [${aliasPn}] 매핑을 삭제하시겠습니까?`)) return;
+    const res = await fetch('../backend/api/delete_part_alias.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+        loadPartAliases();
+    } else {
+        alert(data.message);
+    }
+}
+
+// 자재 입고 모달 파트번호 입력 시 스마트 자동 완성 연동
+document.addEventListener('DOMContentLoaded', () => {
+    const matPartInp = document.getElementById('mat-inp-partno');
+    if (matPartInp) {
+        matPartInp.addEventListener('blur', async () => {
+            const pn = matPartInp.value.trim();
+            const nameInp = document.getElementById('mat-inp-partname');
+            if (pn && nameInp && !nameInp.value.trim()) {
+                try {
+                    const res = await fetch(`../backend/api/match_part_alias.php?part_no=${encodeURIComponent(pn)}`);
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        if (data.matched && data.data?.standard_name) {
+                            nameInp.value = data.data.standard_name;
+                        } else if (data.inferred_name) {
+                            nameInp.value = data.inferred_name;
+                        }
+                    }
+                } catch(e) {}
+            }
+        });
+    }
+});
 </script>
 
 <!-- ════════ MODAL: 수주 (PO) 등록/수정 ════════ -->
@@ -4046,6 +5120,23 @@ function toggleAdminSidebar(side) {
             <button class="modal-close" onclick="closeModal('materialModal')">✕</button>
         </div>
         <input type="hidden" id="mat-type">
+
+        <!-- 자재 구분: 사급 vs 도급 -->
+        <div class="form-group">
+            <label class="form-label">자재 구분 (소유 및 공급 형태) <span style="color:#f87171;">*</span></label>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <label id="lbl-supply-consigned" style="display:flex; align-items:center; gap:8px; padding:10px 12px; background:rgba(59,130,246,0.15); border:1.5px solid rgba(59,130,246,0.45); border-radius:var(--radius-sm); cursor:pointer; font-size:13px; font-weight:700; color:#93c5fd;">
+                    <input type="radio" name="mat-supply-type" value="CONSIGNED" checked onchange="onSupplyTypeChange()" style="accent-color:#3b82f6;">
+                    <span>🏷️ 사급자재 (고객사 공급)</span>
+                </label>
+                <label id="lbl-supply-procured" style="display:flex; align-items:center; gap:8px; padding:10px 12px; background:rgba(245,158,11,0.15); border:1.5px solid rgba(245,158,11,0.45); border-radius:var(--radius-sm); cursor:pointer; font-size:13px; font-weight:700; color:#fcd34d;">
+                    <input type="radio" name="mat-supply-type" value="PROCURED" onchange="onSupplyTypeChange()" style="accent-color:#f59e0b;">
+                    <span>🏢 도급자재 (자사 구매/보유)</span>
+                </label>
+            </div>
+            <div id="mat-supply-hint" style="font-size:11.5px; color:#94a3b8; margin-top:5px;">💡 발주 고객사(원청사)가 제공한 자재로 특정 고객사/WO에 귀속됩니다.</div>
+        </div>
+
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
             <div class="form-group">
                 <label class="form-label">파트번호 <span style="color:#f87171;">*</span></label>
@@ -4064,29 +5155,29 @@ function toggleAdminSidebar(side) {
             <div class="form-group">
                 <label class="form-label">단위</label>
                 <select id="mat-inp-unit" class="form-control">
-                    <option value="EA">EA</option>
-                    <option value="reel">Reel</option>
-                    <option value="kg">kg</option>
-                    <option value="m">m</option>
-                    <option value="pcs">pcs</option>
+                    <option value="EA">EA (개)</option>
+                    <option value="reel">Reel (릴)</option>
+                    <option value="kg">kg (킬로그램)</option>
+                    <option value="m">m (미터)</option>
+                    <option value="pcs">pcs (피스)</option>
                 </select>
             </div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
             <div class="form-group">
-                <label class="form-label">연결 WO</label>
-                <input type="text" id="mat-inp-wo" class="form-control" placeholder="WO ID (선택)">
+                <label class="form-label" id="mat-company-label">발주 고객사 (공급처) <span style="color:#f87171;">*</span></label>
+                <select id="mat-inp-company" class="form-control">
+                    <option value="">고객사/공급처 선택</option>
+                </select>
             </div>
             <div class="form-group">
-                <label class="form-label">공급처</label>
-                <select id="mat-inp-company" class="form-control">
-                    <option value="">선택 안 함</option>
-                </select>
+                <label class="form-label" id="mat-wo-label">연결 작업지시 (WO)</label>
+                <input type="text" id="mat-inp-wo" class="form-control" placeholder="예: WO-20260813-001 (선택)">
             </div>
         </div>
         <div class="form-group">
-            <label class="form-label">비고</label>
-            <textarea id="mat-inp-note" class="form-control" rows="2" placeholder="특이사항 등"></textarea>
+            <label class="form-label">비고 / 로트번호</label>
+            <textarea id="mat-inp-note" class="form-control" rows="2" placeholder="Lot No, 유효기간, 릴 번호 등 특이사항"></textarea>
         </div>
         <button class="btn-submit" onclick="saveMaterial()">저장</button>
     </div>
@@ -4153,11 +5244,12 @@ function toggleAdminSidebar(side) {
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
             <div class="form-group">
-                <label class="form-label">역할</label>
-                <select id="usr-role" class="form-control">
-                    <option value="worker">Worker — 현장</option>
-                    <option value="manager">Manager — 관리</option>
-                    <option value="admin">Admin — 전체</option>
+                <label class="form-label">역할 (Role) <span style="color:#f87171;">*</span></label>
+                <select id="usr-role" class="form-control" style="background:#1e293b; color:#ffffff; font-weight:600; font-size:13.5px;">
+                    <option value="worker">👨‍🏭 Worker — 작업자 (현장 생산 실적 등록)</option>
+                    <option value="supervisor">📊 Supervisor — 관리자 (라인·공정 관제)</option>
+                    <option value="admin">⚙️ Admin — 관리자 (전체 기능 관리 콘솔)</option>
+                    <option value="ceo">👑 CEO — 경영진 (종합 모니터링 뷰)</option>
                 </select>
             </div>
             <div class="form-group">
@@ -4181,7 +5273,7 @@ function toggleAdminSidebar(side) {
 
 <!-- ════════ MODAL: 품질 검사 기준 등록/수정 ════════ -->
 <div class="modal-overlay" id="qualityStdModal">
-    <div class="modal-box">
+    <div class="modal-box" style="max-width:560px;">
         <div class="modal-header">
             <div class="modal-title" id="qs-modal-title">검사 기준 등록</div>
             <button class="modal-close" onclick="closeModal('qualityStdModal')">✕</button>
@@ -4189,36 +5281,71 @@ function toggleAdminSidebar(side) {
         <input type="hidden" id="qs-id">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
             <div class="form-group">
-                <label class="form-label">공정명 <span style="color:#f87171;">*</span></label>
-                <input type="text" id="qs-process" class="form-control" list="qs-process-list" placeholder="예: SMT, DIP, 검사">
+                <label class="form-label">공정명 <span style="color:#f87171;">*</span> <span style="font-size:11px; color:#94a3b8; font-weight:400;">(선택 또는 직접입력)</span></label>
+                <input type="text" id="qs-process" class="form-control" list="qs-process-list" placeholder="공정 선택/입력" oninput="onQualityProcessChange()" onchange="onQualityProcessChange()">
                 <datalist id="qs-process-list">
-                    <option value="SMT자삽">
-                    <option value="DIP수삽">
-                    <option value="외관검사">
-                    <option value="기능검사">
-                    <option value="ICT">
-                    <option value="출하검사">
+                    <option value="SPI">SPI (3D 납도포 검사)</option>
+                    <option value="MOUNTER">MOUNTER (칩 마운터)</option>
+                    <option value="REFLOW">REFLOW (리플로우 솔더링)</option>
+                    <option value="DIP_AOI">DIP_AOI (수삽 외관 검사)</option>
+                    <option value="WAVE">WAVE (웨이브 솔더링)</option>
+                    <option value="ICT">ICT (회로 검사)</option>
+                    <option value="COATING">COATING (방습 코팅)</option>
+                    <option value="FCT">FCT (기능 검사)</option>
+                    <option value="LASER">LASER (레이저 각인)</option>
+                    <option value="출하검사">출하검사 (OQC)</option>
                 </datalist>
             </div>
             <div class="form-group">
-                <label class="form-label">검사 항목 <span style="color:#f87171;">*</span></label>
-                <input type="text" id="qs-item" class="form-control" placeholder="예: 납땜 불량, 극성 오류">
+                <label class="form-label">검사 항목 <span style="color:#f87171;">*</span> <span style="font-size:11px; color:#94a3b8; font-weight:400;">(선택 또는 직접입력)</span></label>
+                <input type="text" id="qs-item" class="form-control" list="qs-item-list" placeholder="검사 항목 선택/입력" oninput="onQualityItemChange()" onchange="onQualityItemChange()">
+                <datalist id="qs-item-list"></datalist>
             </div>
         </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+
+        <div style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:12px;">
             <div class="form-group">
-                <label class="form-label">기준값</label>
-                <input type="text" id="qs-std" class="form-control" placeholder="예: ≤ 0.3mm, PASS">
+                <label class="form-label">기준값 (스펙) <span style="font-size:11px; color:#94a3b8; font-weight:400;">(선택 또는 직접입력)</span></label>
+                <input type="text" id="qs-std" class="form-control" list="qs-std-list" placeholder="예: 100 ± 20, ≤ 0.5">
+                <datalist id="qs-std-list"></datalist>
             </div>
             <div class="form-group">
-                <label class="form-label">단위</label>
-                <input type="text" id="qs-unit" class="form-control" placeholder="예: mm, %, ea">
+                <label class="form-label">단위 <span style="font-size:11px; color:#94a3b8; font-weight:400;">(선택 또는 직접입력)</span></label>
+                <input type="text" id="qs-unit" class="form-control" list="qs-unit-list" placeholder="예: %, ㎛, mm, ℃, Ω">
+                <datalist id="qs-unit-list">
+                    <option value="%">% (백분율)</option>
+                    <option value="㎛">㎛ (마이크로미터)</option>
+                    <option value="mm">mm (밀리미터)</option>
+                    <option value="℃">℃ (섭씨온도)</option>
+                    <option value="Ω">Ω (옴)</option>
+                    <option value="kΩ">kΩ (킬로옴)</option>
+                    <option value="V">V (볼트)</option>
+                    <option value="mA">mA (밀리암페어)</option>
+                    <option value="sec">sec (초)</option>
+                    <option value="ms">ms (밀리초)</option>
+                    <option value="m/min">m/min (이송속도)</option>
+                    <option value="EA">EA (개수)</option>
+                </datalist>
             </div>
         </div>
-        <div class="form-group">
+
+        <!-- 빠른 프리셋 추천 칩 (Chip Buttons) -->
+        <div class="form-group" id="qs-preset-container" style="background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:8px; padding:10px 12px; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span style="font-size:12px; font-weight:700; color:#93c5fd;">⚡ 기준값 원클릭 프리셋 추천</span>
+                <span id="qs-preset-guide" style="font-size:11.5px; color:#94a3b8;">검사항목 선택 시 추천값이 표시됩니다</span>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="preset-chip-btn" id="btn-preset-std" onclick="applyQualityPreset('std')" style="background:#1e293b; color:#38bdf8; border:1px solid #38bdf840; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; transition:0.15s;">🎯 표준 기준값</button>
+                <button type="button" class="preset-chip-btn" id="btn-preset-tight" onclick="applyQualityPreset('tight')" style="background:#1e293b; color:#f87171; border:1px solid #f8717140; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; transition:0.15s;">⚡ 타이트 (정밀 공차)</button>
+                <button type="button" class="preset-chip-btn" id="btn-preset-loose" onclick="applyQualityPreset('loose')" style="background:#1e293b; color:#34d399; border:1px solid #34d39940; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; transition:0.15s;">📏 여유 (넓은 공차)</button>
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px;">
             <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; color:var(--text-dim);">
                 <input type="checkbox" id="qs-active" checked style="accent-color:var(--accent);">
-                검사 기준 활성화
+                <span>검사 기준 활성화 (생산 라인에 즉시 적용)</span>
             </label>
         </div>
         <button class="btn-submit" onclick="saveQualityStd()">저장</button>
@@ -4293,6 +5420,60 @@ function toggleAdminSidebar(side) {
     </div>
 </div>
 
+<!-- ════════ MODAL: 부품 교차 매핑 등록/수정 ════════ -->
+<div class="modal-overlay" id="partAliasModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title" id="alias-modal-title">부품 교차 매핑 등록</div>
+            <button class="modal-close" onclick="closeModal('partAliasModal')">✕</button>
+        </div>
+        <input type="hidden" id="alias-id">
+        <div class="form-group">
+            <label class="form-label">대표 품명 (사내 표준 규격) <span style="color:#f87171;">*</span></label>
+            <input type="text" id="alias-inp-stdname" class="form-control" placeholder="예: 칩저항 1005 10K 1%" list="alias-stdname-datalist">
+            <datalist id="alias-stdname-datalist"></datalist>
+            <div style="font-size:11.5px; color:#94a3b8; margin-top:4px;">💡 시스템에서 통합 관리할 기준 파트명입니다. (기존 목록에서 선택 또는 신규 입력)</div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+                <label class="form-label">실제 파트번호 (P/N) <span style="color:#f87171;">*</span></label>
+                <input type="text" id="alias-inp-partno" class="form-control" placeholder="예: RC1005F103CS">
+            </div>
+            <div class="form-group">
+                <label class="form-label">제조사 / 공급처</label>
+                <input type="text" id="alias-inp-vendor" class="form-control" placeholder="예: 삼성전기, YAGEO, LG사급">
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+                <label class="form-label">대표 표준 코드</label>
+                <input type="text" id="alias-inp-stdcode" class="form-control" placeholder="예: R1005-10K-F (선택)">
+            </div>
+            <div class="form-group">
+                <label class="form-label">부품 사양 / 규격 메모</label>
+                <input type="text" id="alias-inp-desc" class="form-control" placeholder="예: 0402 1/16W 1% 10kohm">
+            </div>
+        </div>
+        <button class="btn-submit" onclick="savePartAlias()">매핑 저장</button>
+    </div>
+</div>
+
+<!-- ════════ MODAL: 엑셀 일괄 매핑 붙여넣기 ════════ -->
+<div class="modal-overlay" id="partAliasBatchModal">
+    <div class="modal-box wide">
+        <div class="modal-header">
+            <div class="modal-title">📋 부품 교차 매핑 엑셀 일괄 등록</div>
+            <button class="modal-close" onclick="closeModal('partAliasBatchModal')">✕</button>
+        </div>
+        <p class="hint-text">엑셀의 <strong>[대표품명, 파트번호, 제조사/공급처, 규격메모]</strong> 4개 열을 복사하여 아래에 붙여넣으세요.</p>
+        <textarea id="aliasBatchPaste" class="form-control" rows="6" placeholder="예시:
+칩저항 1005 10K 1%	RC1005F103CS	삼성전기	0402 1%
+칩저항 1005 10K 1%	RC0402FR-0710KL	YAGEO	0402 1%
+MLCC 1005 100nF 16V	CL05B104KO5NNNC	삼성전기	X7R 16V" style="resize:vertical; font-family:monospace; font-size:12.5px;"></textarea>
+        <button class="btn-submit" style="margin-top:12px;" onclick="savePartAliasBatch()">일괄 등록 실행</button>
+    </div>
+</div>
+
     <!-- 좌/우 사이드바가 접혔을 때 화면 가장자리에 표시되는 플로팅 탭 -->
     <div class="floating-toggle-tab left" id="floatingTabLeft" onclick="toggleAdminSidebar('left')" title="메뉴 열기">
         <span class="floating-tab-arrow">▶</span>
@@ -4303,6 +5484,9 @@ function toggleAdminSidebar(side) {
         <span class="floating-tab-arrow">◀</span>
         <span>우측 분석 패널 열기</span>
     </div>
+
+    <!-- Header Navigation Controller -->
+    <script src="js/header.js"></script>
 </body>
 </html>
 

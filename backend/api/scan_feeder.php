@@ -13,8 +13,54 @@ if (!$wo_id || !$reel_barcode) {
     exit;
 }
 
+// 헬퍼: 두 품번이 직접 일치하거나 part_alias 상의 동일 규격 대체품인지 검증
+function isPartCompatible($pdo, $reqPartNo, $scannedPartNo, &$vendorInfo = '') {
+    if ($reqPartNo === $scannedPartNo) {
+        $vendorInfo = '정품번 일치';
+        return true;
+    }
+
+    // 1. 스캔된 품번과 요구 품번의 part_alias 교차 참조 검사
+    $stmt = $pdo->prepare("
+        SELECT p1.standard_name, p1.vendor_name, p2.vendor_name as req_vendor
+        FROM part_alias p1
+        JOIN part_alias p2 ON p1.standard_name = p2.standard_name
+        WHERE (p1.alias_part_no = ? OR p1.standard_code = ?)
+          AND (p2.alias_part_no = ? OR p2.standard_code = ? OR p2.standard_name = ?)
+        LIMIT 1
+    ");
+    $stmt->execute([$scannedPartNo, $scannedPartNo, $reqPartNo, $reqPartNo, $reqPartNo]);
+    $row = $stmt->fetch();
+
+    if ($row) {
+        $vName = $row['vendor_name'] ?: '공인 벤더';
+        $vendorInfo = "AVL 공인 대체품 승인 [{$vName}]";
+        return true;
+    }
+
+    // 2. 단방향 표준 코드 매핑 확인
+    $stmt2 = $pdo->prepare("
+        SELECT standard_name, vendor_name 
+        FROM part_alias 
+        WHERE alias_part_no = ? AND (standard_name = ? OR standard_code = ?)
+        LIMIT 1
+    ");
+    $stmt2->execute([$scannedPartNo, $reqPartNo, $reqPartNo]);
+    $row2 = $stmt2->fetch();
+
+    if ($row2) {
+        $vName = $row2['vendor_name'] ?: '공인 벤더';
+        $vendorInfo = "AVL 공인 대체품 승인 [{$vName}]";
+        return true;
+    }
+
+    return false;
+}
+
 try {
     $pdo->beginTransaction();
+
+    $vendorInfo = '';
 
     // 1. 릴 마스터에서 릴 정보 확인 (릴 바코드 또는 품번 직접 입력 모두 지원)
     $stmt = $pdo->prepare("SELECT reel_barcode, part_no, msl_level, floor_life_hours, unsealed_at, status FROM reel_master WHERE reel_barcode = ?");
@@ -30,19 +76,27 @@ try {
         if ($reel) {
             $reel_barcode = $reel['reel_barcode'];
         } else {
-            // BOM에 있는 품번인지 확인하여 임시 릴 자동 등록
-            $checkBom = $pdo->prepare("SELECT part_no FROM bom_detail bd JOIN work_order wo ON bd.bom_id = wo.bom_id WHERE wo.wo_id = ? AND bd.part_no = ?");
-            $checkBom->execute([$wo_id, $reel_barcode]);
-            $bomMatch = $checkBom->fetch();
+            // BOM 또는 AVL 대체품에 있는 품번인지 확인하여 임시 릴 자동 등록
+            $checkBom = $pdo->prepare("SELECT part_no FROM bom_detail bd JOIN work_order wo ON bd.bom_id = wo.bom_id WHERE wo.wo_id = ?");
+            $checkBom->execute([$wo_id]);
+            $bomParts = $checkBom->fetchAll(PDO::FETCH_COLUMN);
 
-            if ($bomMatch) {
+            $isMatch = false;
+            foreach ($bomParts as $bp) {
+                if (isPartCompatible($pdo, $bp, $reel_barcode, $vendorInfo)) {
+                    $isMatch = true;
+                    break;
+                }
+            }
+
+            if ($isMatch) {
                 $autoBarcode = 'REEL-' . substr(md5($reel_barcode), 0, 8);
                 $insReel = $pdo->prepare("INSERT IGNORE INTO reel_master (reel_barcode, part_no, msl_level, floor_life_hours, unsealed_at, status) VALUES (?, ?, 1, 0, NOW(), 'IN_USE')");
                 $insReel->execute([$autoBarcode, $reel_barcode]);
                 $reel = ['part_no' => $reel_barcode, 'msl_level' => 1, 'floor_life_hours' => 0, 'unsealed_at' => date('Y-m-d H:i:s'), 'status' => 'IN_USE'];
                 $reel_barcode = $autoBarcode;
             } else {
-                throw new Exception("등록되지 않은 릴 바코드 또는 품번입니다: [{$reel_barcode}]");
+                throw new Exception("등록되지 않았거나 BOM에 호환되지 않는 릴 바코드/품번입니다: [{$reel_barcode}]");
             }
         }
     }
@@ -58,8 +112,7 @@ try {
         $updateReel->execute([$reel_barcode]);
         $is_first_scan = true;
     }
-
-    // 3. 포카요케 BOM 검증: feeder_setup에서 해당 자재 품번(part_no)과 일치하는 슬롯 찾기
+    // 3. 포카요케 BOM 검증: feeder_setup에서 해당 자재 품번(part_no)과 일치 또는 대체 가능한 슬롯 찾기
     if ($target_slot_no) {
         // 특정 슬롯을 지정하여 스캔한 경우
         $slotStmt = $pdo->prepare("SELECT id, slot_no, part_no, location, status FROM feeder_setup WHERE wo_id = ? AND slot_no = ?");
@@ -70,29 +123,38 @@ try {
             throw new Exception("해당 피더 슬롯 정보를 찾을 수 없습니다.");
         }
 
-        if ($targetSlot['part_no'] !== $reel['part_no']) {
-            throw new Exception("오투입(MISMATCH) 경고! 슬롯 {$target_slot_no}번의 필요 부품은 [{$targetSlot['part_no']}]이지만, 스캔된 릴은 [{$reel['part_no']}] 입니다.");
+        if (!isPartCompatible($pdo, $targetSlot['part_no'], $reel['part_no'], $vendorInfo)) {
+            throw new Exception("오투입(MISMATCH) 경고! 슬롯 {$target_slot_no}번의 필요 부품은 [{$targetSlot['part_no']}]이지만, 스캔된 릴은 [{$reel['part_no']}] (호환되지 않는 부품) 입니다.");
         }
 
         $matched_slot_id = $targetSlot['id'];
         $matched_slot_no = $targetSlot['slot_no'];
         $matched_location = $targetSlot['location'];
     } else {
-        // 특정 슬롯 미지정 시, 해당 품번과 일치하는 미장착 슬롯 검색
-        $slotStmt = $pdo->prepare("SELECT id, slot_no, part_no, location, status FROM feeder_setup WHERE wo_id = ? AND part_no = ? AND status != 'VERIFIED' LIMIT 1");
-        $slotStmt->execute([$wo_id, $reel['part_no']]);
-        $matchedSlot = $slotStmt->fetch();
+        // 특정 슬롯 미지정 시, feeder_setup 전체 미장착 슬롯 중 호환되는 슬롯 탐색
+        $allSlotsStmt = $pdo->prepare("SELECT id, slot_no, part_no, location, status FROM feeder_setup WHERE wo_id = ? ORDER BY slot_no ASC");
+        $allSlotsStmt->execute([$wo_id]);
+        $allSlots = $allSlotsStmt->fetchAll();
+
+        $matchedSlot = null;
+        $alreadyVerifiedSlot = null;
+
+        foreach ($allSlots as $sl) {
+            if (isPartCompatible($pdo, $sl['part_no'], $reel['part_no'], $vendorInfo)) {
+                if ($sl['status'] !== 'VERIFIED') {
+                    $matchedSlot = $sl;
+                    break;
+                } else {
+                    $alreadyVerifiedSlot = $sl;
+                }
+            }
+        }
 
         if (!$matchedSlot) {
-            // 이미 장착되었는지 또는 BOM에 아예 없는지 확인
-            $existStmt = $pdo->prepare("SELECT id, slot_no, status FROM feeder_setup WHERE wo_id = ? AND part_no = ?");
-            $existStmt->execute([$wo_id, $reel['part_no']]);
-            $exist = $existStmt->fetch();
-
-            if ($exist) {
-                throw new Exception("이미 검증 장착이 완료된 부품입니다: [{$reel['part_no']}] (피더 슬롯 {$exist['slot_no']}번)");
+            if ($alreadyVerifiedSlot) {
+                throw new Exception("이미 검증 장착이 완료된 부품입니다: [{$reel['part_no']}] (피더 슬롯 {$alreadyVerifiedSlot['slot_no']}번)");
             } else {
-                throw new Exception("오투입(MISMATCH) 경고! 현재 작업지시의 BOM에 포함되지 않은 자재 품번입니다: [{$reel['part_no']}]");
+                throw new Exception("오투입(MISMATCH) 경고! 현재 작업지시의 BOM에 포함되지 않았거나 승인되지 않은 부품 품번입니다: [{$reel['part_no']}]");
             }
         }
 
@@ -126,13 +188,15 @@ try {
 
     $pdo->commit();
 
+    $msgDesc = $vendorInfo ? " ({$vendorInfo})" : "";
     echo json_encode([
         "status" => "success",
-        "message" => "포카요케 검증 성공! 피더 슬롯 {$matched_slot_no}번 [{$matched_location}]에 장착되었습니다.",
+        "message" => "포카요케 검증 성공! 피더 슬롯 {$matched_slot_no}번 [{$matched_location}]에 장착되었습니다.{$msgDesc}",
         "data" => [
             "slot_no" => $matched_slot_no,
             "location" => $matched_location,
             "part_no" => $reel['part_no'],
+            "vendor_info" => $vendorInfo,
             "reel_barcode" => $reel_barcode,
             "is_first_scan" => $is_first_scan,
             "verified_count" => $verified,
