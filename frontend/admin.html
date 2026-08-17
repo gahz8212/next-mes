@@ -3341,7 +3341,10 @@
         renderItemTable(filtered);
     }
 
-    function openItemModal() {
+    async function openItemModal() {
+        if (!companies || companies.length === 0) {
+            await loadCompanies();
+        }
         populateItemCompanySelect('');
         document.getElementById('im-id').value = '';
         document.getElementById('im-company').value = '';
@@ -3354,7 +3357,10 @@
         document.getElementById('itemModal').classList.add('open');
     }
 
-    function openEditItemModal(id, company_id, code, name, cat, unit, desc) {
+    async function openEditItemModal(id, company_id, code, name, cat, unit, desc) {
+        if (!companies || companies.length === 0) {
+            await loadCompanies();
+        }
         populateItemCompanySelect(company_id);
         document.getElementById('im-id').value = id;
         document.getElementById('im-company').value = company_id || '';
@@ -5536,6 +5542,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <input type="checkbox" id="qs-active" checked style="accent-color:var(--accent);">
                 <span>검사 기준 활성화 (생산 라인에 즉시 적용)</span>
             </label>
+        </div>
+        <button class="btn-submit" onclick="saveQualityStd()">저장</button>
+    </div>
+</div>
+
 <!-- ════════ MODAL: BOM 변경 감지 및 버전 비교 선택 (BOM Diff Modal) ════════ -->
 <div class="modal-overlay" id="bomDiffModal" style="z-index:9999;">
     <div class="modal-box" style="max-width:920px; width:95vw; max-height:90vh; display:flex; flex-direction:column;">
