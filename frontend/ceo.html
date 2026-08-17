@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MES CEO Executive Dashboard - 최고경영자 브리핑 콘솔</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/ceo.css">
+</head>
+<body>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         1. EXECUTIVE TOPBAR
+         ═══════════════════════════════════════════════════════════════════ -->
+    <header class="ceo-topbar">
+        <div class="ceo-brand-wrap">
+            <span class="ceo-crown-badge">👑 CEO CONSOLE</span>
+            <div class="ceo-title-box">
+                <div class="ceo-main-title">스마트 제조 경영진 대시보드</div>
+                <div class="ceo-sub-title">SMT/DIP 생산 공장 실시간 매출, 수율 및 가동 현황 총괄</div>
+            </div>
+        </div>
+
+        <div class="ceo-topbar-right">
+            <div class="live-pulse-badge">
+                <div class="pulse-dot"></div>
+                <span id="ceoLiveSyncStatus">실시간 자동 집계 (5초 주기)</span>
+            </div>
+
+            <button class="ceo-nav-btn" onclick="logout()" style="color:#f87171; border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.08); cursor:pointer;">
+                로그아웃
+            </button>
+        </div>
+    </header>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         2. MAIN EXECUTIVE CONTAINER
+         ═══════════════════════════════════════════════════════════════════ -->
+    <main class="ceo-container">
+
+        <!-- ── A. TOP 4-CARD EXECUTIVE KPI METRICS ── -->
+        <section class="kpi-summary-grid">
+
+            <!-- 1. 오늘의 생산 달성률 -->
+            <div class="executive-card">
+                <div class="card-accent-top blue"></div>
+                <div class="card-header-row">
+                    <span class="card-label">오늘의 생산 목표 달성률</span>
+                    <span class="card-icon-tag">🎯</span>
+                </div>
+                <div class="card-main-val-row">
+                    <span class="card-hero-num" id="kpiDailyTargetRate" style="color: #38bdf8;">--%</span>
+                    <span class="card-unit-label">달성 완료</span>
+                </div>
+                <div class="progress-track-bar">
+                    <div class="progress-fill-bar" id="kpiTargetBar" style="width: 0%; background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div>
+                </div>
+                <div class="card-sub-info-row" id="kpiTargetSub">
+                    <span>생산 실적 <strong>-</strong> / 목표 <strong>-</strong> EA</span>
+                </div>
+            </div>
+
+            <!-- 2. 종합 누적 수율 -->
+            <div class="executive-card">
+                <div class="card-accent-top green"></div>
+                <div class="card-header-row">
+                    <span class="card-label">종합 누적 수율 (Quality Index)</span>
+                    <span class="card-icon-tag">✨</span>
+                </div>
+                <div class="card-main-val-row">
+                    <span class="card-hero-num" id="kpiOverallYield" style="color: #34d399;">--%</span>
+                    <span class="card-unit-label">양품률</span>
+                </div>
+                <div class="progress-track-bar">
+                    <div class="progress-fill-bar" id="kpiYieldBar" style="width: 0%; background: linear-gradient(90deg, #10b981, #34d399);"></div>
+                </div>
+                <div class="card-sub-info-row" id="kpiYieldSub">
+                    <span>양품 <strong>-</strong> / 불량 <strong>-</strong> EA</span>
+                </div>
+            </div>
+
+            <!-- 3. 납기 준수율 -->
+            <div class="executive-card">
+                <div class="card-accent-top gold"></div>
+                <div class="card-header-row">
+                    <span class="card-label">수주 납기 준수율 (OTD Rate)</span>
+                    <span class="card-icon-tag">⏱️</span>
+                </div>
+                <div class="card-main-val-row">
+                    <span class="card-hero-num" id="kpiOnTimeRate" style="color: #fbbf24;">--%</span>
+                    <span class="card-unit-label">정시 납기</span>
+                </div>
+                <div class="progress-track-bar">
+                    <div class="progress-fill-bar" id="kpiOnTimeBar" style="width: 0%; background: linear-gradient(90deg, #f59e0b, #fbbf24);"></div>
+                </div>
+                <div class="card-sub-info-row" id="kpiOnTimeSub">
+                    <span>전체 수주 납기 정상 준수 중</span>
+                </div>
+            </div>
+
+            <!-- 4. 이번 달 총 수주/매출액 -->
+            <div class="executive-card">
+                <div class="card-accent-top purple"></div>
+                <div class="card-header-row">
+                    <span class="card-label">이번 달 수주 & 매출 실적</span>
+                    <span class="card-icon-tag">💰</span>
+                </div>
+                <div class="card-main-val-row">
+                    <span class="card-hero-num" id="kpiTotalRevenue" style="color: #c084fc;">₩ 0</span>
+                </div>
+                <div class="progress-track-bar">
+                    <div class="progress-fill-bar" id="kpiRevenueBar" style="width: 0%; background: linear-gradient(90deg, #a855f7, #ec4899);"></div>
+                </div>
+                <div class="card-sub-info-row" id="kpiRevenueSub">
+                    <span>출하완료 <strong>-</strong> / 진행중 <strong>-</strong></span>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ── B. MIDDLE 2-COLUMN SPLIT: TREND CHART & FACTORY LINE STATUS ── -->
+        <section class="ceo-middle-split">
+
+            <!-- 1. 일별 생산량 & 수율 추이 복합 차트 -->
+            <div class="chart-section-card">
+                <div class="section-head-flex">
+                    <div class="section-title">
+                        <span>📈 일별 생산 실적 및 수율 추이</span>
+                    </div>
+                    <span class="chart-badge-filter">최근 14일간 종합 추이</span>
+                </div>
+                <canvas id="ceoDailyTrendCanvas"></canvas>
+            </div>
+
+            <!-- 2. 실시간 공장 라인 가동 종합 상태 -->
+            <div class="line-status-card">
+                <div class="section-title">
+                    <span>🏭 공장 라인 실시간 가동 현황</span>
+                </div>
+
+                <!-- SMT 1호기 -->
+                <div class="line-banner-item" onclick="openCeoLineModal('SMT')" style="cursor:pointer;" title="클릭 시 SMT 라인 실시간 설비 흐름 오버레이 열기">
+                    <div class="line-banner-top">
+                        <div class="line-name-title">
+                            <span>SMT 전자동 고속 라인 (1호기)</span>
+                        </div>
+                        <span class="line-op-tag run">🟢 실시간 가동 관제 ↗</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-dim);">
+                        가동 모델: <strong id="smtCurrentModel" style="color:#fff;">Main Board A타입 (SMT)</strong>
+                    </div>
+                    <div class="line-mini-metrics">
+                        <div class="mini-stat-col">
+                            <span class="mini-stat-label">공정 속도 (TACT)</span>
+                            <span class="mini-stat-num">18.2 초</span>
+                        </div>
+                        <div class="mini-stat-col">
+                            <span class="mini-stat-label">오늘 생산량</span>
+                            <span class="mini-stat-num" id="smtOutputQty">1,850 EA</span>
+                        </div>
+                        <div class="mini-stat-col">
+                            <span class="mini-stat-label">설비 건전도</span>
+                            <span class="mini-stat-num" style="color:#34d399;">99 점</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DIP 2호기 -->
+                <div class="line-banner-item" onclick="openCeoLineModal('DIP')" style="cursor:pointer;" title="클릭 시 DIP 라인 실시간 설비 흐름 오버레이 열기">
+                    <div class="line-banner-top">
+                        <div class="line-name-title">
+                            <span>DIP 수삽 & 웨이브 라인 (2호기)</span>
+                        </div>
+                        <span class="line-op-tag run">🟢 실시간 가동 관제 ↗</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-dim);">
+                        가동 모델: <strong style="color:#fff;">Sub Board B타입 (DIP)</strong>
+                    </div>
+                    <div class="line-mini-metrics">
+                        <div class="mini-stat-col">
+                            <span class="mini-stat-label">용탕 온도</span>
+                            <span class="mini-stat-num">250.2 ℃</span>
+                        </div>
+                        <div class="mini-stat-col">
+                            <span class="mini-stat-label">검사 품질점수</span>
+                            <span class="mini-stat-num">98.5 점</span>
+                        </div>
+                        <div class="mini-stat-col">
+                            <span class="mini-stat-label">웨이브 납땜률</span>
+                            <span class="mini-stat-num" style="color:#34d399;">99.8 %</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ── C. BOTTOM 2-COLUMN SPLIT: ORDERS & EXECUTIVE NOTIFICATIONS ── -->
+        <section class="ceo-bottom-split">
+
+            <!-- 1. 납기 임박 & 주요 고객사 수주 진행 현황 -->
+            <div class="executive-table-card">
+                <div class="section-head-flex">
+                    <div class="section-title">
+                        <span>📦 주요 고객사 수주 및 납기 현황</span>
+                    </div>
+                    <span style="font-size: 11.5px; color: var(--text-muted);">납기순 정렬</span>
+                </div>
+
+                <div class="ceo-table-wrap">
+                    <table class="ceo-table">
+                        <thead>
+                            <tr>
+                                <th>발주 고객사</th>
+                                <th>수주 품목</th>
+                                <th>수량</th>
+                                <th>수주액</th>
+                                <th>납기 일정</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ceoOrdersTbody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px;">
+                                    수주 데이터를 불러오는 중...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 2. 실시간 경영 알림 센터 브리핑 -->
+            <div class="executive-table-card">
+                <div class="section-head-flex">
+                    <div class="section-title">
+                        <span>🔔 실시간 경영 알림 브리핑</span>
+                    </div>
+                    <span style="font-size: 11.5px; color: var(--text-muted);">자동 동기화</span>
+                </div>
+
+                <div class="ceo-notification-list" id="ceoNotifList">
+                    <!-- Dynamically populated via ceo.js -->
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         3. CEO LIVE LINE OVERLAY (대시보드 Line 1 / Line 2 원본 카드 1:1)
+         ═══════════════════════════════════════════════════════════════════ -->
+    <div class="ceo-modal-overlay" id="ceoLineModalOverlay" onclick="closeCeoLineModal(event)">
+        <div class="ceo-line-card-wrapper" onclick="event.stopPropagation()">
+            <!-- 1. SMT 표면실장 라인 (Line 1 카드 원본) -->
+            <section class="line-panel ceo-expanded-panel" id="ceoLinePanelSMT" style="display: none;">
+                <div class="line-panel-header">
+                    <div class="line-panel-title">
+                        <span>Line 1: SMT 자삽/표면실장 자동화 라인</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="line-status-chip chip-smt">자삽 공정</span>
+                        <button class="ceo-inline-close-btn" onclick="closeCeoLineModal()" title="닫기 (Esc)">✕</button>
+                    </div>
+                </div>
+
+                <div class="line-machines-row">
+                    <!-- Machine 1: Laser Marker -->
+                    <div class="machine-card wait" id="ceo-mac-LASER">
+                        <div class="mac-header-row">
+                            <span class="mac-title">Laser Marker</span>
+                            <span class="mac-status-indicator" id="ceo-status-LASER">대기</span>
+                        </div>
+                        <div class="mac-data-box">
+                            <div class="mac-data-label">BARCODE</div>
+                            <div class="mac-data" id="ceo-data-LASER">-</div>
+                        </div>
+                        <div class="mac-dual-spark-container">
+                            <div class="mac-spark-box spark-gauge-box">
+                                <canvas class="gauge-canvas" id="ceo-canvas-radial-LASER" width="320" height="60"></canvas>
+                            </div>
+                            <div class="mac-spark-box spark-bars-box">
+                                <canvas class="bars-canvas" id="ceo-canvas-bars-LASER" width="320" height="96"></canvas>
+                            </div>
+                        </div>
+                        <div class="array-panel-strip">
+                            <div class="array-strip-left">
+                                <span class="array-strip-label">4-UP PANEL</span>
+                                <span class="mac-defect-tag" id="ceo-defect-tag-LASER"></span>
+                            </div>
+                            <div class="array-cells-wrap" id="ceo-cells-LASER">
+                                <span class="cell-chip wait">#1</span>
+                                <span class="cell-chip wait">#2</span>
+                                <span class="cell-chip wait">#3</span>
+                                <span class="cell-chip wait">#4</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flow-step-arrow">▶</div>
+
+                    <!-- Machine 2: SPI -->
+                    <div class="machine-card wait" id="ceo-mac-SPI">
+                        <div class="mac-header-row">
+                            <span class="mac-title">SPI 3D 검사</span>
+                            <span class="mac-status-indicator" id="ceo-status-SPI">대기</span>
+                        </div>
+                        <div class="mac-data-box">
+                            <div class="mac-data-label">BARCODE</div>
+                            <div class="mac-data" id="ceo-data-SPI">-</div>
+                        </div>
+                        <div class="mac-dual-spark-container">
+                            <div class="mac-spark-box spark-gauge-box">
+                                <canvas class="gauge-canvas" id="ceo-canvas-radial-SPI" width="320" height="60"></canvas>
+                            </div>
+                            <div class="mac-spark-box spark-bars-box">
+                                <canvas class="bars-canvas" id="ceo-canvas-bars-SPI" width="320" height="96"></canvas>
+                            </div>
+                        </div>
+                        <div class="array-panel-strip">
+                            <div class="array-strip-left">
+                                <span class="array-strip-label">4-UP PANEL</span>
+                                <span class="mac-defect-tag" id="ceo-defect-tag-SPI"></span>
+                            </div>
+                            <div class="array-cells-wrap" id="ceo-cells-SPI">
+                                <span class="cell-chip wait">#1</span>
+                                <span class="cell-chip wait">#2</span>
+                                <span class="cell-chip wait">#3</span>
+                                <span class="cell-chip wait">#4</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flow-step-arrow">▶</div>
+
+                    <!-- Machine 3: Chip Mounter -->
+                    <div class="machine-card wait" id="ceo-mac-MOUNTER">
+                        <div class="mac-header-row">
+                            <span class="mac-title">고속 마운터</span>
+                            <span class="mac-status-indicator" id="ceo-status-MOUNTER">대기</span>
+                        </div>
+                        <div class="mac-data-box">
+                            <div class="mac-data-label">BARCODE</div>
+                            <div class="mac-data" id="ceo-data-MOUNTER">-</div>
+                        </div>
+                        <div class="mac-dual-spark-container">
+                            <div class="mac-spark-box spark-gauge-box">
+                                <canvas class="gauge-canvas" id="ceo-canvas-radial-MOUNTER" width="320" height="60"></canvas>
+                            </div>
+                            <div class="mac-spark-box spark-bars-box">
+                                <canvas class="bars-canvas" id="ceo-canvas-bars-MOUNTER" width="320" height="96"></canvas>
+                            </div>
+                        </div>
+                        <div class="array-panel-strip">
+                            <div class="array-strip-left">
+                                <span class="array-strip-label">4-UP PANEL</span>
+                                <span class="mac-defect-tag" id="ceo-defect-tag-MOUNTER"></span>
+                            </div>
+                            <div class="array-cells-wrap" id="ceo-cells-MOUNTER">
+                                <span class="cell-chip wait">#1</span>
+                                <span class="cell-chip wait">#2</span>
+                                <span class="cell-chip wait">#3</span>
+                                <span class="cell-chip wait">#4</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flow-step-arrow">▶</div>
+
+                    <!-- Machine 4: Reflow Oven -->
+                    <div class="machine-card wait" id="ceo-mac-REFLOW">
+                        <div class="mac-header-row">
+                            <span class="mac-title">Reflow Oven</span>
+                            <span class="mac-status-indicator" id="ceo-status-REFLOW">대기</span>
+                        </div>
+                        <div class="mac-data-box">
+                            <div class="mac-data-label">BARCODE</div>
+                            <div class="mac-data" id="ceo-data-REFLOW">-</div>
+                        </div>
+                        <div class="mac-dual-spark-container">
+                            <div class="mac-spark-box spark-gauge-box">
+                                <canvas class="gauge-canvas" id="ceo-canvas-radial-REFLOW" width="320" height="60"></canvas>
+                            </div>
+                            <div class="mac-spark-box spark-bars-box">
+                                <canvas class="bars-canvas" id="ceo-canvas-bars-REFLOW" width="320" height="96"></canvas>
+                            </div>
+                        </div>
+                        <div class="array-panel-strip">
+                            <div class="array-strip-left">
+                                <span class="array-strip-label">4-UP PANEL</span>
+                                <span class="mac-defect-tag" id="ceo-defect-tag-REFLOW"></span>
+                            </div>
+                            <div class="array-cells-wrap" id="ceo-cells-REFLOW">
+                                <span class="cell-chip wait">#1</span>
+                                <span class="cell-chip wait">#2</span>
+                                <span class="cell-chip wait">#3</span>
+                                <span class="cell-chip wait">#4</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. DIP 수삽 & 웨이브 솔더링 라인 (Line 2 카드 원본) -->
+            <section class="line-panel ceo-expanded-panel" id="ceoLinePanelDIP" style="display: none;">
+                <div class="line-panel-header">
+                    <div class="line-panel-title">
+                        <span>Line 2: DIP 수삽 & 웨이브 솔더링 라인</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="line-status-chip chip-dip">수삽 공정</span>
+                        <button class="ceo-inline-close-btn" onclick="closeCeoLineModal()" title="닫기 (Esc)">✕</button>
+                    </div>
+                </div>
+
+                <div class="line-machines-row">
+                    <!-- Machine 5: 수삽 AOI -->
+                    <div class="machine-card wait" id="ceo-mac-DIP_AOI">
+                        <div class="mac-header-row">
+                            <span class="mac-title">수삽 AOI 검사</span>
+                            <span class="mac-status-indicator" id="ceo-status-DIP_AOI">대기</span>
+                        </div>
+                        <div class="mac-data-box">
+                            <div class="mac-data-label">BARCODE</div>
+                            <div class="mac-data" id="ceo-data-DIP_AOI">-</div>
+                        </div>
+                        <div class="mac-dual-spark-container">
+                            <div class="mac-spark-box spark-gauge-box">
+                                <canvas class="gauge-canvas" id="ceo-canvas-radial-DIP_AOI" width="320" height="60"></canvas>
+                            </div>
+                            <div class="mac-spark-box spark-bars-box">
+                                <canvas class="bars-canvas" id="ceo-canvas-bars-DIP_AOI" width="320" height="96"></canvas>
+                            </div>
+                        </div>
+                        <div class="array-panel-strip">
+                            <div class="array-strip-left">
+                                <span class="array-strip-label">4-UP PANEL</span>
+                                <span class="mac-defect-tag" id="ceo-defect-tag-DIP_AOI"></span>
+                            </div>
+                            <div class="array-cells-wrap" id="ceo-cells-DIP_AOI">
+                                <span class="cell-chip wait">#1</span>
+                                <span class="cell-chip wait">#2</span>
+                                <span class="cell-chip wait">#3</span>
+                                <span class="cell-chip wait">#4</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flow-step-arrow">▶</div>
+
+                    <!-- Machine 6: Wave Soldering -->
+                    <div class="machine-card wait" id="ceo-mac-WAVE">
+                        <div class="mac-header-row">
+                            <span class="mac-title">Wave Soldering</span>
+                            <span class="mac-status-indicator" id="ceo-status-WAVE">대기</span>
+                        </div>
+                        <div class="mac-data-box">
+                            <div class="mac-data-label">BARCODE</div>
+                            <div class="mac-data" id="ceo-data-WAVE">-</div>
+                        </div>
+                        <div class="mac-dual-spark-container">
+                            <div class="mac-spark-box spark-gauge-box">
+                                <canvas class="gauge-canvas" id="ceo-canvas-radial-WAVE" width="320" height="60"></canvas>
+                            </div>
+                            <div class="mac-spark-box spark-bars-box">
+                                <canvas class="bars-canvas" id="ceo-canvas-bars-WAVE" width="320" height="96"></canvas>
+                            </div>
+                        </div>
+                        <div class="array-panel-strip">
+                            <div class="array-strip-left">
+                                <span class="array-strip-label">4-UP PANEL</span>
+                                <span class="mac-defect-tag" id="ceo-defect-tag-WAVE"></span>
+                            </div>
+                            <div class="array-cells-wrap" id="ceo-cells-WAVE">
+                                <span class="cell-chip wait">#1</span>
+                                <span class="cell-chip wait">#2</span>
+                                <span class="cell-chip wait">#3</span>
+                                <span class="cell-chip wait">#4</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Script Engine -->
+    <script src="js/ceo.js"></script>
+</body>
+</html>

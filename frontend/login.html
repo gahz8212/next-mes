@@ -186,9 +186,11 @@
         <button class="btn-login" onclick="login()">로그인</button>
 
         <div class="role-helper">
+            <button class="helper-btn" onclick="quickFill('ceo')" style="border-color:rgba(245,158,11,0.4); color:#fbbf24;">👑 경영진 (ceo)</button>
             <button class="helper-btn" onclick="quickFill('admin')">관리자 (admin)</button>
             <button class="helper-btn" onclick="quickFill('supervisor')">라인 반장 (supervisor)</button>
             <button class="helper-btn" onclick="quickFill('kitting')">자재 피킹 (kitting)</button>
+            <button class="helper-btn" onclick="quickFill('machine')">설비 HMI (machine)</button>
         </div>
     </div>
 
@@ -201,7 +203,10 @@
         function login() {
             const pwd = document.getElementById('pwd').value.trim();
             const errBox = document.getElementById('error-msg');
-            if (pwd === 'admin') {
+            if (pwd === 'ceo') {
+                localStorage.setItem('role', 'admin');
+                window.location.href = 'ceo.html';
+            } else if (pwd === 'admin') {
                 localStorage.setItem('role', 'admin');
                 window.location.href = 'admin.html';
             } else if (pwd === 'worker' || pwd === 'supervisor') {
@@ -210,8 +215,11 @@
             } else if (pwd === 'kitting') {
                 localStorage.setItem('role', 'worker');
                 window.location.href = 'kitting.html';
+            } else if (pwd === 'machine') {
+                localStorage.setItem('role', 'worker');
+                window.location.href = 'machine.html?eq=LASER';
             } else {
-                errBox.innerText = '비밀번호가 올바르지 않습니다. (admin / supervisor / kitting)';
+                errBox.innerText = '비밀번호가 올바르지 않습니다. (ceo / admin / supervisor / kitting / machine)';
             }
         }
     </script>

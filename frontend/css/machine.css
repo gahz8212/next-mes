@@ -1,0 +1,839 @@
+/* ═══════════════════════════════════════════════════════════════════
+   MES Machine HMI Terminal - Industrial Dedicated Station UI
+   - Individual Machine Health, TPM Maintenance, 4-Sensor SPC Waveform, 4-UP Array Tracking
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+    --bg-main: #070d18;
+    --surface-dark: #0f172a;
+    --surface-card: #131f35;
+    --surface-card-hover: #1a2a47;
+    --surface-inner: #0b1324;
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-subtle: rgba(255, 255, 255, 0.05);
+
+    --primary-blue: #3b82f6;
+    --primary-cyan: #06b6d4;
+    --emerald-green: #10b981;
+    --amber-warning: #f59e0b;
+    --rose-danger: #ef4444;
+    --purple-accent: #a855f7;
+
+    --text-pure: #ffffff;
+    --text-main: #f1f5f9;
+    --text-dim: #94a3b8;
+    --text-muted: #64748b;
+
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    --font-sans: 'Pretendard', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 18px;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   1. TOPBAR & MACHINE SELECTOR TABS
+   ═══════════════════════════════════════════════════════════════════ */
+.hmi-topbar {
+    height: 64px;
+    background: var(--surface-dark);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    gap: 16px;
+}
+
+.brand-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.brand-badge {
+    background: linear-gradient(135deg, #2563eb, #06b6d4);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    letter-spacing: 0.06em;
+}
+
+.brand-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.02em;
+}
+
+.brand-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* 설비 원터치 공정 탭 (Segmented Buttons) */
+.machine-tabs-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 4px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    overflow-x: auto;
+}
+
+.mach-tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: var(--radius-md);
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-dim);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mach-tab-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+
+.mach-tab-btn.active {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(6, 182, 212, 0.25));
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #fff;
+    box-shadow: 0 0 14px rgba(59, 130, 246, 0.2);
+}
+
+.tab-seq-num {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--text-muted);
+}
+
+.mach-tab-btn.active .tab-seq-num {
+    background: var(--primary-blue);
+    color: #fff;
+}
+
+.tab-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--emerald-green);
+    box-shadow: 0 0 6px var(--emerald-green);
+}
+
+.tab-status-dot.idle {
+    background: var(--text-muted);
+    box-shadow: none;
+}
+
+.tab-status-dot.warn {
+    background: var(--rose-danger);
+    box-shadow: 0 0 6px var(--rose-danger);
+    animation: pulseWarn 1.2s infinite;
+}
+
+@keyframes pulseWarn {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.3); }
+}
+
+/* 상단 우측 컨트롤 */
+.topbar-right-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.nav-link-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-dim);
+    transition: all 0.15s;
+}
+
+.nav-link-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.live-time-badge {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.1);
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   2. MAIN HMI WORKSPACE (2-Column Industrial Split)
+   ═══════════════════════════════════════════════════════════════════ */
+.hmi-workspace {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 16px;
+    padding: 16px 20px;
+    min-height: calc(100vh - 64px);
+}
+
+@media (max-width: 1200px) {
+    .hmi-workspace {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 공통 카드 스타일 */
+.hmi-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 18px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    position: relative;
+    overflow: hidden;
+}
+
+.card-head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.card-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: -0.01em;
+}
+
+.card-tag {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-dim);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   3. LEFT COLUMN: HEALTH INDEX & TPM MAINTENANCE
+   ═══════════════════════════════════════════════════════════════════ */
+.left-col-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* 설비 종합 정보 & 타워 램프 */
+.mach-identity-card {
+    background: linear-gradient(180deg, #16243d 0%, #111c30 100%);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.mach-header-main {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.mach-code-badge {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+    padding: 3px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 4px;
+}
+
+.mach-title-large {
+    font-size: 20px;
+    font-weight: 800;
+    color: #fff;
+}
+
+.mach-category-desc {
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+/* 3색 시뮬레이션 타워램프 */
+.tower-lamp-strip {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.lamp-bulb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    opacity: 0.2;
+    transition: all 0.3s;
+}
+
+.lamp-bulb.red { background: #ef4444; }
+.lamp-bulb.yellow { background: #f59e0b; }
+.lamp-bulb.green { background: #10b981; }
+
+.lamp-bulb.red.active { opacity: 1; box-shadow: 0 0 10px #ef4444; animation: pulseWarn 1s infinite; }
+.lamp-bulb.yellow.active { opacity: 1; box-shadow: 0 0 10px #f59e0b; }
+.lamp-bulb.green.active { opacity: 1; box-shadow: 0 0 10px #10b981; }
+
+/* 상태 뱃지 띠 */
+.mach-status-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    margin-top: 10px;
+    border: 1px solid var(--border-subtle);
+}
+
+.status-badge-chip {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+
+.status-badge-chip.run { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.status-badge-chip.idle { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
+.status-badge-chip.error { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+/* 대형 건전도 원형 게이지 */
+.health-gauge-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 0 8px 0;
+}
+
+.health-score-canvas-wrap {
+    position: relative;
+    width: 170px;
+    height: 170px;
+}
+
+.health-center-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.health-val-num {
+    font-family: var(--font-mono);
+    font-size: 38px;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+}
+
+.health-unit-max {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+}
+
+.health-status-desc {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--emerald-green);
+    margin-top: 10px;
+    padding: 3px 12px;
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 20px;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+/* 예방정비 (TPM) 수명주기 및 리셋 박스 */
+.tpm-section-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+}
+
+.tpm-metric-box {
+    background: var(--surface-inner);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    margin-bottom: 12px;
+}
+
+.tpm-metric-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+}
+
+.tpm-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.tpm-days-badge {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.15);
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.tpm-bar-track {
+    width: 100%;
+    height: 9px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.tpm-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #06b6d4);
+    border-radius: 5px;
+    transition: width 0.4s ease;
+}
+
+.tpm-bar-fill.warn {
+    background: linear-gradient(90deg, #f59e0b, #ef4444);
+}
+
+.tpm-detail-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: var(--text-dim);
+}
+
+/* 큼직한 정비 완료 리셋 버튼 */
+.btn-tpm-reset {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #1e40af, #2563eb);
+    border: 1px solid #3b82f6;
+    border-radius: var(--radius-md);
+    color: #fff;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+}
+
+.btn-tpm-reset:hover {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+}
+
+.btn-tpm-reset:active {
+    transform: translateY(0);
+}
+
+.btn-tpm-reset.reset-done {
+    background: linear-gradient(135deg, #065f46, #059669);
+    border-color: #10b981;
+}
+
+/* AI 예지보전 가이드 박스 */
+.ai-pdm-guide-box {
+    background: rgba(59, 130, 246, 0.05);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #93c5fd;
+}
+
+.ai-guide-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    color: #60a5fa;
+    margin-bottom: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   4. RIGHT COLUMN: SENSORS, WAVEFORM & RUNTIME TRACKING
+   ═══════════════════════════════════════════════════════════════════ */
+.right-col-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* 4대 핵심 센서 4-Grid */
+.sensor-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+@media (max-width: 900px) {
+    .sensor-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.sensor-stat-card {
+    background: var(--surface-inner);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    transition: border-color 0.2s;
+}
+
+.sensor-stat-card:hover {
+    border-color: rgba(59, 130, 246, 0.4);
+}
+
+.sensor-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.sensor-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+}
+
+.sensor-limit-tag {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+}
+
+.sensor-val-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.sensor-big-val {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+}
+
+.sensor-unit {
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.sensor-mini-track {
+    width: 100%;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.sensor-mini-fill {
+    height: 100%;
+    background: var(--emerald-green);
+    border-radius: 3px;
+    transition: width 0.3s;
+}
+
+.sensor-mini-fill.warn { background: var(--rose-danger); }
+
+/* 실시간 SPC 파형 차트 (Waveform Chart) */
+.waveform-chart-wrap {
+    background: var(--surface-inner);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    position: relative;
+}
+
+.chart-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.chart-legend-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.legend-color-line {
+    width: 12px;
+    height: 2px;
+    background: #38bdf8;
+}
+
+.legend-color-line.ucl { background: #ef4444; border-top: 1px dashed #ef4444; }
+.legend-color-line.lcl { background: #f59e0b; border-top: 1px dashed #f59e0b; }
+
+#hmiWaveformCanvas {
+    width: 100%;
+    height: 160px;
+    display: block;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   5. REAL-TIME TRACKING & 4-UP ARRAY PANEL & SCANNER
+   ═══════════════════════════════════════════════════════════════════ */
+.tracking-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 14px;
+}
+
+@media (max-width: 1000px) {
+    .tracking-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+.active-pcb-box {
+    background: var(--surface-inner);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 14px;
+}
+
+.active-barcode-val {
+    font-family: var(--font-mono);
+    font-size: 17px;
+    font-weight: 800;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.08);
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    margin: 8px 0 12px 0;
+    word-break: break-all;
+}
+
+/* 4-UP 어레이 패널 칩 */
+.array-cells-4up-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
+
+.hmi-cell-chip {
+    padding: 10px 4px;
+    text-align: center;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-dim);
+}
+
+.hmi-cell-chip.pass {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #34d399;
+}
+
+.hmi-cell-chip.fail {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #f87171;
+}
+
+.hmi-cell-chip.wait {
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-muted);
+}
+
+/* 바코드 스캐너 직접 입력 인풋 */
+.scanner-input-wrap {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+}
+
+.scanner-input-field {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+}
+
+.scanner-input-field:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-scan-trigger {
+    padding: 8px 14px;
+    background: var(--surface-card-hover);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-scan-trigger:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* 최근 가공 이력 테이블 */
+.recent-history-table-wrap {
+    background: var(--surface-inner);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.hmi-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11.5px;
+}
+
+.hmi-table th {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 8px 10px;
+    text-align: left;
+    color: var(--text-muted);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.hmi-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-dim);
+}
+
+.hmi-table tr:last-child td {
+    border-bottom: none;
+}
+
+.hmi-table tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.tag-pass { color: var(--emerald-green); font-weight: 700; }
+.tag-fail { color: var(--rose-danger); font-weight: 700; }
+
+/* 토스트 알림 */
+.hmi-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #1e293b;
+    border: 1px solid #3b82f6;
+    color: #fff;
+    padding: 12px 18px;
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 100;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hmi-toast.show {
+    transform: translateY(0);
+    opacity: 1;
+}

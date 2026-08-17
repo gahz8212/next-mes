@@ -699,28 +699,34 @@ html, body {
     }
 }
 
+.machine-card.alarm,
 .machine-card.error {
-    border-color: rgba(239, 68, 68, 0.9);
-    box-shadow: 0 0 16px rgba(239, 68, 68, 0.4);
-    animation: machineErrorBlink 0.8s infinite;
+    border-color: rgba(239, 68, 68, 0.95);
+    box-shadow: 0 0 24px rgba(239, 68, 68, 0.6);
+    animation: machineAlarmPulse 1s infinite;
 }
+.machine-card.alarm .mac-status-indicator,
 .machine-card.error .mac-status-indicator {
-    background: var(--danger);
+    background: #ef4444;
     color: #ffffff;
+    font-weight: 800;
+    animation: pulseWarn 1s infinite;
 }
+.machine-card.alarm .mac-title,
 .machine-card.error .mac-title {
     color: #fca5a5;
 }
+.machine-card.alarm .mac-data,
 .machine-card.error .mac-data {
-    color: #f87171 !important;
-    background: rgba(127, 29, 29, 0.6) !important;
-    border: 1px solid rgba(239, 68, 68, 0.5);
-    font-weight: 700;
+    color: #ffffff !important;
+    background: rgba(220, 38, 38, 0.7) !important;
+    border: 1px solid rgba(239, 68, 68, 0.9);
+    font-weight: 800;
 }
 
-@keyframes machineErrorBlink {
-    0%, 100% { opacity: 1; border-color: rgba(239, 68, 68, 0.9); }
-    50% { opacity: 0.7; border-color: rgba(239, 68, 68, 0.3); }
+@keyframes machineAlarmPulse {
+    0%, 100% { opacity: 1; border-color: rgba(239, 68, 68, 1); box-shadow: 0 0 24px rgba(239, 68, 68, 0.6); }
+    50% { opacity: 0.75; border-color: rgba(239, 68, 68, 0.3); box-shadow: 0 0 8px rgba(239, 68, 68, 0.2); }
 }
 
 .flow-step-arrow {
@@ -1816,6 +1822,60 @@ html, body {
 .floating-tab-arrow {
     font-size: 9px;
     color: var(--accent);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   EMBED MODE (For CEO Dashboard Live Overlay Modal)
+   ═══════════════════════════════════════════════════════════════════ */
+body.embed-mode {
+    background: transparent !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+body.embed-mode .topbar,
+body.embed-mode .wo-sidebar,
+body.embed-mode .event-terminal-vertical,
+body.embed-mode .floating-toggle-tab,
+body.embed-mode .bottom-console-wrapper {
+    display: none !important;
+}
+
+body.embed-mode .app-body {
+    height: 100vh !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+}
+
+body.embed-mode .main-stage {
+    padding: 8px 12px !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+}
+
+body.embed-mode .lines-wrapper {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 0 !important;
+}
+
+body.embed-mode .line-panel {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+body.embed-mode .line-machines-row {
+    justify-content: space-evenly !important;
 }
 
 

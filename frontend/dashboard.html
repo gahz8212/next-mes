@@ -25,8 +25,16 @@
                 <span>LIVE FEED</span>
             </div>
 
+            <a href="ceo.html" class="btn-nav-admin" style="background: rgba(245,158,11,0.15); color: #fbbf24; border-color: rgba(245,158,11,0.35);">
+                👑 경영진 뷰
+            </a>
+
             <a href="kitting.html" class="btn-nav-admin" style="background: rgba(59,130,246,0.15); color: #93c5fd; border-color: rgba(59,130,246,0.3);">
                 자재 피킹 단말기 (Kitting)
+            </a>
+
+            <a href="machine.html" class="btn-nav-admin" style="background: rgba(6,182,212,0.15); color: #67e8f9; border-color: rgba(6,182,212,0.3);">
+                설비별 HMI 콘솔
             </a>
 
             <div class="user-badge" id="userBadge">
@@ -89,7 +97,7 @@
             <!-- 2단 공정 분리 컨테이너 (Line 1: SMT / Line 2: DIP) -->
             <div class="lines-wrapper">
                 <!-- 1. SMT 표면실장 라인 (Line 1) -->
-                <section class="line-panel">
+                <section class="line-panel" id="linePanel-SMT">
                     <div class="line-panel-header">
                         <div class="line-panel-title">
                             <span>Line 1: SMT 자삽/표면실장 자동화 라인</span>
@@ -243,7 +251,7 @@
                 </section>
 
                 <!-- 2. DIP 수삽 & 웨이브 솔더링 라인 (Line 2) -->
-                <section class="line-panel">
+                <section class="line-panel" id="linePanel-DIP">
                     <div class="line-panel-header">
                         <div class="line-panel-title">
                             <span>Line 2: DIP 수삽 & 웨이브 솔더링 라인</span>
@@ -460,7 +468,12 @@
                         <div class="pdm-modal-sub" id="pdmModalSub">실시간 물리 파라미터 & 건전도 분석 (Predictive Maintenance)</div>
                     </div>
                 </div>
-                <button class="btn-close-pdm" onclick="closePdmModal()">✕</button>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <a id="btnOpenDedicatedHmi" href="machine.html?eq=LASER" class="btn-nav-admin" style="background: rgba(59,130,246,0.2); color:#93c5fd; border-color: rgba(59,130,246,0.4); padding: 5px 10px; font-size: 11px; text-decoration:none;" title="해당 설비 전용 HMI 스테이션 전체화면으로 열기">
+                        전용 HMI 열기 ↗
+                    </a>
+                    <button class="btn-close-pdm" onclick="closePdmModal()">✕</button>
+                </div>
             </div>
 
             <!-- Modal Body -->

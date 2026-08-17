@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MES 설비 전용 HMI 터미널 - Machine Station</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+    <!-- HMI Stylesheet -->
+    <link rel="stylesheet" href="css/machine.css">
+</head>
+<body>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         1. TOPBAR & ONE-TOUCH MACHINE SELECTOR TABS
+         ═══════════════════════════════════════════════════════════════════ -->
+    <header class="hmi-topbar">
+        <div class="brand-wrap">
+            <span class="brand-badge">HMI OP</span>
+            <div>
+                <div class="brand-title">MES 설비 전용 HMI 콘솔</div>
+                <div class="brand-sub">스마트 제조 현장 설비 1:1 관제 & 예방정비 스테이션</div>
+            </div>
+        </div>
+
+        <!-- 설비 원터치 공정 탭 (Segmented Buttons) -->
+        <nav class="machine-tabs-nav" id="machineTabsNav">
+            <!-- Dynamically populated via machine.js -->
+        </nav>
+
+        <!-- 상단 우측 네비게이션 & 시계 -->
+        <div class="topbar-right-controls">
+            <a href="ceo.html" class="nav-link-btn" style="border-color: rgba(245,158,11,0.4); color: #fbbf24;" title="최고경영자 브리핑 콘솔">
+                <span>👑 경영진 뷰</span>
+            </a>
+            <a href="dashboard.html" class="nav-link-btn" title="전체 라인 관제 대시보드로 이동">
+                <span>📊 라인 대시보드</span>
+            </a>
+            <a href="kitting.html" class="nav-link-btn" title="자재 키팅 단말기로 이동">
+                <span>📦 키팅 단말기</span>
+            </a>
+            <a href="admin.html" class="nav-link-btn" title="관리자 시스템으로 이동">
+                <span>⚙️ 관리자</span>
+            </a>
+            <div class="live-time-badge" id="liveClock">00:00:00</div>
+        </div>
+    </header>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         2. MAIN HMI 2-COLUMN INDUSTRIAL WORKSPACE
+         ═══════════════════════════════════════════════════════════════════ -->
+    <main class="hmi-workspace">
+
+        <!-- ── 좌측 컬럼: 설비 종합 건전도 & TPM 예방정비 ── -->
+        <aside class="left-col-stack">
+
+            <!-- 1. 설비 아이덴티티 카드 & 타워램프 -->
+            <div class="hmi-card mach-identity-card">
+                <div class="mach-header-main">
+                    <div>
+                        <div class="mach-code-badge" id="machCodeBadge">SMT 라인 1호기 • #01</div>
+                        <div class="mach-title-large" id="machTitleLarge">Laser Marker</div>
+                        <div class="mach-category-desc" id="machCategoryDesc">고정밀 레이저 2D 바코드 마킹 설비</div>
+                    </div>
+                    <!-- 3색 시뮬레이션 타워램프 -->
+                    <div class="tower-lamp-strip">
+                        <div class="lamp-bulb red" id="lamp-red" title="경보 (ALARM / ERROR)"></div>
+                        <div class="lamp-bulb yellow" id="lamp-yellow" title="주의 / 대기 (WARNING / IDLE)"></div>
+                        <div class="lamp-bulb green active" id="lamp-green" title="정상 가동 (RUNNING)"></div>
+                    </div>
+                </div>
+
+                <div class="mach-status-strip">
+                    <span style="font-size: 11.5px; color: var(--text-dim);">설비 현재 상태</span>
+                    <span class="status-badge-chip idle" id="machStatusChip">대기 중 (Ready)</span>
+                </div>
+            </div>
+
+            <!-- 2. 대형 설비 종합 건전도 게이지 (Health Index) -->
+            <div class="hmi-card">
+                <div class="card-head-row">
+                    <span class="card-title">🩺 설비 종합 건전도 (HEALTH INDEX)</span>
+                    <span class="card-tag">Real-Time</span>
+                </div>
+
+                <div class="health-gauge-center">
+                    <div class="health-score-canvas-wrap">
+                        <canvas id="healthScoreCanvas" width="170" height="170"></canvas>
+                        <div class="health-center-text">
+                            <div class="health-val-num" id="healthValNum">98</div>
+                            <div class="health-unit-max">/ 100 PTS</div>
+                        </div>
+                    </div>
+                    <div class="health-status-desc" id="healthStatusDesc">정상 안정 (Optimal)</div>
+                </div>
+            </div>
+
+            <!-- 3. 예방정비 (TPM) 수명주기 & 리셋 박스 -->
+            <div class="hmi-card tpm-section-card">
+                <div class="card-head-row">
+                    <span class="card-title">⏱️ 예방정비 (TPM) 소모품 수명 (RUL)</span>
+                    <span class="card-tag">Maintenance</span>
+                </div>
+
+                <div class="tpm-metric-box">
+                    <div class="tpm-metric-head">
+                        <span class="tpm-name" id="tpmItemTitle">집진기 흄 헤파 필터 잔여 수명</span>
+                        <span class="tpm-days-badge" id="tpmDaysBadge">D-14 (82%)</span>
+                    </div>
+                    <div class="tpm-bar-track">
+                        <div class="tpm-bar-fill" id="tpmBarFill" style="width: 82%;"></div>
+                    </div>
+                    <div class="tpm-detail-row">
+                        <span id="tpmSubLeft">집진기 음압: -2.3 kPa (정상)</span>
+                        <span id="tpmSubRight">교체 주기: 30일</span>
+                    </div>
+                </div>
+
+                <!-- 작업자 정비완료 리셋 버튼 -->
+                <button class="btn-tpm-reset" id="btnTpmReset" onclick="handleTpmReset()">
+                    🛠️ 필터 교체 완료 (Reset)
+                </button>
+
+                <!-- AI 예지보전 가이드 -->
+                <div class="ai-pdm-guide-box" style="margin-top: 14px;">
+                    <div class="ai-guide-head">
+                        <span>🤖 AI 예지보전 진단 코멘트</span>
+                    </div>
+                    <div id="aiGuideText">
+                        집진기 차압 및 레이저 튜브 온도가 관리 기준선 내에서 안정적으로 유지되고 있습니다.
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- ── 우측 컬럼: 4대 핵심 센서, SPC 파형 차트 & 4-UP 실시간 가공 트래킹 ── -->
+        <section class="right-col-stack">
+
+            <!-- 1. 4대 핵심 센서 텔레메트리 4-Grid -->
+            <div class="hmi-card">
+                <div class="card-head-row">
+                    <span class="card-title">⚡ 4대 핵심 물리 파라미터 텔레메트리</span>
+                    <span class="card-tag">Sensors 4-Grid</span>
+                </div>
+                <div class="sensor-grid-4" id="sensorGrid4">
+                    <!-- Dynamically populated via machine.js -->
+                </div>
+            </div>
+
+            <!-- 2. 실시간 SPC 관리도 파형 스트림 차트 (Waveform Chart) -->
+            <div class="hmi-card">
+                <div class="card-head-row">
+                    <span class="card-title">📈 실시간 파라미터 추이 & 관리한계선 (SPC Waveform)</span>
+                    <div class="chart-legend-group">
+                        <div class="legend-item">
+                            <div class="legend-color-line ucl"></div>
+                            <span>상한선 (UCL)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color-line lcl"></div>
+                            <span>하한선 (LCL)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color-line"></div>
+                            <span>실시간 측정값</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="waveform-chart-wrap">
+                    <canvas id="hmiWaveformCanvas" height="160"></canvas>
+                </div>
+            </div>
+
+            <!-- 3. 실시간 가공 기판 & 4-UP 어레이 패널 & 바코드 스캔 -->
+            <div class="tracking-grid-2">
+                <!-- 가공 기판 & 4-UP 어레이 패널 -->
+                <div class="hmi-card">
+                    <div class="card-head-row">
+                        <span class="card-title">🎯 현재 가공 기판 & 4-UP 셀 판정</span>
+                        <span class="card-tag">Panel Array</span>
+                    </div>
+
+                    <div class="active-pcb-box">
+                        <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">ACTIVE BARCODE</div>
+                        <div class="active-barcode-val" id="activeBarcodeVal">- (가공 대기)</div>
+
+                        <div style="font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 6px;">4-UP ARRAY CELL STATUS (BAD MARK SKIP)</div>
+                        <div class="array-cells-4up-row" id="arrayCellsWrap">
+                            <div class="hmi-cell-chip wait">#1 대기</div>
+                            <div class="hmi-cell-chip wait">#2 대기</div>
+                            <div class="hmi-cell-chip wait">#3 대기</div>
+                            <div class="hmi-cell-chip wait">#4 대기</div>
+                        </div>
+                    </div>
+
+                    <!-- 바코드 스캐너 직접 입력창 -->
+                    <div class="scanner-input-wrap">
+                        <input type="text" id="scannerInput" class="scanner-input-field" placeholder="바코드 스캔 또는 직접 입력 후 Enter..." autofocus>
+                        <button class="btn-scan-trigger" onclick="triggerManualScan()">스캔 입력</button>
+                    </div>
+                </div>
+
+                <!-- 최근 가공 이력 테이블 -->
+                <div class="hmi-card">
+                    <div class="card-head-row">
+                        <span class="card-title">📋 최근 공정 처리 이력 (최근 5건)</span>
+                        <span class="card-tag">History</span>
+                    </div>
+
+                    <div class="recent-history-table-wrap">
+                        <table class="hmi-table">
+                            <thead>
+                                <tr>
+                                    <th>시간</th>
+                                    <th>바코드</th>
+                                    <th>결과</th>
+                                    <th>상세 내용</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentHistoryTbody">
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 18px;">
+                                        실시간 가공 데이터 대기 중...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- 토스트 알림 컴포넌트 -->
+    <div class="hmi-toast" id="hmiToast">알림 메시지</div>
+
+    <!-- HMI Control Engine Script -->
+    <script src="js/machine.js"></script>
+</body>
+</html>

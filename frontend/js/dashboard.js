@@ -532,12 +532,18 @@ function updateMachine(processId, status, barcode, pDataObj) {
     }
 
     lastActiveTimestamp[processId] = Date.now();
-    const isPass = (status === 'PASS');
-    const targetClass = isPass ? 'run' : 'error';
     
-    if (!mac.classList.contains(targetClass)) {
-        mac.classList.remove('wait', 'run', 'error');
-        mac.classList.add(targetClass);
+    // 1. 상태 분류 (설비 고장 vs 제품 불량 vs 정상 가동)
+    const isMachineAlarm = (status === 'ALARM' || status === 'MACHINE_ALARM' || (pDataObj && pDataObj.is_machine_alarm));
+    const isPass = (status === 'PASS');
+    const isProductDefect = (status === 'FAIL' || status === 'DEFECT' || (!isPass && !isMachineAlarm));
+
+    // 2. 카드 클래스 적용 (설비 알람 시에만 error/alarm 적용, 제품 불량 시에는 가동 run 유지!)
+    mac.classList.remove('wait', 'run', 'error', 'alarm');
+    if (isMachineAlarm) {
+        mac.classList.add('error', 'alarm');
+    } else {
+        mac.classList.add('run');
     }
     
     dataBox.innerText = barcode || '-';
@@ -553,29 +559,34 @@ function updateMachine(processId, status, barcode, pDataObj) {
     }
     if (pDataObj && pDataObj.pcb_no) pcbNum = pDataObj.pcb_no;
 
+    // 3. 상태 인디케이터 라벨
     if (indicator) {
-        if (isPass) {
+        if (isMachineAlarm) {
+            indicator.innerText = '🚨 설비알람';
+        } else if (isPass) {
             indicator.innerText = '가동중';
         } else {
             indicator.innerText = (pDataObj && pDataObj.is_inherited_fail) ? '불량 통과' : '불량감지';
         }
     }
 
-    // 설비카드 하단 불량 PCB 알림 태그 갱신
-    const failedCell = (pDataObj && pDataObj.failed_cell) ? pDataObj.failed_cell : (!isPass ? 2 : 0);
+    // 4. 설비카드 하단 불량 PCB 알림 태그 갱신
+    const failedCell = (pDataObj && pDataObj.failed_cell) ? pDataObj.failed_cell : (isProductDefect ? 2 : 0);
     if (defectTag) {
-        if (!isPass) {
+        if (isMachineAlarm) {
+            defectTag.innerHTML = `<span class="defect-badge-highlight" style="background:#ef4444; color:#fff;" title="설비 파라미터 임계치 초과 경보">🚨 설비 비상점검 필요</span>`;
+        } else if (isProductDefect) {
             defectTag.innerHTML = `<span class="defect-badge-highlight" title="[불량] PCB #${pcbNum}번 기판 셀 #${failedCell} 불량 감지">⚠️ PCB #${pcbNum} 불량(셀 #${failedCell})</span>`;
         } else {
             defectTag.innerHTML = `<span class="pass-badge-chip">PCB #${pcbNum}</span>`;
         }
     }
 
-    // 4-UP 어레이 패널 셀 인디케이터 업데이트
+    // 5. 4-UP 어레이 패널 셀 인디케이터 업데이트
     if (cellWrap) {
         let cellHtml = '';
         for (let c = 1; c <= 4; c++) {
-            if (!isPass && failedCell === c) {
+            if (isProductDefect && failedCell === c) {
                 cellHtml += `<span class="cell-chip fail" title="[셀 #${c} 불량] Bad Mark 스킵">#${c} ✖</span>`;
             } else {
                 cellHtml += `<span class="cell-chip pass" title="[셀 #${c}] 정상">#${c} ✔</span>`;
@@ -700,6 +711,9 @@ function renderPdmModalContent(processId) {
 
     if (badge) badge.innerText = processId;
     if (title) title.innerText = `${names[processId] || processId} 정밀 예지보전 진단`;
+
+    const openHmiBtn = document.getElementById('btnOpenDedicatedHmi');
+    if (openHmiBtn) openHmiBtn.href = `machine.html?eq=${processId}`;
 
     const health = d.pdm_health !== undefined ? d.pdm_health : 98;
     if (healthScoreEl) healthScoreEl.innerHTML = `${health} <span class="score-unit">/ 100</span>`;
@@ -1108,13 +1122,32 @@ async function pollLiveStream() {
     }
 }
 
+function checkEmbedMode() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const embedLine = urlParams.get('embed_line');
+    if (embedLine) {
+        document.body.classList.add('embed-mode');
+        const smtPanel = document.getElementById('linePanel-SMT');
+        const dipPanel = document.getElementById('linePanel-DIP');
+        if (embedLine === '1') {
+            if (dipPanel) dipPanel.style.display = 'none';
+            if (smtPanel) smtPanel.style.display = 'block';
+        } else if (embedLine === '2') {
+            if (smtPanel) smtPanel.style.display = 'none';
+            if (dipPanel) dipPanel.style.display = 'block';
+        }
+    }
+}
+
 // 10. 초기화 및 실시간 루프 시작
 document.addEventListener('DOMContentLoaded', () => {
+    checkEmbedMode();
     initIdleHistories();
     startIdleAmbientLoop();
 });
 
 // 즉시 실행 (DOMContentLoaded 이전 로드 대응)
+checkEmbedMode();
 initIdleHistories();
 startIdleAmbientLoop();
 
