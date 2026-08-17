@@ -2944,6 +2944,8 @@
         }
     }
 
+    let pendingBOMPayload = null; // 비교 후 승인 대기 중인 BOM 데이터
+
     async function saveBOM() {
         const selects = document.querySelectorAll('.bom-map-select');
         const mapping = {};
@@ -2983,10 +2985,121 @@
         const auto_inbound = document.getElementById('bom-auto-inbound') ? document.getElementById('bom-auto-inbound').checked : true;
         const mappingArray = Array.from(selects).map(s => s.value);
 
+        // 1. 기존 BOM과 실시간 Diff 비교 분석
+        const compRes = await fetch('../backend/api/compare_bom.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ wo_id, new_items: finalData })
+        });
+        const compData = await compRes.json();
+
+        pendingBOMPayload = {
+            wo_id,
+            bom_data: finalData,
+            company_id,
+            mapping: mappingArray,
+            auto_inbound,
+            compData
+        };
+
+        // 기존 BOM과 변경 사항이 있고, 최초 등록이 아닌 경우 ➔ Diff 모달 팝업!
+        if (compData.status === 'success' && compData.is_changed && !compData.is_initial) {
+            renderBOMDiffModal(compData);
+            document.getElementById('bomDiffModal').classList.add('open');
+            return;
+        }
+
+        // 변경 없거나 초기 등록이면 곧바로 저장 진행
+        await executeBOMSave(pendingBOMPayload, compData.next_version || 'v1.0');
+    }
+
+    function renderBOMDiffModal(data) {
+        const sum = data.summary;
+        const strip = document.getElementById('bom-diff-summary-strip');
+        const tbody = document.getElementById('bom-diff-tbody');
+
+        strip.innerHTML = `
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:13px; color:#ffffff; font-weight:700;">기존 버전: <code style="color:#93c5fd;">${data.existing_version||'v1.0'}</code></span>
+                <span style="color:#94a3b8;">➔</span>
+                <span style="font-size:13px; color:#ffffff; font-weight:700;">추천 신규 버전: <code style="color:#34d399;">${data.next_version||'v2.0'}</code></span>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <span class="status-badge" style="background:rgba(52,211,153,0.2); color:#6ee7b7; border:1px solid rgba(52,211,153,0.4);">🟢 추가 +${sum.added_count}</span>
+                <span class="status-badge" style="background:rgba(248,113,113,0.2); color:#fca5a5; border:1px solid rgba(248,113,113,0.4);">🔴 삭제 -${sum.removed_count}</span>
+                <span class="status-badge" style="background:rgba(245,158,11,0.2); color:#fcd34d; border:1px solid rgba(245,158,11,0.4);">🟡 변경 ${sum.modified_count}</span>
+                <span class="status-badge" style="background:rgba(255,255,255,0.06); color:#cbd5e1;">⚪ 동일 ${sum.unchanged_count}</span>
+            </div>
+        `;
+
+        document.getElementById('diff-next-ver').textContent = data.next_version || 'v2.0';
+        document.getElementById('diff-exist-ver').textContent = data.existing_version || 'v1.0';
+
+        tbody.innerHTML = data.diff_list.map(d => {
+            let statusBadge = '';
+            let rowBg = '';
+            if (d.status === 'ADDED') {
+                statusBadge = '<span class="status-badge" style="background:rgba(52,211,153,0.2); color:#6ee7b7; border:1px solid rgba(52,211,153,0.4);">+ 추가</span>';
+                rowBg = 'rgba(52,211,153,0.05)';
+            } else if (d.status === 'REMOVED') {
+                statusBadge = '<span class="status-badge" style="background:rgba(248,113,113,0.2); color:#fca5a5; border:1px solid rgba(248,113,113,0.4);">- 삭제</span>';
+                rowBg = 'rgba(248,113,113,0.05)';
+            } else if (d.status === 'MODIFIED') {
+                statusBadge = '<span class="status-badge" style="background:rgba(245,158,11,0.2); color:#fcd34d; border:1px solid rgba(245,158,11,0.4);">~ 변경</span>';
+                rowBg = 'rgba(245,158,11,0.05)';
+            } else {
+                statusBadge = '<span style="color:#64748b; font-size:11px;">동일</span>';
+            }
+
+            return `
+            <tr style="background:${rowBg};">
+                <td style="text-align:center;">${statusBadge}</td>
+                <td><code style="color:#38bdf8;">${escHtml(d.location_new || d.location_old || '—')}</code></td>
+                <td>
+                    ${d.part_no_old ? `<code>${escHtml(d.part_no_old)}</code><br><span style="font-size:11px; color:#94a3b8;">${escHtml(d.part_name_old||'')}</span>` : '<span style="color:#64748b;">(없음)</span>'}
+                </td>
+                <td style="text-align:right; color:#cbd5e1;">${d.qty_old !== null ? d.qty_old.toLocaleString() : '—'}</td>
+                <td style="text-align:center; color:#64748b;">➔</td>
+                <td>
+                    ${d.part_no_new ? `<code style="color:#fcd34d;">${escHtml(d.part_no_new)}</code><br><span style="font-size:11px; color:#ffffff;">${escHtml(d.part_name_new||'')}</span>` : '<span style="color:#f87171;">(삭제)</span>'}
+                </td>
+                <td style="text-align:right; font-weight:700; color:#f1f5f9;">${d.qty_new !== null ? d.qty_new.toLocaleString() : '—'}</td>
+                <td style="color:${d.status === 'MODIFIED' ? '#fcd34d' : (d.status === 'ADDED' ? '#6ee7b7' : (d.status === 'REMOVED' ? '#fca5a5' : '#94a3b8'))}; font-size:12px;">
+                    ${escHtml(d.change_desc)}
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    async function confirmBOMDecision() {
+        if (!pendingBOMPayload) return;
+        const decision = document.querySelector('input[name="bom-decision"]:checked')?.value || 'UPGRADE_MASTER';
+        const { compData } = pendingBOMPayload;
+
+        if (decision === 'KEEP_OLD') {
+            closeModal('bomDiffModal');
+            closeModal('bomModal');
+            alert('기존 표준 BOM을 유지합니다.');
+            return;
+        }
+
+        const targetVersion = (decision === 'UPGRADE_MASTER') ? (compData.next_version || 'v2.0') : (compData.existing_version || 'v1.0');
+        await executeBOMSave(pendingBOMPayload, targetVersion);
+        closeModal('bomDiffModal');
+    }
+
+    async function executeBOMSave(payload, version) {
         const res = await fetch('../backend/api/save_bom.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ wo_id, bom_data: finalData, company_id, mapping: mappingArray, auto_inbound })
+            body: JSON.stringify({
+                wo_id: payload.wo_id,
+                bom_data: payload.bom_data,
+                company_id: payload.company_id,
+                mapping: payload.mapping,
+                auto_inbound: payload.auto_inbound,
+                version: version
+            })
         });
         const data = await res.json();
         if (data.status === 'success') {
@@ -5347,8 +5460,67 @@ document.addEventListener('DOMContentLoaded', () => {
                 <input type="checkbox" id="qs-active" checked style="accent-color:var(--accent);">
                 <span>검사 기준 활성화 (생산 라인에 즉시 적용)</span>
             </label>
+<!-- ════════ MODAL: BOM 변경 감지 및 버전 비교 선택 (BOM Diff Modal) ════════ -->
+<div class="modal-overlay" id="bomDiffModal" style="z-index:9999;">
+    <div class="modal-box" style="max-width:920px; width:95vw; max-height:90vh; display:flex; flex-direction:column;">
+        <div class="modal-header" style="border-bottom:2px solid rgba(245,158,11,0.4);">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:20px;">⚠️</span>
+                <div>
+                    <div class="modal-title" style="color:#fcd34d;">BOM 변경 감지 — 기존 버전과 차이점 확인</div>
+                    <div style="font-size:12px; color:#94a3b8;">품목의 기존 등록된 기준 BOM과 신규 BOM 간의 변경 사항을 비교 확인 후 진행 방향을 선택하세요.</div>
+                </div>
+            </div>
+            <button class="modal-close" onclick="closeModal('bomDiffModal')">✕</button>
         </div>
-        <button class="btn-submit" onclick="saveQualityStd()">저장</button>
+
+        <!-- Diff Summary Strip -->
+        <div id="bom-diff-summary-strip" style="padding:12px 20px; background:rgba(15,23,42,0.8); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:space-between;">
+            <!-- JS 렌더링 -->
+        </div>
+
+        <!-- Diff Table Wrap -->
+        <div style="flex:1; overflow-y:auto; padding:16px 20px; min-height:220px; max-height:380px;">
+            <table class="data-table" style="font-size:12.5px;">
+                <thead>
+                    <tr style="background:rgba(255,255,255,0.04);">
+                        <th style="width:75px; text-align:center;">상태</th>
+                        <th style="width:90px;">실장 위치</th>
+                        <th style="width:180px;">기존 부품 (Old)</th>
+                        <th style="width:70px; text-align:right;">기존 수량</th>
+                        <th style="width:20px; text-align:center; color:#94a3b8;">➔</th>
+                        <th style="width:180px;">신규 부품 (New)</th>
+                        <th style="width:70px; text-align:right;">신규 수량</th>
+                        <th>변경 상세 내용</th>
+                    </tr>
+                </thead>
+                <tbody id="bom-diff-tbody"></tbody>
+            </table>
+        </div>
+
+        <!-- Decision Radio Choices -->
+        <div style="padding:14px 20px; background:rgba(30,41,59,0.7); border-top:1px solid rgba(255,255,255,0.08);">
+            <div style="font-size:13px; font-weight:700; color:#93c5fd; margin-bottom:8px;">🛠️ 진행 방식 선택 (Action Decision):</div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; color:#ffffff; background:rgba(52,211,153,0.1); padding:8px 12px; border-radius:6px; border:1px solid rgba(52,211,153,0.3);">
+                    <input type="radio" name="bom-decision" value="UPGRADE_MASTER" checked style="accent-color:#34d399;">
+                    <span><strong>[추천] 신규 BOM을 최신 표준 버전으로 승인</strong> (<span id="diff-next-ver" style="color:#6ee7b7; font-weight:700;">v2.0</span>으로 품목 마스터 업데이트 및 이번 생산 적용)</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; color:#cbd5e1; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:6px; border:1px solid rgba(255,255,255,0.08);">
+                    <input type="radio" name="bom-decision" value="WO_ONLY" style="accent-color:#60a5fa;">
+                    <span><strong>이번 작업지시(WO)에만 1회성 적용</strong> (기존 품목 마스터 버전 <span id="diff-exist-ver" style="color:#93c5fd;">v1.0</span> 유지)</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; color:#cbd5e1; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:6px; border:1px solid rgba(255,255,255,0.08);">
+                    <input type="radio" name="bom-decision" value="KEEP_OLD" style="accent-color:#f87171;">
+                    <span><strong>신규 변경 취소 및 기존 표준 BOM 유지</strong> (기존 BOM 그대로 생산 진행)</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="modal-footer" style="padding:12px 20px; display:flex; justify-content:flex-end; gap:10px; border-top:1px solid rgba(255,255,255,0.08);">
+            <button class="topbar-action-btn" style="background:rgba(255,255,255,0.1); color:#cbd5e1;" onclick="closeModal('bomDiffModal')">취소</button>
+            <button class="topbar-action-btn" style="background:#2563eb; color:#ffffff; font-weight:700; padding:8px 20px;" onclick="confirmBOMDecision()">선택한 BOM으로 진행 및 저장</button>
+        </div>
     </div>
 </div>
 

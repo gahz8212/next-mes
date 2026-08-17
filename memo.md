@@ -242,8 +242,12 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
   - BOM에 등록된 품번과 달라도, `part_alias` 상에 등록된 벤더사 실물 품번(`RC1005F103CS`, `MAX1554ETA+T` 등) 릴 바코드 스캔 시 **"AVL 공인 대체품 승인 [제조사명]"**으로 자동 감지하여 정상 피더 장착 및 라인 인터록 해제.
   - 미승인/불일치 부품 스캔 시 오투입(MISMATCH) 경고 및 인터록 잠금 유지.
 
-- **5) UI 시인성 & 한글 UTF-8 인코딩 표준화**:
-  - 전역 인풋박스(`input`, `textarea`, `.form-control`, `.data-search`, `.scanner-input`) 텍스트 색상을 선명한 검정색(`color: #111827 / #000000; font-weight: 600;`) 및 클린 화이트 배경 전역 적용.
-  - DB 및 파일 전체 UTF-8(`utf8mb4`) 인코딩 무결성 복구 완료.
+- **6) 기존 BOM vs 신규 BOM 실시간 Diff 비교 & 버전 선택 승인 워크플로우 구축**:
+  - `backend/api/compare_bom.php`: 기존 등록된 기준 BOM(v1.0)과 새로 입력된 BOM의 부품(추가 `🟢`, 삭제 `🔴`, 수정 `🟡`, 동일 `⚪`)을 위치(Location)/품번 기준으로 정밀 자동 비교 분석.
+  - `admin.html` `#bomDiffModal`: 변경 사항 발생 시 시각적 Diff 테이블 팝업 및 사용자 선택 제공:
+    - `[추천] 신규 BOM을 최신 표준 버전으로 승인 (v2.0 품목 마스터 업데이트 및 이번 생산 적용)`
+    - `이번 작업지시(WO)에만 1회성 적용 (기존 마스터 v1.0 유지)`
+    - `신규 변경 취소 및 기존 표준 BOM 유지`
+  - `convert_order_to_wo.php`: 수주(PO)에서 `[⚡ WO 발행]` 클릭 시 품목 마스터의 최신 공인 BOM을 자동 상속받아 마운터 피더 슬롯(`feeder_setup`)까지 1초 만에 원클릭 자동 구성.
 
 

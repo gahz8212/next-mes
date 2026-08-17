@@ -14,6 +14,9 @@ if (!$wo_id || empty($bom_data)) {
     exit;
 }
 
+$item_id = !empty($input['item_id']) ? (int)$input['item_id'] : null;
+$version = trim($input['version'] ?? 'v1.0');
+
 try {
     $pdo->beginTransaction();
 
@@ -22,17 +25,32 @@ try {
     $stmt = $pdo->prepare("INSERT IGNORE INTO product_master (product_id, product_name) VALUES (?, ?)");
     $stmt->execute([$product_id, "Product for " . $wo_id]);
     
-    $pdo->exec("INSERT INTO bom_master (product_id) VALUES ('{$product_id}')");
+    $stmtBm = $pdo->prepare("INSERT INTO bom_master (product_id, item_id, version, created_at) VALUES (?, ?, ?, NOW())");
+    $stmtBm->execute([$product_id, $item_id, $version]);
     $bom_id = $pdo->lastInsertId();
 
     // 2. Update work_order with this bom_id
     $stmt = $pdo->prepare("UPDATE work_order SET bom_id = ? WHERE wo_id = ?");
     $stmt->execute([$bom_id, $wo_id]);
 
-    // 3. Insert BOM details
-    $detailStmt = $pdo->prepare("INSERT INTO bom_detail (bom_id, part_no, req_qty, location) VALUES (?, ?, ?, ?)");
+    // 3. Insert BOM details & populate feeder_setup
+    $detailStmt = $pdo->prepare("INSERT INTO bom_detail (bom_id, part_no, part_name, req_qty, location, feeder_slot) VALUES (?, ?, ?, ?, ?, ?)");
+    
+    // feeder_setup 초기화/재구성
+    $delFeeder = $pdo->prepare("DELETE FROM feeder_setup WHERE wo_id = ? AND status != 'VERIFIED'");
+    $delFeeder->execute([$wo_id]);
+    $insFeeder = $pdo->prepare("INSERT INTO feeder_setup (wo_id, slot_no, part_no, location, req_qty, status) VALUES (?, ?, ?, ?, ?, 'PENDING') ON DUPLICATE KEY UPDATE part_no = VALUES(part_no), location = VALUES(location), req_qty = VALUES(req_qty)");
+
+    $slotIndex = 1;
     foreach ($bom_data as $row) {
-        $detailStmt->execute([$bom_id, $row['part_no'], $row['req_qty'], $row['location'] ?? '']);
+        $pNo = trim($row['part_no'] ?? '');
+        $pName = trim($row['part_name'] ?? '') ?: $pNo;
+        $qty = (float)($row['req_qty'] ?? 1);
+        $loc = trim($row['location'] ?? '');
+        $slotNo = !empty($row['feeder_slot']) ? (int)$row['feeder_slot'] : $slotIndex++;
+
+        $detailStmt->execute([$bom_id, $pNo, $pName, $qty, $loc, $slotNo]);
+        $insFeeder->execute([$wo_id, $slotNo, $pNo, $loc, $qty]);
     }
 
     // 4. Update company bom_mapping if provided
@@ -54,7 +72,7 @@ try {
             $qty = (float)($row['req_qty'] ?? 0);
             if (!empty($part_no) && $qty > 0) {
                 $loc = !empty($row['location']) ? " [위치: {$row['location']}]" : "";
-                $note = "BOM 등록 자동 연계 사급 입고 (WO: {$wo_id}{$loc})";
+                $note = "BOM 등록 자동 연계 사급 입고 (WO: {$wo_id}{$loc}) [버전: {$version}]";
                 $matStmt->execute([$part_no, $part_name, $qty, $wo_id, $comp_id, $note]);
                 $inbound_count++;
             }
@@ -62,16 +80,22 @@ try {
     }
 
     $pdo->commit();
-    $msg = "BOM 저장 완료";
+    $msg = "BOM 저장 완료 (버전: {$version})";
     if ($auto_inbound && $inbound_count > 0) {
-        $msg .= " (사급 자재 {$inbound_count}건 창고 자동 입고 완료)";
+        $msg .= " - 사급 자재 {$inbound_count}건 창고 자동 입고 완료";
     }
-    echo json_encode(["status" => "success", "message" => $msg, "inbound_count" => $inbound_count]);
+    echo json_encode([
+        "status" => "success",
+        "message" => $msg,
+        "bom_id" => $bom_id,
+        "version" => $version,
+        "inbound_count" => $inbound_count
+    ], JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    echo json_encode(["status" => "error", "message" => $e->getMessage()], JSON_UNESCAPED_UNICODE);
 }
 
