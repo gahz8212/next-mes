@@ -6,10 +6,13 @@ try {
     $sql = "
         SELECT 
             i.*,
+            COALESCE(c.name, '-') as company_name,
+            c.code as company_code,
             bm.bom_id,
             COALESCE(bm.version, 'v1.0') as bom_version,
             COALESCE(bd_cnt.part_count, 0) as bom_part_count
         FROM item i
+        LEFT JOIN company c ON i.company_id = c.id
         LEFT JOIN (
             SELECT bom_id, item_id, version
             FROM bom_master bm1

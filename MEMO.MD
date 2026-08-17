@@ -257,5 +257,12 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
     - 품목 신규 등록 시: "지금 바로 표준 BOM을 등록하시겠습니까?" 즉시 연계 안내 팝업 제공 (확인 시 바로 BOM 엑셀 등록 모달 실행, 취소 시 나중에 등록).
     - `save_bom.php` & `get_bom.php`: 품목 ID(`item_id`) 단독 BOM 등록 및 버전 관리 완벽 지원.
 
+- **8) 품목 리스트 거래처명 컬럼 추가 및 거래처(고객사) 연동**:
+  - `item` 테이블에 `company_id` 컬럼 추가 및 `get_items.php`에서 `company` 테이블 JOIN(`company_name`, `company_code`) 제공.
+  - `admin.html` 품목 관리 리스트 첫 번째 컬럼에 **`거래처명`** 배치 (`<th>거래처명</th><th>품목 코드</th>...`).
+  - 품목 등록/수정 모달(`#itemModal`)에 **`거래처 (발주 고객사)`** 선택 드롭다운 탑재 및 `create_item.php`, `update_item.php` 연동 완료.
+
+
+
 
 

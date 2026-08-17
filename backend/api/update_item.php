@@ -8,6 +8,7 @@ if (!is_array($input)) {
 }
 
 $id = $input['id'] ?? null;
+$company_id = !empty($input['company_id']) ? (int)$input['company_id'] : null;
 $item_code = trim($input['item_code'] ?? '');
 $item_name = trim($input['item_name'] ?? '');
 $category = isset($input['category']) && $input['category'] !== '' ? trim($input['category']) : null;
@@ -23,8 +24,8 @@ if (empty($id) || $item_code === '' || $item_name === '') {
 }
 
 try {
-    $stmt = $pdo->prepare("UPDATE item SET item_code = ?, item_name = ?, category = ?, unit = ?, description = ? WHERE id = ?");
-    $stmt->execute([$item_code, $item_name, $category, $unit, $description, $id]);
+    $stmt = $pdo->prepare("UPDATE item SET company_id = ?, item_code = ?, item_name = ?, category = ?, unit = ?, description = ? WHERE id = ?");
+    $stmt->execute([$company_id, $item_code, $item_name, $category, $unit, $description, $id]);
 
     echo json_encode([
         "status" => "success",

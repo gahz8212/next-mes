@@ -1694,6 +1694,7 @@
                     <table class="data-table">
                         <thead>
                             <tr>
+                                <th>거래처명</th>
                                 <th>품목 코드</th>
                                 <th>품목명</th>
                                 <th>카테고리</th>
@@ -3289,10 +3290,21 @@
         renderItemTable(itemsData);
     }
 
+    function populateItemCompanySelect(selectedId = '') {
+        const sel = document.getElementById('im-company');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">— 거래처 선택 —</option>';
+        if (typeof companies !== 'undefined' && companies.length > 0) {
+            companies.forEach(c => {
+                sel.innerHTML += `<option value="${c.id}" ${selectedId == c.id ? 'selected' : ''}>${escHtml(c.name)}</option>`;
+            });
+        }
+    }
+
     function renderItemTable(list) {
         const tbody = document.getElementById('item-tbody');
         if (!list.length) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:32px; color:#94a3b8; font-size:13.5px;">등록된 품목이 없습니다.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:32px; color:#94a3b8; font-size:13.5px;">등록된 품목이 없습니다.</td></tr>`;
             return;
         }
         tbody.innerHTML = list.map(item => {
@@ -3303,6 +3315,7 @@
 
             return `
             <tr>
+                <td><strong style="color:#60a5fa; font-size:13.5px;">${escHtml(item.company_name || '-')}</strong></td>
                 <td><code>${escHtml(item.item_code)}</code></td>
                 <td><strong style="color:#ffffff; font-size:13.5px;">${escHtml(item.item_name)}</strong></td>
                 <td>${item.category ? `<span class="status-badge status-progress">${escHtml(item.category)}</span>` : '<span style="color:#64748b;">-</span>'}</td>
@@ -3312,7 +3325,7 @@
                 <td style="font-size:13px; font-family:'JetBrains Mono',monospace; color:#94a3b8;">${item.created_at ? item.created_at.slice(0,10) : '-'}</td>
                 <td style="text-align:right; white-space:nowrap;">
                     <button class="card-btn" style="background:rgba(59,130,246,0.2); color:#93c5fd; border:1px solid rgba(59,130,246,0.35); margin-right:4px; font-weight:700;" onclick="openItemBOMModal(${item.id}, '${escHtml(item.item_code)}', '${escHtml(item.item_name)}')">📋 BOM</button>
-                    <button class="card-btn card-btn-edit" onclick="openEditItemModal(${item.id}, '${escHtml(item.item_code)}', '${escHtml(item.item_name)}', '${escHtml(item.category||'')}', '${escHtml(item.unit||'EA')}', '${escHtml(item.description||'')}')">수정</button>
+                    <button class="card-btn card-btn-edit" onclick="openEditItemModal(${item.id}, ${item.company_id || 'null'}, '${escHtml(item.item_code)}', '${escHtml(item.item_name)}', '${escHtml(item.category||'')}', '${escHtml(item.unit||'EA')}', '${escHtml(item.description||'')}')">수정</button>
                     <button class="card-btn card-btn-del" style="margin-left:4px;" onclick="deleteItem(${item.id}, '${escHtml(item.item_name)}')">삭제</button>
                 </td>
             </tr>`;
@@ -3323,13 +3336,15 @@
         const q   = document.getElementById('item-search').value.toLowerCase();
         const cat = document.getElementById('item-cat-filter').value;
         let filtered = itemsData;
-        if (q)   filtered = filtered.filter(i => i.item_name.toLowerCase().includes(q) || i.item_code.toLowerCase().includes(q));
+        if (q)   filtered = filtered.filter(i => (i.company_name && i.company_name.toLowerCase().includes(q)) || i.item_name.toLowerCase().includes(q) || i.item_code.toLowerCase().includes(q));
         if (cat) filtered = filtered.filter(i => i.category === cat);
         renderItemTable(filtered);
     }
 
     function openItemModal() {
+        populateItemCompanySelect('');
         document.getElementById('im-id').value = '';
+        document.getElementById('im-company').value = '';
         document.getElementById('im-code').value = '';
         document.getElementById('im-name').value = '';
         document.getElementById('im-cat').value = '';
@@ -3339,8 +3354,10 @@
         document.getElementById('itemModal').classList.add('open');
     }
 
-    function openEditItemModal(id, code, name, cat, unit, desc) {
+    function openEditItemModal(id, company_id, code, name, cat, unit, desc) {
+        populateItemCompanySelect(company_id);
         document.getElementById('im-id').value = id;
+        document.getElementById('im-company').value = company_id || '';
         document.getElementById('im-code').value = code;
         document.getElementById('im-name').value = name;
         document.getElementById('im-cat').value = cat;
@@ -3351,18 +3368,19 @@
     }
 
     async function saveItem() {
-        const id        = document.getElementById('im-id').value;
-        const item_code = document.getElementById('im-code').value.trim();
-        const item_name = document.getElementById('im-name').value.trim();
-        const category  = document.getElementById('im-cat').value.trim();
-        const unit      = document.getElementById('im-unit').value.trim() || 'EA';
+        const id         = document.getElementById('im-id').value;
+        const company_id = document.getElementById('im-company').value;
+        const item_code  = document.getElementById('im-code').value.trim();
+        const item_name  = document.getElementById('im-name').value.trim();
+        const category   = document.getElementById('im-cat').value.trim();
+        const unit       = document.getElementById('im-unit').value.trim() || 'EA';
         const description = document.getElementById('im-desc').value.trim();
 
         if (!item_code || !item_name) { alert('품목 코드와 품목명은 필수입니다.'); return; }
 
         const url  = id ? '../backend/api/update_item.php' : '../backend/api/create_item.php';
-        const body = id ? { id: parseInt(id), item_code, item_name, category, unit, description }
-                        : { item_code, item_name, category, unit, description };
+        const body = id ? { id: parseInt(id), company_id: company_id ? parseInt(company_id) : null, item_code, item_name, category, unit, description }
+                        : { company_id: company_id ? parseInt(company_id) : null, item_code, item_name, category, unit, description };
 
         const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
         const data = await res.json();
@@ -5618,6 +5636,12 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="modal-close" onclick="closeModal('itemModal')">✕</button>
         </div>
         <input type="hidden" id="im-id">
+        <div class="form-group">
+            <label class="form-label">거래처 (발주 고객사) <span style="color:#f87171;">*</span></label>
+            <select id="im-company" class="form-control">
+                <option value="">— 거래처 선택 —</option>
+            </select>
+        </div>
         <div class="form-group">
             <label class="form-label">품목 코드 <span style="color:#f87171;">*</span></label>
             <input type="text" id="im-code" class="form-control" placeholder="예: PCB-001">
