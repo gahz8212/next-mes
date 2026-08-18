@@ -1,0 +1,21 @@
+# .htaccess
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # 1. Allow existing files or directories (HTML, CSS, JS, Images, etc.) to be served directly
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # 2. Rewrite /backend/api/* or /api/* or /backend/* requests to backend/index.php
+    RewriteRule ^(backend/api|api|backend)(/.*)?$ backend/index.php [QSA,L]
+</IfModule>
+
+# Security: Disable directory browsing
+Options -Indexes
+
+# Security: Deny access to sensitive files
+<FilesMatch "^\.(env|git|htaccess)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>

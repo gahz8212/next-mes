@@ -274,6 +274,47 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
   - `admin.html` 품목 관리 리스트 첫 번째 컬럼에 **`거래처명`** 배치 (`<th>거래처명</th><th>품목 코드</th>...`).
   - 품목 등록/수정 모달(`#itemModal`)에 **`거래처 (발주 고객사)`** 선택 드롭다운 탑재 및 `create_item.php`, `update_item.php` 연동 완료.
 
+---
+
+## 📝 2026-08-18 작업 이력 (작업자: Antigravity)
+
+### 1. 작업지시 (WO) 관리 UI/UX 구조 정밀 리파인 (`frontend/admin.html`)
+- **부모 수주(PO) 헤더 컴팩트 재구성**:
+  - 부모 영역에 `🏢 [거래처명]` `[수주번호 (PO)]` `[D-Day 뱃지]` `📅 납기일: YYYY-MM-DD` 깔끔 배치.
+  - 부모 영역의 중복되던 총 진행률 텍스트 및 품목 카운트 텍스트 정리.
+- **자식 품목 카드 레이아웃 조정**:
+  - 자식 품목 카드는 전체 폭을 유지하되, 내부 뱃지·텍스트·버튼 콘텐츠를 원 그래프 방향으로 `100px` 안쪽 여백(`padding-left: 100px`) 적용.
+  - **SVG 원형 도넛 게이지(68px)**: 우측 끝에서 좌측으로 `100px` 이동(`margin-right: 100px`)하여 시각적 정렬 및 조화 확보.
+
+### 2. 분할 작업지시 (Lot Split) 삭제 시 부모 WO 수량 자동 복원 및 분할 취소 엔진
+- **DB 스키마 확장**: `work_order` 테이블에 `parent_wo_id` 컬럼 추가.
+- **자동 병합 복구 (`backend/controllers/WorkOrderController.php::deleteWo`)**:
+  - 분할된 WO(`parent_wo_id` 존재 또는 `-B` / `-S2` 접미사)를 삭제할 경우, 분할되었던 수량을 원본 부모 WO의 `target_qty`로 자동 가산 합산 복원.
+  - 부모 WO의 분할 비고(Remark)를 정상 상태로 자동 정리.
+  - 프론트엔드 삭제 확인창에서 분할 취소 및 부모 WO 수량 복원 내용을 사용자에게 명확히 안내.
+
+### 3. 고객 사급 자재 수불 및 반납 정산 시스템 (Consigned Material Return & Reconciliation System)
+- **1) 데이터베이스 테이블 구축 & 확장**:
+  - `material_inout`: `order_no`, `bom_id`, `supply_type = 'CONSIGNED'` 확장.
+  - `consigned_return_master`: 반납 관리번호(`RET-YYYYMMDD-XXX`), 수주번호, 거래처, 완제품 출하수량, 반납일자, 인수자, 비고.
+  - `consigned_return_detail`: 반납 상세 부품별 BOM 단위 소요량, 사급 제공량(A), 생산 사용량(B), 계산상 잔여량(A-B), 실제 반납 수량(C), 특이사항.
+- **2) 전용 백엔드 컨트롤러 & API 구축 (`ConsignedMaterialController.php`, `backend/routes/api.php`)**:
+  - `/get_consigned_summary.php`: 사급 총 입고량, 보유 거래처/수주수, 미반납 수주 건수 KPI 집계.
+  - `/get_consigned_stocks.php`: 거래처 & 수주(PO/공용 Pool)별 사급 자재 재고 대장 조회.
+  - `/get_bom_parts_for_order.php`: 수주(PO) 또는 제품 선택 시 연결된 BOM 부품 목록 및 위치 자동 로드.
+  - `/receive_consigned_materials.php`: BOM 기반 또는 엑셀 붙여넣기 사급 자재 일괄 원클릭 입고 트랜잭션.
+  - `/get_consigned_reconciliation.php`: 완제품 양품 생산 실적 연동 및 부품별 이론 소요량 vs 잔여 반납량 자동 계산.
+  - `/create_consigned_return.php`: 실사 반납 수량 기반 반납 명세서 발행 및 사급 출고(OUT) 자동 전표 마감.
+  - `/get_consigned_returns.php` & `/get_consigned_return_detail.php`: 발행 명세서 이력 및 A4 인쇄/엑셀 데이터 제공.
+- **3) 프론트엔드 전용 독립 관리 화면 구축 (`#page-consigned-material`)**:
+  - **사이드바 메뉴 분리**: `📦 고객 사급 자재 및 반납`과 `🏭 자사 보유 자재 관리`로 명확히 분리.
+  - **4대 서브 탭 워크플로우**:
+    1. **📋 사급 재고 / 수불 대장**: 고객사 & 수주별 그룹화 카드, 총입고/출고/현재고 실시간 집계, 수주별 즉시 정산 연동.
+    2. **📥 수주 BOM 원클릭 입고**: 수주 선택 시 BOM 부품 자동 로드, 발주소요량 기반 추천 수량 자동 채우기, 엑셀 일괄 붙여넣기(`[품번 \t 수량]`), 수동 행 추가 지원.
+    3. **⚖️ 수주별 사급 수불 & 반납 정산**: 양품 생산 실적 기반 `[제공량(A) - 사용량(B) = 잔여량]` 계산 및 로스 분쟁 방지를 위한 실사 반납 수량(C) 유연 수정, 원클릭 정산서 발행.
+    4. **📜 반납 완료 명세서 이력 & A4 인쇄 서식**: 완제품 납품 시 동봉 가능한 대한민국 표준 **[사급 자재 반납 명세서]** A4 인쇄 전용 CSS(`@media print`) 및 엑셀(UTF-8 BOM CSV) 다운로드 완비.
+
+
 
 
 

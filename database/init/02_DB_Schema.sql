@@ -174,22 +174,42 @@ CREATE TABLE IF NOT EXISTS quality_standard (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 16. 수주 관리
+-- 16. 수주 관리 (마스터)
 CREATE TABLE IF NOT EXISTS sales_order (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    order_no VARCHAR(50) NOT NULL UNIQUE COMMENT '수주 번호',
+    order_no VARCHAR(50) NOT NULL UNIQUE COMMENT '수주 번호 / 고객 발주번호 (예: PO-20260818-001)',
     company_id INT NOT NULL COMMENT '발주 고객사 ID',
-    item_code VARCHAR(50) DEFAULT NULL COMMENT '수주 품목 코드',
-    item_name VARCHAR(100) DEFAULT NULL COMMENT '수주 품목명',
-    order_qty INT NOT NULL COMMENT '수주 수량',
+    item_code VARCHAR(50) DEFAULT NULL COMMENT '대표 품목 코드',
+    item_name VARCHAR(100) DEFAULT NULL COMMENT '대표 품목명',
+    order_qty INT NOT NULL DEFAULT 0 COMMENT '총 수주 수량',
     unit_price DECIMAL(12,2) DEFAULT 0 COMMENT '단가',
     total_price DECIMAL(14,2) DEFAULT 0 COMMENT '총 수주액',
     order_date DATE NOT NULL COMMENT '수주일자',
-    due_date DATE NOT NULL COMMENT '납기요청일',
+    due_date DATE NOT NULL COMMENT '기본 납기요청일',
     status ENUM('RECEIVED', 'IN_PRODUCTION', 'COMPLETED', 'CANCELLED') DEFAULT 'RECEIVED' COMMENT '수주 상태',
     wo_id VARCHAR(50) DEFAULT NULL COMMENT '연계 발행된 작업지시(WO) ID',
     memo TEXT DEFAULT NULL COMMENT '수주 특이사항 / 메모',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 16-1. 수주 품목 상세 (1:N 라인 아이템)
+CREATE TABLE IF NOT EXISTS sales_order_item (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL COMMENT 'sales_order.id 참조',
+    order_no VARCHAR(50) NOT NULL COMMENT '수주 번호',
+    item_code VARCHAR(50) DEFAULT NULL COMMENT '품목 코드',
+    item_name VARCHAR(100) NOT NULL COMMENT '품목명 (제품명)',
+    order_qty INT NOT NULL DEFAULT 1 COMMENT '수주 수량',
+    unit_price DECIMAL(12,2) DEFAULT 0 COMMENT '품목 단가',
+    total_price DECIMAL(14,2) DEFAULT 0 COMMENT '공급가액',
+    due_date DATE DEFAULT NULL COMMENT '품목별 납기일',
+    status ENUM('RECEIVED', 'IN_PRODUCTION', 'COMPLETED', 'CANCELLED') DEFAULT 'RECEIVED' COMMENT '상태',
+    wo_id VARCHAR(50) DEFAULT NULL COMMENT '연계 발행된 작업지시(WO) ID',
+    memo TEXT DEFAULT NULL COMMENT '품목 특이사항',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_soi_order_id (order_id),
+    INDEX idx_soi_order_no (order_no),
+    INDEX idx_soi_wo_id (wo_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 17. 시스템 알림 센터

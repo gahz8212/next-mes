@@ -1,0 +1,34 @@
+# nginx.conf.sample
+# Example Nginx Configuration for AWS EC2 / Lightsail / Docker
+
+server {
+    listen 80;
+    server_name your-domain.com or-ec2-ip;
+    root /home/gahz/next-mes;
+    index dashboard.html index.html admin.html;
+
+    charset utf-8;
+
+    # 1. Frontend Static Files (HTML, JS, CSS, Images)
+    location / {
+        try_files $uri $uri/ /dashboard.html;
+    }
+
+    # 2. Backend API Rewrite to backend/index.php
+    location ~ ^/(backend/api|api|backend) {
+        try_files $uri /backend/index.php?$query_string;
+    }
+
+    # 3. PHP-FPM FastCGI Handler
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock; # Or 127.0.0.1:9000
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+
+    # 4. Deny access to hidden files (.env, .git, etc.)
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
