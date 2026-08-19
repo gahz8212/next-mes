@@ -352,15 +352,14 @@ function resetAllMachines(targetLine = 'ALL') {
     }
 }
 
-// 5-1. 상단: 건전도 & 정비주기 듀얼 원형 게이지 (High-DPI 컴팩트 패딩 렌더링)
+// 5-1. 상단: 건전도 & 정비주기 듀얼 원형 게이지
 function drawRadialGauges(processId, healthVal, cycleVal, cycleText, cycleSub, pdmStatus) {
     const canvas = document.getElementById(`canvas-radial-${processId}`);
     if (!canvas) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    const cssW = Math.max(160, Math.round(rect.width) || 180);
-    const cssH = Math.max(44, Math.round(rect.height) || 46);
+    const cssW = Math.max(160, canvas.offsetWidth || 180);
+    const cssH = Math.max(36, canvas.offsetHeight || 46);
 
     if (canvas.width !== Math.round(cssW * dpr) || canvas.height !== Math.round(cssH * dpr)) {
         canvas.width = Math.round(cssW * dpr);
@@ -385,21 +384,33 @@ function drawRadialGauges(processId, healthVal, cycleVal, cycleText, cycleSub, p
         statusText = '주의';
     }
 
-    const cy = Math.round(cssH / 2);
-    const r = Math.min(16.5, Math.round((cssH - 6) / 2));
-    const strokeW = 3.0;
+    const cy = cssH / 2;
+    const strokeW = 5.4;  // 1.5x (기존 3.6)
+    const r = Math.max(14, (cssH / 2) - (strokeW / 2) - 1.5);
+
+    // ── 중앙 구분선 ──
+    const midX = Math.round(cssW / 2);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(midX, 2);
+    ctx.lineTo(midX, cssH - 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // 각 절반 중앙에 원 배치
+    const leftCX = Math.round(midX / 2);
+    const rightCX = Math.round(midX + (cssW - midX) / 2);
 
     // ── 좌측 원그래프: 설비 건전도 (Health Index) ──
-    const leftCX = Math.round(cssW * 0.17);
-
-    // 배경 링
     ctx.save();
+    // 배경 링
     ctx.beginPath();
     ctx.arc(leftCX, cy, r, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = strokeW;
     ctx.stroke();
-
     // 값 아크
     ctx.beginPath();
     ctx.arc(leftCX, cy, r, -Math.PI / 2, -Math.PI / 2 + (safeHealth / 100) * (Math.PI * 2));
@@ -409,47 +420,28 @@ function drawRadialGauges(processId, healthVal, cycleVal, cycleText, cycleSub, p
     ctx.stroke();
     ctx.restore();
 
-    // 아크 내부 퍼센트 수치
+    // 도넛 내부: 퍼센트 (위) + 상태 (아래)
+    const lineGap = cssH * 0.18;
     ctx.save();
-    ctx.font = 'bold 8.5px "JetBrains Mono", monospace';
-    ctx.fillStyle = '#f8fafc';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${safeHealth}%`, leftCX, cy);
-
-    // 우측 텍스트 라벨 (건전도 / 상태)
-    ctx.textAlign = 'left';
-    ctx.font = '8.5px sans-serif';
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillText('건전도', leftCX + r + 4, cy - 4);
-
-    ctx.font = 'bold 9px sans-serif';
+    ctx.font = `bold ${Math.round(cssH * 0.28)}px "JetBrains Mono", monospace`;
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillText(`${safeHealth}%`, leftCX, cy - lineGap / 2);
+    ctx.font = 'bold 13px sans-serif';
     ctx.fillStyle = healthColor;
-    ctx.fillText(statusText, leftCX + r + 4, cy + 6.5);
-    ctx.restore();
-
-    // ── 중앙 구분선 ──
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(Math.round(cssW * 0.48), 3);
-    ctx.lineTo(Math.round(cssW * 0.48), cssH - 3);
-    ctx.stroke();
+    ctx.fillText(statusText, leftCX, cy + lineGap);
     ctx.restore();
 
     // ── 우측 원그래프: 예방보전 주기/수명 (PM Cycle / RUL) ──
-    const rightCX = Math.round(cssW * 0.65);
     const cycleColor = '#38bdf8';
-
-    // 배경 링
     ctx.save();
+    // 배경 링
     ctx.beginPath();
     ctx.arc(rightCX, cy, r, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = strokeW;
     ctx.stroke();
-
     // 값 아크
     ctx.beginPath();
     ctx.arc(rightCX, cy, r, -Math.PI / 2, -Math.PI / 2 + (safeCycle / 100) * (Math.PI * 2));
@@ -459,36 +451,28 @@ function drawRadialGauges(processId, healthVal, cycleVal, cycleText, cycleSub, p
     ctx.stroke();
     ctx.restore();
 
-    // 아크 내부 D-Day / 수치
+    // 도넛 내부: 값 (위) + 상태 (아래)
     ctx.save();
-    ctx.font = 'bold 9px "JetBrains Mono", monospace';
-    ctx.fillStyle = '#f8fafc';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(cycleText || `${safeCycle}%`, rightCX, cy);
-
-    // 우측 텍스트 라벨 (정비주기 / 부품명)
-    ctx.textAlign = 'left';
-    ctx.font = '9px sans-serif';
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillText('정비주기', rightCX + r + 6, cy - 4.5);
-
-    ctx.font = 'bold 9.5px sans-serif';
+    ctx.font = `bold ${Math.round(cssH * 0.26)}px "JetBrains Mono", monospace`;
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillText(cycleText || `${safeCycle}%`, rightCX, cy - lineGap / 2);
+    ctx.font = 'bold 13px sans-serif';
     ctx.fillStyle = cycleColor;
-    ctx.fillText(cycleSub || '양호', rightCX + r + 6, cy + 7);
+    ctx.fillText(cycleSub || '양호', rightCX, cy + lineGap);
     ctx.restore();
 }
 
-// 5-2. 하단: 4대 핵심 물리량 상하 막대 그래프 (High-DPI 꽉 찬 공간 활용 렌더링)
+// 5-2. 하단: 4대 핵심 물리량 수직 막대 그래프
 function drawVerticalBars(processId, metricsValues, pdmStatus) {
     const canvas = document.getElementById(`canvas-bars-${processId}`);
     const schema = MACHINE_TELEMETRY_SCHEMAS[processId];
     if (!canvas || !schema) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    const cssW = Math.max(160, Math.round(rect.width) || 180);
-    const cssH = Math.max(68, Math.round(rect.height) || 82);
+    const cssW = Math.max(160, canvas.offsetWidth || 180);
+    const cssH = Math.max(38, canvas.offsetHeight || 48);
 
     if (canvas.width !== Math.round(cssW * dpr) || canvas.height !== Math.round(cssH * dpr)) {
         canvas.width = Math.round(cssW * dpr);
@@ -500,17 +484,19 @@ function drawVerticalBars(processId, metricsValues, pdmStatus) {
     ctx.clearRect(0, 0, cssW, cssH);
 
     const slotWidth = cssW / 4;
-    const trackY = 17;
-    const trackH = Math.max(36, cssH - 37);
-    const trackW = 9.5;
+    const labelH = Math.round(cssH * 0.16);   // 상단 수치 영역
+    const footH  = Math.round(cssH * 0.16);   // 하단 명칭 영역
+    const trackY = labelH + 2;
+    const trackH = Math.max(16, cssH - trackY - footH - 2);
+    const trackW = 12;
 
     schema.bars.forEach((b, i) => {
         const val = (metricsValues && metricsValues[i] !== undefined) ? metricsValues[i] : b.base;
         const cx = Math.round(slotWidth * i + slotWidth / 2);
 
-        // 정규화 비율 (0.05 ~ 0.95)
+        // 정규화 비율
         const ratio = Math.max(0.06, Math.min(0.94, (val - b.min) / (b.max - b.min)));
-        const fillH = Math.max(4, trackH * ratio);
+        const fillH = Math.max(3, trackH * ratio);
         const fillY = trackY + trackH - fillH;
 
         // 색상 판정
@@ -518,27 +504,28 @@ function drawVerticalBars(processId, metricsValues, pdmStatus) {
         if (pdmStatus === 'WARNING') barColor = '#ef4444';
         else if (pdmStatus === 'CAUTION') barColor = '#f59e0b';
 
-        // 1. 상단 측정 수치
         ctx.save();
-        ctx.font = 'bold 9.5px "JetBrains Mono", monospace';
+
+        // 1. 상단 측정 수치
+        ctx.font = 'bold 11px "JetBrains Mono", monospace';
         ctx.fillStyle = '#f1f5f9';
         ctx.textAlign = 'center';
-        ctx.fillText(`${val}${b.unit}`, cx, 12);
+        ctx.fillText(`${val}${b.unit}`, cx, labelH);
 
-        // 2. 바 배경 트랙 (Dark Pill)
-        ctx.beginPath();
+        // 2. 바 배경 트랙
         const rx = cx - trackW / 2;
+        ctx.beginPath();
         ctx.roundRect(rx, trackY, trackW, trackH, 3.5);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
         ctx.fill();
 
-        // 3. 내부 채움 막대 (Filled Bar)
+        // 3. 내부 채움 막대
         ctx.beginPath();
         ctx.roundRect(rx, fillY, trackW, fillH, 3.5);
         ctx.fillStyle = barColor;
         ctx.fill();
 
-        // 4. 중심 기준선 틱 (Target Guideline)
+        // 4. 중심 기준선 틱
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
         ctx.lineWidth = 1.0;
         ctx.beginPath();
@@ -547,10 +534,11 @@ function drawVerticalBars(processId, metricsValues, pdmStatus) {
         ctx.stroke();
 
         // 5. 하단 물리량 명칭
-        ctx.font = 'bold 9.5px sans-serif';
+        ctx.font = 'bold 11px sans-serif';
         ctx.fillStyle = '#94a3b8';
         ctx.textAlign = 'center';
-        ctx.fillText(b.label, cx, cssH - 3);
+        ctx.fillText(b.label, cx, cssH - 2);
+
         ctx.restore();
     });
 }

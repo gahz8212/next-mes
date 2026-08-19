@@ -87,6 +87,45 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
 
 ---
 
+### 5. 대시보드 설비카드 UI 전면 개선 (작업자: Antigravity / 2026-08-19)
+- **듀얼 원형 게이지 (건전도 & 정비주기) 대폭 개선**:
+  - 원 게이지를 더 크게 렌더링 (아크 반지름 최대화), 수직 막대 그래프는 약 1/4 길이 단축.
+  - `건전도` / `정비주기` 라벨 완전 삭제 → 상태값(정상/주의/경고, 양호 등)과 퍼센트를 도넛 내부에 2줄로 배치.
+  - 아크 두께 1.5배 (`strokeW: 3.6 → 5.4`), 도넛 내부 텍스트 1.3배 확대 (`13px`), 상태 색상 유지 (`healthColor` / `cycleColor`).
+  - 도넛 2개를 각 절반 영역의 정중앙에 배치하여 균형 개선.
+- **수직 막대 그래프 개선**:
+  - 막대 두께 1.5배 (`trackW: 8 → 12`), 수치/라벨 텍스트 1.3배 (`11px`).
+  - 위아래 빈 공간 최소화 (`labelH/footH: 22% → 16%`, 갭 `4px → 2px`).
+  - 막대 영역 높이를 도넛 영역의 80%로 축소 (`flex: 0.8`).
+- **Canvas 완전 밀착 렌더링 (Full-Bleed) 구현**:
+  - `.gauge-canvas`, `.bars-canvas`: `position: absolute; top:0; left:0; width:100%; height:100%` 적용.
+  - JS에서 `getBoundingClientRect()` → `canvas.offsetWidth/Height`로 전환하여 정확한 픽셀 크기 기반 렌더링.
+  - `.mac-spark-box`: `position: relative; overflow: hidden` 구조로 캔버스가 박스를 100% 꽉 채움.
+- **두 그래프 영역 flex 확장 (카드 하단까지 채움)**:
+  - `.mac-dual-spark-container`: `flex: 1; min-height: 0` → 카드 여백 공간을 꽉 채움.
+  - `.spark-gauge-box / .spark-bars-box`: `flex: 1` → 양쪽 그래프 영역이 컨테이너를 균등 분할.
+  - `.array-panel-strip`: `margin-top: auto` → 4-UP 셀 패널이 항상 카드 최하단 고정.
+  - `.machine-card`: `justify-content: space-between → flex-start` 변경으로 `flex:1` 정상 동작.
+- **좌측 색상 띠 제거**: `.spark-gauge-box` 초록 띠 / `.spark-bars-box` 파란 띠 모두 제거.
+- **카드 전체 레이아웃 컴팩트화**:
+  - `min-height`: `240px → 143px` 대폭 축소 (15인치 소형 모니터 대응).
+  - `padding`: `6px 8px → 5px 7px`.
+  - `BARCODE` 라벨 숨김 (`.mac-data-label { display: none }`), 바코드 값은 그대로 표시.
+- **4-UP 셀 가시성 대폭 향상**:
+  - `.cell-chip`: `8.5px → 10px`, `padding: 1px 4px → 2px 6px`.
+  - `wait` 상태 색상: 거의 보이지 않는 투명 흰색 → `#94a3b8` 슬레이트 (명확한 회색).
+  - `.array-strip-label`: `8px → 9.5px`, 색상 명시 (`#94a3b8`).
+  - 구분선: `dashed` → `solid`, `opacity: 8% → 12%`.
+- **카드 타이틀 & 상태 뱃지 확대**:
+  - `.mac-title`: `11.5px → 13.5px`.
+  - `.mac-status-indicator`: `9.5px → 11px`, `padding: 1px 5px → 2px 7px`.
+- **흐름 화살표 (▶) 개선**:
+  - 위치: 카드 상단 → **세로 중앙** (`align-self: center`).
+  - 색상: 흐린 회색 (`opacity: 0.4`) → `#94a3b8 opacity: 0.85` (밝고 선명하게).
+  - 크기: `11px → 13px`.
+
+---
+
 ## 🏭 전자제조(SMT) 핵심 도메인 지식 정리
 
 ### 1. 리플로우 오븐(Reflow Oven) 연속 터널 공정 & 4대 대표 불량
