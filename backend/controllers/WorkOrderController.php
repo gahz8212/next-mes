@@ -585,8 +585,24 @@ class WorkOrderController {
             $stmt = $pdo->prepare("
                 SELECT 
                   w.wo_id, w.target_qty, w.status, w.due_date, w.completed_at,
-                  w.shipped, w.shipped_at,
+                  w.shipped, w.shipped_at, w.remark, w.parent_wo_id, w.company_id,
                   c.name as company_name,
+                  COALESCE(
+                      (SELECT soi.item_name FROM sales_order_item soi WHERE soi.wo_id = w.wo_id LIMIT 1),
+                      (SELECT soi.item_name FROM sales_order_item soi WHERE soi.wo_id = w.parent_wo_id LIMIT 1),
+                      (SELECT so.item_name FROM sales_order so WHERE so.wo_id = w.wo_id LIMIT 1),
+                      (SELECT so.item_name FROM sales_order so WHERE so.wo_id = w.parent_wo_id LIMIT 1),
+                      (SELECT i.item_name FROM bom_master bm JOIN item i ON bm.item_id = i.id WHERE bm.bom_id = w.bom_id LIMIT 1),
+                      (SELECT bm.product_id FROM bom_master bm WHERE bm.bom_id = w.bom_id LIMIT 1),
+                      '—'
+                  ) as item_name,
+                  COALESCE(
+                      (SELECT soi.order_no FROM sales_order_item soi WHERE soi.wo_id = w.wo_id LIMIT 1),
+                      (SELECT soi.order_no FROM sales_order_item soi WHERE soi.wo_id = w.parent_wo_id LIMIT 1),
+                      (SELECT so.order_no FROM sales_order so WHERE so.wo_id = w.wo_id LIMIT 1),
+                      (SELECT so.order_no FROM sales_order so WHERE so.wo_id = w.parent_wo_id LIMIT 1),
+                      ''
+                  ) as order_no,
                   COALESCE(SUM(CASE WHEN b.status != 'WAIT' THEN 1 ELSE 0 END), 0) as processed_qty,
                   COALESCE(SUM(CASE WHEN b.status IN ('SHIPPING') THEN 1 ELSE 0 END), 0) as good_qty,
                   COALESCE(SUM(CASE WHEN b.status = 'FAIL' THEN 1 ELSE 0 END), 0) as fail_qty
@@ -594,7 +610,7 @@ class WorkOrderController {
                 LEFT JOIN company c ON w.company_id = c.id
                 LEFT JOIN barcode_master b ON w.wo_id = b.wo_id
                 WHERE {$whereSql}
-                GROUP BY w.wo_id, w.target_qty, w.status, w.due_date, w.completed_at, w.shipped, w.shipped_at, c.name
+                GROUP BY w.wo_id, w.target_qty, w.status, w.due_date, w.completed_at, w.shipped, w.shipped_at, w.remark, w.parent_wo_id, w.company_id, c.name, w.bom_id
                 ORDER BY w.due_date ASC
             ");
             $stmt->execute($params);
@@ -610,7 +626,12 @@ class WorkOrderController {
                     'completed_at'  => $row['completed_at'],
                     'shipped'       => (int)$row['shipped'],
                     'shipped_at'    => $row['shipped_at'],
+                    'remark'        => $row['remark'],
+                    'parent_wo_id'  => $row['parent_wo_id'],
+                    'company_id'    => $row['company_id'],
                     'company_name'  => $row['company_name'],
+                    'item_name'     => $row['item_name'],
+                    'order_no'      => $row['order_no'],
                     'processed_qty' => (int)$row['processed_qty'],
                     'good_qty'      => (int)$row['good_qty'],
                     'fail_qty'      => (int)$row['fail_qty']

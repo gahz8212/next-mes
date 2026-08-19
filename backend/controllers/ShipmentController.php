@@ -34,11 +34,15 @@ class ShipmentController {
             ];
 
             // Records
-            $recordsSql = "SELECT s.*, w.target_qty, c.name as company_name,
+            $recordsSql = "SELECT s.*, w.target_qty, COALESCE(c.name, '거래처') as company_name, 
+              COALESCE(i.item_name, pm.product_name, s.wo_id) as item_name,
               (SELECT COALESCE(SUM(b.status!='WAIT'), 0) FROM barcode_master b WHERE b.wo_id=s.wo_id) as processed_qty
             FROM shipment s
             LEFT JOIN work_order w ON s.wo_id = w.wo_id
-            LEFT JOIN company c ON s.company_id = c.id
+            LEFT JOIN bom_master bm ON w.bom_id = bm.bom_id
+            LEFT JOIN item i ON bm.item_id = i.id
+            LEFT JOIN product_master pm ON bm.product_id = pm.product_id
+            LEFT JOIN company c ON COALESCE(s.company_id, w.company_id) = c.id
             WHERE DATE(s.ship_date) BETWEEN :start AND :end";
 
             $recParams = [

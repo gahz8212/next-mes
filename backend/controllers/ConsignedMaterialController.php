@@ -85,7 +85,23 @@ class ConsignedMaterialController {
                     MAX(m.part_name) as part_name,
                     m.company_id,
                     COALESCE(c.name, '미지정 거래처') as company_name,
-                    COALESCE(m.order_no, '공용 자재(Pool)') as order_no,
+                    COALESCE(NULLIF(m.order_no, ''), '공용 자재(Pool)') as order_no,
+                    COALESCE(
+                        (SELECT GROUP_CONCAT(DISTINCT item_name SEPARATOR ', ') FROM sales_order_item WHERE order_no = m.order_no),
+                        (SELECT product_id FROM bom_master WHERE bom_id = MAX(m.bom_id) LIMIT 1),
+                        '사급 자재'
+                    ) as project_name,
+                    (
+                        SELECT JSON_ARRAYAGG(
+                            JSON_OBJECT(
+                                'item_name', soi.item_name,
+                                'has_bom', IF((SELECT bom_id FROM work_order WHERE wo_id = soi.wo_id) IS NOT NULL, 1, 0)
+                            )
+                        )
+                        FROM sales_order_item soi
+                        WHERE soi.order_no = m.order_no
+                    ) as order_items_json,
+                    MAX(m.bom_id) as bom_id,
                     MAX(m.unit) as unit,
                     COALESCE(SUM(CASE WHEN m.inout_type = 'IN' THEN m.qty ELSE 0 END), 0) as total_in,
                     COALESCE(SUM(CASE WHEN m.inout_type = 'OUT' THEN m.qty ELSE 0 END), 0) as total_out,
@@ -106,12 +122,17 @@ class ConsignedMaterialController {
                 $inQty = (float)$r['total_in'];
                 $outQty = (float)$r['total_out'];
                 $stock = $inQty - $outQty;
+                $itemsSummary = !empty($r['order_items_json']) ? json_decode($r['order_items_json'], true) : [];
+
                 $list[] = [
                     'part_no'        => $r['part_no'],
                     'part_name'      => $r['part_name'] ?: $r['part_no'],
                     'company_id'     => $r['company_id'],
                     'company_name'   => $r['company_name'],
                     'order_no'       => $r['order_no'],
+                    'project_name'   => $r['project_name'],
+                    'items_summary'  => $itemsSummary ?: [],
+                    'bom_id'         => $r['bom_id'],
                     'unit'           => $r['unit'] ?: 'EA',
                     'total_in'       => $inQty,
                     'total_out'      => $outQty,

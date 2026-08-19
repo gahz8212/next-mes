@@ -67,7 +67,7 @@ class MaterialController {
             FROM material_inout m
             LEFT JOIN company c ON m.company_id = c.id
             $cond
-            ORDER BY m.created_at DESC LIMIT 200";
+            ORDER BY m.created_at DESC LIMIT 2000";
 
             $stmtRec = $pdo->prepare($recordsSql);
             $stmtRec->execute($params);
@@ -191,6 +191,92 @@ class MaterialController {
             Response::json(["status" => "success"]);
 
         } catch (Exception $e) {
+            Response::error($e->getMessage());
+        }
+    }
+
+    /**
+     * 4. 자사 자재 엑셀 일괄 입출고 등록 (Batch)
+     */
+    public static function createMaterialBatch(): void {
+        try {
+            $pdo = Database::getConnection();
+            $input = Request::getBody();
+            $items = $input['items'] ?? [];
+            $inoutType = strtoupper(trim($input['inout_type'] ?? 'IN'));
+            $supplyType = strtoupper(trim($input['supply_type'] ?? 'PROCURED'));
+            $globalCompanyId = !empty($input['company_id']) ? (int)$input['company_id'] : null;
+
+            if (empty($items) || !is_array($items)) {
+                Response::error("등록할 자재 항목이 없습니다.");
+            }
+
+            if (!in_array($inoutType, ['IN', 'OUT'])) {
+                $inoutType = 'IN';
+            }
+
+            $pdo->beginTransaction();
+
+            $insertedInCount = 0;
+            $insertedOutCount = 0;
+            $totalInQty = 0;
+            $totalOutQty = 0;
+
+            foreach ($items as $item) {
+                $partNo = trim($item['part_no'] ?? '');
+                $partName = trim($item['part_name'] ?? '') ?: null;
+                $itemInout = strtoupper(trim($item['inout_type'] ?? ''));
+                if (!in_array($itemInout, ['IN', 'OUT'])) {
+                    $itemInout = $inoutType;
+                }
+                $qty = (float)($item['qty'] ?? 0);
+                $unit = trim($item['unit'] ?? '') ?: 'EA';
+                $woId = trim($item['wo_id'] ?? '') ?: null;
+                $companyId = !empty($item['company_id']) ? (int)$item['company_id'] : $globalCompanyId;
+                $note = trim($item['note'] ?? '') ?: null;
+
+                if (empty($partNo) || $qty <= 0) {
+                    continue; // 유효하지 않은 행은 건너뜀
+                }
+
+                $stmt->execute([
+                    ':part_no' => $partNo,
+                    ':part_name' => $partName,
+                    ':inout_type' => $itemInout,
+                    ':supply_type' => $supplyType,
+                    ':qty' => $qty,
+                    ':unit' => $unit,
+                    ':wo_id' => $woId,
+                    ':company_id' => $companyId,
+                    ':note' => $note
+                ]);
+
+                if ($itemInout === 'IN') {
+                    $insertedInCount++;
+                    $totalInQty += $qty;
+                } else {
+                    $insertedOutCount++;
+                    $totalOutQty += $qty;
+                }
+            }
+
+            $pdo->commit();
+
+            Response::json([
+                "status" => "success",
+                "data" => [
+                    "inserted_count" => ($insertedInCount + $insertedOutCount),
+                    "in_count" => $insertedInCount,
+                    "out_count" => $insertedOutCount,
+                    "in_qty" => $totalInQty,
+                    "out_qty" => $totalOutQty
+                ]
+            ]);
+
+        } catch (Exception $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             Response::error($e->getMessage());
         }
     }

@@ -35,15 +35,17 @@ class CompanyController {
         try {
             $pdo = Database::getConnection();
             $sql = "SELECT 
-              c.id, c.name, c.code, c.tel, c.email,
+              c.*,
               COUNT(w.wo_id) as total_wo,
               SUM(CASE WHEN w.status = 'DONE' THEN 1 ELSE 0 END) as done_wo,
               SUM(CASE WHEN w.status NOT IN ('DONE') THEN 1 ELSE 0 END) as active_wo,
               COALESCE(SUM(w.target_qty), 0) as total_qty,
-              MAX(w.due_date) as last_due_date
+              MAX(w.due_date) as last_due_date,
+              (SELECT COUNT(*) FROM sales_order so WHERE so.company_id = c.id) as total_po,
+              (SELECT COUNT(*) FROM part_alias pa WHERE pa.company_id = c.id) as total_avl
             FROM company c
             LEFT JOIN work_order w ON c.id = w.company_id
-            GROUP BY c.id, c.name, c.code, c.tel, c.email
+            GROUP BY c.id
             ORDER BY c.name ASC";
 
             $stmt = $pdo->query($sql);
@@ -66,13 +68,27 @@ class CompanyController {
                 Response::error("업체명을 입력하세요.");
             }
 
-            $code = strtoupper(bin2hex(random_bytes(1))); // 2-hex char code
-            $stmt = $pdo->prepare("INSERT INTO company (name, code) VALUES (?, ?)");
-            $stmt->execute([$name, $code]);
+            $code          = !empty($input['code']) ? trim($input['code']) : strtoupper(bin2hex(random_bytes(1)));
+            $biz_no        = trim($input['biz_no'] ?? '') ?: null;
+            $ceo_name      = trim($input['ceo_name'] ?? '') ?: null;
+            $type          = trim($input['type'] ?? 'CUSTOMER');
+            $tel           = trim($input['tel'] ?? '') ?: null;
+            $email         = trim($input['email'] ?? '') ?: null;
+            $manager_name  = trim($input['manager_name'] ?? '') ?: null;
+            $manager_dept  = trim($input['manager_dept'] ?? '') ?: null;
+            $manager_phone = trim($input['manager_phone'] ?? '') ?: null;
+            $manager_email = trim($input['manager_email'] ?? '') ?: null;
+            $address       = trim($input['address'] ?? '') ?: null;
+            $memo          = trim($input['memo'] ?? '') ?: null;
+
+            $stmt = $pdo->prepare("INSERT INTO company (name, code, biz_no, ceo_name, type, tel, email, manager_name, manager_dept, manager_phone, manager_email, address, memo) 
+                                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$name, $code, $biz_no, $ceo_name, $type, $tel, $email, $manager_name, $manager_dept, $manager_phone, $manager_email, $address, memo]);
             $id = (int)$pdo->lastInsertId();
 
             Response::json([
                 "status" => "success",
+                "message" => "거래처가 등록되었습니다.",
                 "data" => ["id" => $id, "name" => $name, "code" => $code]
             ]);
         } catch (Exception $e) {
@@ -94,12 +110,29 @@ class CompanyController {
                 Response::error("필수 입력 항목(id, name)이 누락되었습니다.");
             }
 
-            $tel   = isset($input['tel']) ? trim($input['tel']) : null;
-            $email = isset($input['email']) ? trim($input['email']) : null;
-            $memo  = isset($input['memo']) ? trim($input['memo']) : null;
+            $code          = trim($input['code'] ?? '') ?: null;
+            $biz_no        = trim($input['biz_no'] ?? '') ?: null;
+            $ceo_name      = trim($input['ceo_name'] ?? '') ?: null;
+            $type          = trim($input['type'] ?? 'CUSTOMER');
+            $tel           = trim($input['tel'] ?? '') ?: null;
+            $email         = trim($input['email'] ?? '') ?: null;
+            $manager_name  = trim($input['manager_name'] ?? '') ?: null;
+            $manager_dept  = trim($input['manager_dept'] ?? '') ?: null;
+            $manager_phone = trim($input['manager_phone'] ?? '') ?: null;
+            $manager_email = trim($input['manager_email'] ?? '') ?: null;
+            $address       = trim($input['address'] ?? '') ?: null;
+            $memo          = trim($input['memo'] ?? '') ?: null;
 
-            $stmt = $pdo->prepare("UPDATE company SET name=?, tel=?, email=?, memo=? WHERE id=?");
-            $stmt->execute([$name, $tel, $email, $memo, $companyId]);
+            $stmt = $pdo->prepare("UPDATE company SET 
+                                   name=?, code=COALESCE(?, code), biz_no=?, ceo_name=?, type=?, 
+                                   tel=?, email=?, manager_name=?, manager_dept=?, manager_phone=?, 
+                                   manager_email=?, address=?, memo=? 
+                                   WHERE id=?");
+            $stmt->execute([
+                $name, $code, $biz_no, $ceo_name, $type,
+                $tel, $email, $manager_name, $manager_dept, $manager_phone,
+                $manager_email, $address, $memo, $companyId
+            ]);
 
             Response::json(["status" => "success", "message" => "업체 정보가 수정되었습니다."]);
         } catch (Exception $e) {

@@ -2,63 +2,14 @@
 // backend/controllers/OrderController.php
 
 class OrderController {
+    private static bool $schemaEnsured = true;
+
     /**
-     * DB 스키마 자동 동기화 및 마이그레이션
+     * DB 스키마 자동 동기화 및 마이그레이션 (기 생성 완료되어 즉시 반환)
      */
     private static function ensureSchema(PDO $pdo): void {
-        $pdo->exec("
-            CREATE TABLE IF NOT EXISTS sales_order_item (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                order_id INT NOT NULL,
-                order_no VARCHAR(50) NOT NULL,
-                item_code VARCHAR(50) DEFAULT NULL,
-                item_name VARCHAR(100) NOT NULL,
-                order_qty INT NOT NULL DEFAULT 1,
-                unit_price DECIMAL(12,2) DEFAULT 0,
-                total_price DECIMAL(14,2) DEFAULT 0,
-                due_date DATE DEFAULT NULL,
-                status ENUM('RECEIVED', 'IN_PRODUCTION', 'COMPLETED', 'CANCELLED') DEFAULT 'RECEIVED',
-                wo_id VARCHAR(50) DEFAULT NULL,
-                memo TEXT DEFAULT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_soi_order_id (order_id),
-                INDEX idx_soi_order_no (order_no),
-                INDEX idx_soi_wo_id (wo_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-        ");
-
-        try {
-            $pdo->exec("ALTER TABLE item ADD COLUMN unit_price DECIMAL(12,2) DEFAULT 0 AFTER unit");
-        } catch (\Exception $e) {}
-        try {
-            $pdo->exec("ALTER TABLE item ADD COLUMN status VARCHAR(20) DEFAULT 'ACTIVE' AFTER unit_price");
-        } catch (\Exception $e) {}
-
-        // 기존 1:1 sales_order 데이터를 1:N sales_order_item으로 마이그레이션 (필요시)
-        $chk = $pdo->query("SELECT COUNT(*) FROM sales_order_item")->fetchColumn();
-        if ((int)$chk === 0) {
-            $existingOrders = $pdo->query("SELECT * FROM sales_order WHERE item_name IS NOT NULL AND item_name != ''")->fetchAll();
-            $insItem = $pdo->prepare("
-                INSERT INTO sales_order_item (order_id, order_no, item_code, item_name, order_qty, unit_price, total_price, due_date, status, wo_id, memo, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            foreach ($existingOrders as $eo) {
-                $insItem->execute([
-                    $eo['id'],
-                    $eo['order_no'],
-                    $eo['item_code'] ?? '',
-                    $eo['item_name'],
-                    $eo['order_qty'] ?: 1,
-                    $eo['unit_price'] ?: 0,
-                    $eo['total_price'] ?: 0,
-                    $eo['due_date'] ?? null,
-                    $eo['status'] ?: 'RECEIVED',
-                    $eo['wo_id'] ?: null,
-                    $eo['memo'] ?? null,
-                    $eo['created_at'] ?? date('Y-m-d H:i:s')
-                ]);
-            }
-        }
+        if (self::$schemaEnsured) return;
+        self::$schemaEnsured = true;
     }
 
     /**

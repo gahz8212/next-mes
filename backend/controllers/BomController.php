@@ -42,7 +42,7 @@ class BomController {
                 Response::json(["status" => "success", "data" => [], "version" => "v1.0"]);
             }
 
-            $stmt = $pdo->prepare("SELECT part_no, COALESCE(part_name, '') as part_name, req_qty, COALESCE(location, '') as location, feeder_slot FROM bom_detail WHERE bom_id = ?");
+            $stmt = $pdo->prepare("SELECT part_no, COALESCE(part_name, '') as part_name, COALESCE(points, req_qty, 1) as points, COALESCE(provide_qty, req_qty) as provide_qty, req_qty, COALESCE(location, '') as location, feeder_slot FROM bom_detail WHERE bom_id = ?");
             $stmt->execute([$bom_id]);
             $details = $stmt->fetchAll();
 
@@ -72,26 +72,66 @@ class BomController {
                 Response::error("품목(Item) 또는 작업지시(WO)와 BOM 데이터가 필요합니다.");
             }
 
+            // 포인트(PCB 1장당 소요수량) 누락 및 0 이하 검증 (하나라도 빠지면 저장/입고 차단)
+            $invalidItems = [];
+            foreach ($bom_data as $idx => $row) {
+                $pNo = trim($row['part_no'] ?? '');
+                $qty = isset($row['req_qty']) ? (float)$row['req_qty'] : 0;
+                if (empty($pNo)) {
+                    Response::error("BOM 데이터의 " . ($idx + 1) . "번째 행에 파트번호가 누락되었습니다.");
+                }
+                if ($qty <= 0) {
+                    $invalidItems[] = "행 " . ($idx + 1) . " (부품: {$pNo})";
+                }
+            }
+
+            if (!empty($invalidItems)) {
+                $itemStr = implode(', ', array_slice($invalidItems, 0, 5));
+                if (count($invalidItems) > 5) {
+                    $itemStr .= " 외 " . (count($invalidItems) - 5) . "건";
+                }
+                Response::error("포인트(PCB 1장당 소요수량)가 누락되거나 0 이하인 부품이 있습니다: [{$itemStr}]. 모든 부품의 수량을 1 이상으로 입력해야 저장 및 입고 처리가 가능합니다.");
+            }
+
             $pdo->beginTransaction();
 
-            // 1. item_id 자동 추적 및 자동 생성: wo_id 기준 수주(sales_order)와 품목(item)을 매칭하여 item_id 확보
+            // 1. item_id 자동 추적 및 자동 생성: wo_id 기준 수주 품목(sales_order_item)과 품목(item)을 매칭하여 item_id 확보
             if (!$item_id && !empty($wo_id)) {
-                $stmtSo = $pdo->prepare("SELECT company_id, item_code, item_name FROM sales_order WHERE wo_id = ? LIMIT 1");
-                $stmtSo->execute([$wo_id]);
-                $so = $stmtSo->fetch();
-                if ($so && !empty($so['item_name'])) {
-                    $cId = (int)$so['company_id'];
-                    $iCode = trim($so['item_code'] ?? '');
-                    $iName = trim($so['item_name'] ?? '');
+                $stmtSoi = $pdo->prepare("
+                    SELECT 
+                        soi.item_code, 
+                        soi.item_name, 
+                        COALESCE(so.company_id, wo.company_id) as company_id 
+                    FROM work_order wo
+                    LEFT JOIN sales_order_item soi ON wo.wo_id = soi.wo_id
+                    LEFT JOIN sales_order so ON soi.order_no = so.order_no
+                    WHERE wo.wo_id = ?
+                    LIMIT 1
+                ");
+                $stmtSoi->execute([$wo_id]);
+                $soi = $stmtSoi->fetch();
+                
+                if ($soi && !empty($soi['item_name'])) {
+                    $cId = (int)($soi['company_id'] ?: $company_id);
+                    $iCode = trim($soi['item_code'] ?? '');
+                    $iName = trim($soi['item_name'] ?? '');
 
-                    $stmtIt = $pdo->prepare("SELECT id FROM item WHERE ((item_code != '' AND item_code = ?) OR item_name = ?) ORDER BY (company_id = ?) DESC, id DESC LIMIT 1");
+                    $stmtIt = $pdo->prepare("
+                        SELECT id FROM item 
+                        WHERE ((item_code != '' AND item_code = ?) OR item_name = ?)
+                        ORDER BY (company_id = ?) DESC, id DESC 
+                        LIMIT 1
+                    ");
                     $stmtIt->execute([$iCode, $iName, $cId]);
                     $itemRow = $stmtIt->fetch();
 
                     if ($itemRow) {
                         $item_id = (int)$itemRow['id'];
                     } else {
-                        $insIt = $pdo->prepare("INSERT INTO item (company_id, item_code, item_name, unit, description, created_at) VALUES (?, ?, ?, 'EA', '작업지시 BOM 연계 자동 생성 품목', NOW())");
+                        $insIt = $pdo->prepare("
+                            INSERT INTO item (company_id, item_code, item_name, unit, description, created_at) 
+                            VALUES (?, ?, ?, 'EA', '작업지시 BOM 연계 자동 생성 품목', NOW())
+                        ");
                         $insIt->execute([$cId ?: null, $iCode ?: null, $iName]);
                         $item_id = (int)$pdo->lastInsertId();
                     }
@@ -130,7 +170,7 @@ class BomController {
             }
 
             // 3. bom_detail & feeder_setup 인서트
-            $detailStmt = $pdo->prepare("INSERT INTO bom_detail (bom_id, part_no, part_name, req_qty, location, feeder_slot) VALUES (?, ?, ?, ?, ?, ?)");
+            $detailStmt = $pdo->prepare("INSERT INTO bom_detail (bom_id, part_no, part_name, req_qty, points, provide_qty, location, feeder_slot) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
             
             if (!empty($wo_id)) {
                 $delFeeder = $pdo->prepare("DELETE FROM feeder_setup WHERE wo_id = ? AND status != 'VERIFIED'");
@@ -138,17 +178,36 @@ class BomController {
                 $insFeeder = $pdo->prepare("INSERT INTO feeder_setup (wo_id, slot_no, part_no, location, req_qty, status) VALUES (?, ?, ?, ?, ?, 'PENDING') ON DUPLICATE KEY UPDATE part_no = VALUES(part_no), location = VALUES(location), req_qty = VALUES(req_qty)");
             }
 
-            $slotIndex = 1;
+            // WO 목표 수량 조회 (제공수량 미입력 시 자동 계산용)
+            $woTargetQty = 1;
+            $woOrderNo = null;
+            if (!empty($wo_id)) {
+                $stmtWoInfo = $pdo->prepare("
+                    SELECT wo.target_qty, soi.order_no 
+                    FROM work_order wo 
+                    LEFT JOIN sales_order_item soi ON wo.wo_id = soi.wo_id 
+                    WHERE wo.wo_id = ? 
+                    LIMIT 1
+                ");
+                $stmtWoInfo->execute([$wo_id]);
+                $woInfo = $stmtWoInfo->fetch();
+                if ($woInfo) {
+                    $woTargetQty = (float)($woInfo['target_qty'] ?: 1);
+                    $woOrderNo = $woInfo['order_no'] ?: null;
+                }
+            }
+
             foreach ($bom_data as $row) {
                 $pNo = trim($row['part_no'] ?? '');
                 $pName = trim($row['part_name'] ?? '') ?: $pNo;
-                $qty = (float)($row['req_qty'] ?? 1);
+                $points = (float)($row['points'] ?? $row['req_qty'] ?? 1);
+                $provQty = !empty($row['provide_qty']) ? (float)$row['provide_qty'] : null;
                 $loc = trim($row['location'] ?? '');
-                $slotNo = !empty($row['feeder_slot']) ? (int)$row['feeder_slot'] : $slotIndex++;
+                $slotNo = !empty($row['feeder_slot']) ? (int)$row['feeder_slot'] : null;
 
-                $detailStmt->execute([$bom_id, $pNo, $pName, $qty, $loc, $slotNo]);
-                if (!empty($wo_id) && isset($insFeeder)) {
-                    $insFeeder->execute([$wo_id, $slotNo, $pNo, $loc, $qty]);
+                $detailStmt->execute([$bom_id, $pNo, $pName, $points, $points, $provQty, $loc, $slotNo]);
+                if (!empty($wo_id) && $slotNo !== null && isset($insFeeder)) {
+                    $insFeeder->execute([$wo_id, $slotNo, $pNo, $loc, $points]);
                 }
             }
 
@@ -159,20 +218,25 @@ class BomController {
                 $stmt->execute([$mappingJson, $company_id]);
             }
 
-            // 5. 사급 자재 자동 입고 연계
+            // 5. 사급 자재 자동 입고 연계 (제공수량 우선, 없으면 목표수량 x 포인트)
             $inbound_count = 0;
             if ($auto_inbound) {
-                $matStmt = $pdo->prepare("INSERT INTO material_inout (part_no, part_name, inout_type, supply_type, qty, unit, wo_id, company_id, note) VALUES (?, ?, 'IN', 'CONSIGNED', ?, 'EA', ?, ?, ?)");
+                $matStmt = $pdo->prepare("INSERT INTO material_inout (part_no, part_name, inout_type, supply_type, qty, unit, wo_id, order_no, bom_id, company_id, note) VALUES (?, ?, 'IN', 'CONSIGNED', ?, 'EA', ?, ?, ?, ?, ?)");
                 $comp_id = !empty($company_id) ? (int)$company_id : null;
                 
                 foreach ($bom_data as $row) {
                     $part_no = trim($row['part_no'] ?? '');
                     $part_name = trim($row['part_name'] ?? '') ?: $part_no;
-                    $qty = (float)($row['req_qty'] ?? 0);
-                    if (!empty($part_no) && $qty > 0) {
+                    $points = (float)($row['points'] ?? $row['req_qty'] ?? 1);
+                    $provQty = !empty($row['provide_qty']) ? (float)$row['provide_qty'] : 0;
+                    
+                    // 제공수량이 명시되어 있으면 제공수량으로, 없으면 발주목표수량 * 포인트로 계산
+                    $inboundQty = $provQty > 0 ? $provQty : ($points * $woTargetQty);
+
+                    if (!empty($part_no) && $inboundQty > 0) {
                         $loc = !empty($row['location']) ? " [위치: {$row['location']}]" : "";
-                        $note = "BOM 등록 자동 연계 사급 입고 (WO: {$wo_id}{$loc}) [버전: {$version}]";
-                        $matStmt->execute([$part_no, $part_name, $qty, $wo_id, $comp_id, $note]);
+                        $note = "BOM 등록 자동 연계 사급 입고 (WO: {$wo_id}{$loc}) [포인트: {$points}, 버전: {$version}]";
+                        $matStmt->execute([$part_no, $part_name, $inboundQty, $wo_id ?: null, $woOrderNo, $bom_id, $comp_id, $note]);
                         $inbound_count++;
                     }
                 }
@@ -584,7 +648,7 @@ class BomController {
                 Response::error("존재하지 않는 BOM 버전입니다.");
             }
 
-            $stmtDetails = $pdo->prepare("SELECT detail_id, part_no, COALESCE(part_name, '') as part_name, req_qty, COALESCE(location, '') as location, feeder_slot, COALESCE(is_nc, 0) as is_nc FROM bom_detail WHERE bom_id = ? ORDER BY detail_id ASC");
+            $stmtDetails = $pdo->prepare("SELECT detail_id, part_no, COALESCE(part_name, '') as part_name, COALESCE(points, req_qty, 1) as points, COALESCE(provide_qty, req_qty) as provide_qty, req_qty, COALESCE(location, '') as location, feeder_slot, COALESCE(is_nc, 0) as is_nc FROM bom_detail WHERE bom_id = ? ORDER BY detail_id ASC");
             $stmtDetails->execute([$bom_id]);
             $details = $stmtDetails->fetchAll();
 
