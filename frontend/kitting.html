@@ -148,9 +148,10 @@
 
     <!-- 스크립트 로직 -->
     <script>
-        let currentWoId = null;
+                let currentWoId = null;
         let currentFeederData = null;
-        let simulatedProducedQty = 0; slotSpliceOffset = {}; // 실시간 릴 잔량 시뮬레이션용 생산 수량
+        let simulatedProducedQty = 0; // 실시간 릴 잔량 시뮬레이션용 생산 수량
+        let slotSpliceOffset = {}; // 슬롯별 스플라이싱 시점 오프셋
 
         const currentRole = localStorage.getItem('role');
         if (currentRole !== 'worker' && currentRole !== 'admin') {
@@ -482,8 +483,6 @@
                 alert("초기화 실패: " + e.message);
             }
         }
-
-        let slotSpliceOffset = {}; // 슬롯별 스플라이싱 시점 오프셋
 
         // ⚡ 1-클릭 자재카드 스플라이싱 & 잔량 100% 즉시 리필 함수
         async function quickSpliceSlot(slotNo, partNo) {
