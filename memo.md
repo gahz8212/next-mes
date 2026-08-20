@@ -418,3 +418,12 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
   - **관리자 작업지시관리/생산계획 (`admin.html`)**: 계획/관리 화면이므로 가동 제어 버튼은 두지 않고, 공정 진행률(SMT 50% + DIP 50%) 및 상태 뱃지만 명확히 모니터링하도록 정리.
 - **백엔드 자동 동기화**:
   - SMT 바코드 실적이 목표 수량에 도달하면 `status = 'SMT_DONE'`으로 자동 상태 동기화.
+
+### 9. 자재 스플라이싱(Material Splicing) 포카요케 검증 시스템
+- **개념**: SMT 라인 가동 중 특정 슬롯의 릴 잔량이 소진 임박(10% 이하 등)했을 때, 장비를 멈추지 않고 신규 릴을 테이프로 이어 붙여 연속 생산하는 작업.
+- **오삽 방지(Poka-Yoke) 검증 절차**:
+  1. 피킹 화면([`kitting.html`](file:///home/gahz/next-mes/frontend/kitting.html))에서 잔량이 부족한 슬롯 카드의 **`[🔗 스플라이싱]`** 버튼 클릭.
+  2. 스플라이싱 전용 검증 모달에서 새로 연결할 신규 릴 바코드를 스캔.
+  3. 백엔드([`FeederController.php`](file:///home/gahz/next-mes/backend/controllers/FeederController.php))에서 정품번 일치 여부, 공인 대체품(AVL) 승인 여부, MSL 수명 만료 여부를 실시간 대조.
+  4. **검증 성공 시**: 피더 슬롯의 릴 바코드 자동 갱신, 실시간 잔량 100% 리필, `system_log`에 스플라이싱 이력 추적(Traceability) 기록.
+  5. **검증 실패 시 (이종 부품)**: 🚨 **오투입(MISMATCH) 경고 알림**과 함께 연결을 즉시 차단하여 불량 PCB 생산을 원천 방지.

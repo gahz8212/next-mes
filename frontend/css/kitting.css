@@ -833,4 +833,176 @@ html, body {
     }
 }
 
+/* ── 자재 스플라이싱(Splicing) 스타일 ── */
+.btn-splice-trigger {
+    background: rgba(124, 58, 237, 0.2);
+    color: #c4b5fd;
+    border: 1px solid rgba(124, 58, 237, 0.4);
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 7px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+.btn-splice-trigger:hover {
+    background: #7c3aed;
+    color: #ffffff;
+    border-color: #7c3aed;
+    box-shadow: 0 0 10px rgba(124, 58, 237, 0.5);
+}
 
+.splice-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.splice-modal-card {
+    background: #1e293b;
+    border: 1px solid rgba(124, 58, 237, 0.4);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 480px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(124, 58, 237, 0.2);
+    overflow: hidden;
+    animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPop {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.splice-modal-header {
+    background: rgba(15, 23, 42, 0.8);
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.splice-close-btn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 22px;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.15s ease;
+}
+.splice-close-btn:hover {
+    color: #f8fafc;
+}
+
+.splice-modal-body {
+    padding: 20px;
+}
+
+.splice-info-box {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.splice-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+}
+
+.splice-label {
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.splice-val-slot {
+    background: #3b82f6;
+    color: #ffffff;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.splice-val-part {
+    color: #60a5fa;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800;
+    font-size: 13.5px;
+}
+
+.splice-val-reel {
+    color: #34d399;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 12.5px;
+}
+
+.splice-input {
+    flex: 1;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1.5px solid rgba(124, 58, 237, 0.5);
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: #ffffff;
+    font-size: 13.5px;
+    font-family: 'JetBrains Mono', monospace;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.splice-input:focus {
+    border-color: #a78bfa;
+    box-shadow: 0 0 10px rgba(167, 139, 250, 0.4);
+}
+
+.splice-submit-btn {
+    background: linear-gradient(135deg, #7c3aed, #6366f1);
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 0 16px;
+    font-weight: 800;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+.splice-submit-btn:hover {
+    background: linear-gradient(135deg, #6d28d9, #4f46e5);
+    box-shadow: 0 0 12px rgba(124, 58, 237, 0.5);
+}
+
+.splice-feedback {
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+.splice-feedback.success {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #6ee7b7;
+}
+.splice-feedback.error {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+}

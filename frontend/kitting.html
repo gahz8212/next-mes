@@ -347,6 +347,9 @@
                         </div>
                         <div class="live-qty-wrap">
                             ${liveInfoHtml}
+                            ${isVerified ? `
+                                <button type="button" class="btn-splice-trigger" onclick="event.stopPropagation(); openSpliceModal(${slot.slot_no}, '${slot.part_no}', '${slot.reel_barcode || ''}')" title="자재 소진 시 신규 릴 스플라이싱 검증">🔗 스플라이싱</button>
+                            ` : ''}
                         </div>
                     </div>
                 `;
@@ -507,8 +510,131 @@
         initWOList();
         setInterval(syncLiveProductionQty, 1500);
 
+        /* ── 자재 스플라이싱(Splicing) 모달 및 검증 로직 ── */
+        let currentSpliceSlotNo = null;
+
+        function openSpliceModal(slotNo, partNo, currentReel) {
+            currentSpliceSlotNo = slotNo;
+            document.getElementById('spliceSlotLabel').innerText = `Slot #${slotNo}`;
+            document.getElementById('splicePartLabel').innerText = partNo;
+            document.getElementById('spliceOldReelLabel').innerText = currentReel || '(미장착)';
+            
+            const fb = document.getElementById('spliceFeedback');
+            fb.style.display = 'none';
+            fb.className = 'splice-feedback';
+            fb.innerText = '';
+
+            const input = document.getElementById('spliceReelInput');
+            input.value = '';
+            
+            document.getElementById('spliceModalOverlay').style.display = 'flex';
+            setTimeout(() => input.focus(), 150);
+        }
+
+        function closeSpliceModal() {
+            document.getElementById('spliceModalOverlay').style.display = 'none';
+            currentSpliceSlotNo = null;
+        }
+
+        async function submitSpliceScan() {
+            const input = document.getElementById('spliceReelInput');
+            const newReelBarcode = input.value.trim();
+            const fb = document.getElementById('spliceFeedback');
+
+            if (!newReelBarcode) {
+                fb.className = 'splice-feedback error';
+                fb.innerText = '신규 릴 바코드를 입력하거나 스캔하세요.';
+                fb.style.display = 'block';
+                return;
+            }
+
+            if (!currentWoId || !currentSpliceSlotNo) return;
+
+            try {
+                const res = await fetch('/backend/api/scan_feeder.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        wo_id: currentWoId,
+                        slot_no: currentSpliceSlotNo,
+                        reel_barcode: newReelBarcode,
+                        action: 'splice'
+                    })
+                });
+                const json = await res.json();
+
+                if (json.status === 'success') {
+                    fb.className = 'splice-feedback success';
+                    fb.innerText = `✅ ${json.message}`;
+                    fb.style.display = 'block';
+
+                    const banner = document.getElementById('feedbackBanner');
+                    const text = document.getElementById('feedbackText');
+                    if (banner && text) {
+                        banner.className = 'feedback-banner success';
+                        text.innerText = `[스플라이싱 성공] ${json.message}`;
+                    }
+
+                    await loadKittingData(currentWoId, currentSpliceSlotNo);
+                    setTimeout(() => {
+                        closeSpliceModal();
+                    }, 1200);
+                } else {
+                    fb.className = 'splice-feedback error';
+                    fb.innerText = `🚨 ${json.message}`;
+                    fb.style.display = 'block';
+                    input.select();
+                }
+            } catch (e) {
+                fb.className = 'splice-feedback error';
+                fb.innerText = '통신 오류: ' + e.message;
+                fb.style.display = 'block';
+            }
+        }
+
     </script>
     <!-- Header Navigation Controller -->
     <script src="js/header.js"></script>
+
+    <!-- Splice Modal Overlay -->
+    <div id="spliceModalOverlay" class="splice-modal-overlay" style="display:none;">
+        <div class="splice-modal-card">
+            <div class="splice-modal-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:18px;">🔗</span>
+                    <h3 style="margin:0; font-size:16px; font-weight:800; color:#f8fafc;">자재 스플라이싱(Splicing) 검증</h3>
+                </div>
+                <button type="button" class="splice-close-btn" onclick="closeSpliceModal()">&times;</button>
+            </div>
+            <div class="splice-modal-body">
+                <div class="splice-info-box">
+                    <div class="splice-info-row">
+                        <span class="splice-label">대상 슬롯</span>
+                        <span id="spliceSlotLabel" class="splice-val-slot">Slot #1</span>
+                    </div>
+                    <div class="splice-info-row">
+                        <span class="splice-label">BOM 필요 부품</span>
+                        <span id="splicePartLabel" class="splice-val-part">SKRPACE010</span>
+                    </div>
+                    <div class="splice-info-row">
+                        <span class="splice-label">현재 장착 릴</span>
+                        <span id="spliceOldReelLabel" class="splice-val-reel">REEL-69dec11a</span>
+                    </div>
+                </div>
+
+                <div style="margin-top:16px;">
+                    <label style="display:block; font-size:12.5px; font-weight:700; color:#93c5fd; margin-bottom:6px;">
+                        ⚡ 새로 이어 붙일 신규 릴 바코드 스캔 / 입력
+                    </label>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="spliceReelInput" class="splice-input" placeholder="신규 릴 바코드를 스캔하세요" onkeydown="if(event.key==='Enter') submitSpliceScan()">
+                        <button type="button" class="splice-submit-btn" onclick="submitSpliceScan()">검증 및 연결</button>
+                    </div>
+                </div>
+
+                <div id="spliceFeedback" class="splice-feedback" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

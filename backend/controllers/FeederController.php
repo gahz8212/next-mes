@@ -313,6 +313,14 @@ class FeederController {
             ");
             $upStmt->execute([$reel_barcode, $scanned_by, $matched_slot_id]);
 
+            $isSpliceAction = (!empty($input['action']) && $input['action'] === 'splice') || !empty($target_slot_no);
+            if ($isSpliceAction) {
+                try {
+                    $logStmt = $pdo->prepare("INSERT INTO system_log (event_type, description, wo_id, created_at) VALUES ('SPLICING', ?, ?, NOW())");
+                    $logStmt->execute(["슬롯 {$matched_slot_no}번 [{$matched_location}] 파트[{$reel['part_no']}] 릴 바코드 [{$reel_barcode}] 스플라이싱 검증 완료", $wo_id]);
+                } catch(Exception $le) {}
+            }
+
             $statStmt = $pdo->prepare("
                 SELECT 
                     count(*) as total,
@@ -330,9 +338,13 @@ class FeederController {
             $pdo->commit();
 
             $msgDesc = $vendorInfo ? " ({$vendorInfo})" : "";
+            $succMsg = $isSpliceAction 
+                ? "포카요케 스플라이싱 성공! 슬롯 {$matched_slot_no}번 [{$matched_location}]에 신규 릴 [{$reel_barcode}]이(가) 안전하게 연결되었습니다.{$msgDesc}"
+                : "포카요케 검증 성공! 피더 슬롯 {$matched_slot_no}번 [{$matched_location}]에 장착되었습니다.{$msgDesc}";
+
             Response::json([
                 "status" => "success",
-                "message" => "포카요케 검증 성공! 피더 슬롯 {$matched_slot_no}번 [{$matched_location}]에 장착되었습니다.{$msgDesc}",
+                "message" => $succMsg,
                 "data" => [
                     "slot_no" => $matched_slot_no,
                     "location" => $matched_location,
