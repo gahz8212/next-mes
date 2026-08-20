@@ -5865,6 +5865,20 @@ async function deleteCompany(id, name) {
         }
     }
 
+    // 🎹 피더 슬롯 모달 키보드 단축키 (Enter = 슬롯 저장, Escape = 모달 닫기)
+    window.addEventListener('keydown', function(e) {
+        const modal = document.getElementById('feederSlotPickerModal');
+        if (!modal || !modal.classList.contains('open')) return;
+
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveFeederSlotFromPicker();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            closeModal('feederSlotPickerModal');
+        }
+    });
+
     function renderFeederSlotPickerUI() {
         // 1. Update Tabs
         const tabColors = {
@@ -13008,7 +13022,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     취소
                 </button>
                 <button type="button" class="btn-submit" style="padding:7px 22px; font-size:13px; font-weight:800; background:#2563eb; border:1px solid #3b82f6; cursor:pointer;" onclick="saveFeederSlotFromPicker()">
-                    💾 슬롯 배정 저장
+                    💾 슬롯 배정 저장 (Enter)
                 </button>
             </div>
         </div>
