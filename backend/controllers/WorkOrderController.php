@@ -732,44 +732,10 @@ class WorkOrderController {
         } catch (Exception $e) {
             Response::error($e->getMessage());
         }
-    }           $orders = [];
-            foreach ($rows as $row) {
-                $orders[] = [
-                    'wo_id'         => $row['wo_id'],
-                    'target_qty'    => (int)$row['target_qty'],
-                    'status'        => $row['status'],
-                    'due_date'      => $row['due_date'],
-                    'completed_at'  => $row['completed_at'],
-                    'shipped'       => (int)$row['shipped'],
-                    'shipped_at'    => $row['shipped_at'],
-                    'remark'        => $row['remark'],
-                    'parent_wo_id'  => $row['parent_wo_id'],
-                    'company_id'    => $row['company_id'],
-                    'company_name'  => $row['company_name'],
-                    'item_name'     => $row['item_name'],
-                    'order_no'      => $row['order_no'],
-                    'processed_qty' => (int)$row['processed_qty'],
-                    'good_qty'      => (int)$row['good_qty'],
-                    'fail_qty'      => (int)$row['fail_qty']
-                ];
-            }
-
-            Response::json([
-                'status' => 'success',
-                'data'   => [
-                    'year'   => $year,
-                    'month'  => $month,
-                    'orders' => $orders
-                ]
-            ]);
-
-        } catch (Exception $e) {
-            Response::error($e->getMessage());
-        }
     }
 
     /**
-     * 12. 작업지시 분할 (Lot Split - 부족분 분할 생산)
+     * 13. 작업지시 분할 (Lot Split - 부족분 분할 생산)
      */
     public static function splitWorkOrder(): void {
         $pdo = Database::getConnection();
