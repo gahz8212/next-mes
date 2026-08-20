@@ -10306,13 +10306,17 @@ function updateOrderKPI(kpi) {
     if (amtEl) amtEl.textContent = '₩ ' + Math.round(kpi.total_amount || 0).toLocaleString();
 }
 
-async function loadOrders() {
+async function loadOrders(targetOrderId = null, bypassCache = false) {
     const search    = document.getElementById('ord-search')?.value.trim() || '';
     const status    = document.getElementById('ord-status-filter')?.value || '';
     const companyId = document.getElementById('ord-company-filter')?.value || '';
 
-    // 1. SWR 캐시 즉시 동기 렌더링 (0.001초 지연 없는 화면 페인팅)
-    if (!search && !status && !companyId) {
+    if (targetOrderId) {
+        selectedOrderId = targetOrderId;
+    }
+
+    // 1. SWR 캐시 즉시 동기 렌더링 (bypassCache가 아닐 때만)
+    if (!bypassCache && !search && !status && !companyId) {
         const cached = localStorage.getItem('mes_cached_orders') || sessionStorage.getItem('mes_cached_orders');
         if (cached) {
             try {
@@ -10327,7 +10331,7 @@ async function loadOrders() {
         }
     }
 
-    // 2. 백그라운드 최신 데이터 fetch & 조용한 동기화
+    // 2. 백그라운드 최신 데이터 fetch & 즉시 동기화
     try {
         const res  = await fetch(`../backend/api/get_orders.php?search=${encodeURIComponent(search)}&status=${status}&company_id=${companyId}`);
         const data = await res.json();
@@ -10354,10 +10358,11 @@ async function loadOrders() {
         renderOrderMasterList(ordersData);
 
         if (ordersData.length > 0) {
-            if (!selectedOrderId || !ordersData.some(o => o.id === selectedOrderId)) {
-                selectOrder(ordersData[0].id);
+            const pickId = targetOrderId || selectedOrderId;
+            if (pickId && ordersData.some(o => o.id === pickId)) {
+                selectOrder(pickId);
             } else {
-                selectOrder(selectedOrderId);
+                selectOrder(ordersData[0].id);
             }
         } else {
             selectedOrderId = null;
@@ -10962,8 +10967,33 @@ async function saveOrder() {
     if (data.status === 'success') {
         closeModal('orderModal');
         expandedOrders.clear();
-        await loadOrders();
-        loadNotifications();
+
+        const newOrderId = (data.data && data.data.id) ? parseInt(data.data.id) : (id ? parseInt(id) : null);
+        if (newOrderId) {
+            selectedOrderId = newOrderId;
+        }
+
+        // Invalidate caches
+        localStorage.removeItem('mes_cached_orders');
+        sessionStorage.removeItem('mes_cached_orders');
+
+        // Clear search & filter inputs so new order is immediately visible
+        const sInp = document.getElementById('ord-search');
+        if (sInp) sInp.value = '';
+        const stSel = document.getElementById('ord-status-filter');
+        if (stSel) stSel.value = '';
+        const cpSel = document.getElementById('ord-company-filter');
+        if (cpSel) cpSel.value = '';
+
+        // Switch to orders tab to ensure the user is viewing the orders screen
+        if (typeof switchTab === 'function') {
+            switchTab('orders');
+        }
+
+        await loadOrders(newOrderId, true);
+        if (typeof loadDashboard === 'function') loadDashboard();
+        if (typeof loadNotifications === 'function') loadNotifications();
+        if (typeof loadItems === 'function') loadItems();
     } else {
         alert(data.message || '수주 저장에 실패했습니다.');
     }
