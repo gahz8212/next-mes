@@ -10487,19 +10487,23 @@ function renderSelectedOrderDetail() {
                 <table class="detail-balanced-table" style="width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed;">
                     <thead>
                         <tr>
-                            <th style="width:50px; text-align:center;">NO</th>
-                            <th style="width:320px; text-align:left;">품목명</th>
-                            <th style="width:160px; text-align:center;">작업지시(WO)</th>
-                            <th style="width:180px; text-align:right; padding-right:24px;">수주수량</th>
+                            <th style="width:45px; text-align:center;">NO</th>
+                            <th style="width:250px; text-align:left;">품목명</th>
+                            <th style="width:140px; text-align:center;">작업지시(WO)</th>
+                            <th style="width:140px; text-align:right; padding-right:20px;">수주수량</th>
+                            <th style="width:120px; text-align:right;">단가</th>
+                            <th style="width:140px; text-align:right;">공급가액</th>
                             <th style="text-align:left; padding-right:12px;">비고 / 메모</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${items.length === 0 ? `
                             <tr>
-                                <td colspan="5" style="text-align:center; padding:50px; color:#94a3b8; font-size:13px;">등록된 품목이 없습니다.</td>
+                                <td colspan="7" style="text-align:center; padding:50px; color:#94a3b8; font-size:13px;">등록된 품목이 없습니다.</td>
                             </tr>
                         ` : items.map((it, idx) => {
+                            const itPrice = it.unit_price ? '₩ ' + Math.round(it.unit_price).toLocaleString() : '—';
+                            const itTotal = it.total_price ? '₩ ' + Math.round(it.total_price).toLocaleString() : '—';
                             const woText = it.wo_id 
                                 ? `<code style="font-family:'JetBrains Mono',monospace; color:#93c5fd; font-weight:700; font-size:13px;">${escHtml(it.wo_id)}</code>`
                                 : `<span style="color:#64748b; font-size:12px;">미발행</span>`;
@@ -10511,9 +10515,11 @@ function renderSelectedOrderDetail() {
                                     <div style="font-weight:800; color:#ffffff; font-size:14px;">${escHtml(it.item_name || '—')}</div>
                                 </td>
                                 <td style="text-align:center;">${woText}</td>
-                                <td style="text-align:right; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace; font-size:14px; padding-right:24px;">
+                                <td style="text-align:right; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace; font-size:14px; padding-right:20px;">
                                     ${parseInt(it.order_qty||0).toLocaleString()} <span style="font-size:11px; color:#94a3b8; font-weight:400;">EA</span>
                                 </td>
+                                <td style="text-align:right; color:#cbd5e1; font-family:'JetBrains Mono',monospace;">${itPrice}</td>
+                                <td style="text-align:right; color:#34d399; font-weight:800; font-family:'JetBrains Mono',monospace;">${itTotal}</td>
                                 <td style="color:#94a3b8; font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(it.memo || '—')}</td>
                             </tr>
                             `;
@@ -10529,11 +10535,15 @@ function renderSelectedOrderDetail() {
                 <table class="detail-balanced-table" style="width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; margin:0;">
                     <tbody>
                         <tr style="font-weight:800; height:44px;">
-                            <td style="width:50px; text-align:center; color:#64748b; padding:10px;">—</td>
-                            <td style="width:320px; text-align:left; color:#f8fafc; font-size:13.5px; padding:10px;">합 계 (${items.length}종)</td>
-                            <td style="width:160px; text-align:center; color:#64748b; padding:10px;">—</td>
-                            <td style="width:180px; text-align:right; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace; font-size:14.5px; padding:10px 24px 10px 10px;">
+                            <td style="width:45px; text-align:center; color:#64748b; padding:10px;">—</td>
+                            <td style="width:250px; text-align:left; color:#f8fafc; font-size:13.5px; padding:10px;">합 계 (${items.length}종)</td>
+                            <td style="width:140px; text-align:center; color:#64748b; padding:10px;">—</td>
+                            <td style="width:140px; text-align:right; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace; font-size:14.5px; padding:10px 20px 10px 10px;">
                                 ${totalQty} <span style="font-size:11px; font-weight:400; color:#94a3b8;">EA</span>
+                            </td>
+                            <td style="width:120px; text-align:center; color:#64748b; padding:10px;">—</td>
+                            <td style="width:140px; text-align:right; font-weight:800; color:#34d399; font-family:'JetBrains Mono',monospace; font-size:14.5px; padding:10px;">
+                                ${totalWon}
                             </td>
                             <td style="padding:10px;"></td>
                         </tr>
