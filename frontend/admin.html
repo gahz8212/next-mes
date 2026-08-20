@@ -5525,6 +5525,7 @@ async function deleteCompany(id, name) {
             }
 
             const list = data.data.details;
+            window.currentBomDetailsList = list;
             if (list.length === 0) {
                 container.innerHTML = `<div style="text-align:center; padding:40px; color:#94a3b8; font-size:13px;">등록된 부품이 없습니다.</div>`;
                 return;
@@ -5641,10 +5642,59 @@ async function deleteCompany(id, name) {
         location: '',
         partName: '',
         machineType: 'CHIP', // 'CHIP', 'ODD', 'TRAY'
-        spanMode: 1,         // 1, 2, 3, 4, 'multi'
-        selectedSlots: [],   // [1] or [5, 6] or [1, 2]
-        occupiedSlots: {}    // slotKey -> partNo
+        selectedSlots: [],   // array of integers [1, 2]
+        occupiedSlots: {}    // slotKey (e.g. "C-01") -> { partNo, partName }
     };
+
+    function parseAllOccupiedSlots(list, currentDetailId) {
+        const occupied = {};
+        if (!Array.isArray(list)) return occupied;
+
+        list.forEach(r => {
+            if (r.detail_id == currentDetailId || !r.feeder_slot) return;
+            const slotRaw = String(r.feeder_slot).trim().toUpperCase();
+            if (!slotRaw) return;
+
+            let prefix = 'C-';
+            if (slotRaw.startsWith('TR-') || slotRaw.startsWith('TR')) prefix = 'TR-';
+            else if (slotRaw.startsWith('O-') || slotRaw.startsWith('ODD-') || slotRaw.startsWith('O')) prefix = 'O-';
+            else if (slotRaw.startsWith('C-') || slotRaw.startsWith('C')) prefix = 'C-';
+
+            if (slotRaw.includes('~')) {
+                const parts = slotRaw.replace(/^[A-Z\-]+/, '').split('~');
+                const start = parseInt(parts[0]);
+                const end = parseInt(parts[1]);
+                if (!isNaN(start) && !isNaN(end)) {
+                    for (let s = start; s <= end; s++) {
+                        const key = `${prefix}${String(s).padStart(2, '0')}`;
+                        occupied[key] = { partNo: r.part_no, partName: r.part_name || r.part_no };
+                    }
+                }
+            } else if (slotRaw.includes(',')) {
+                const parts = slotRaw.split(',');
+                parts.forEach(p => {
+                    let pfx = prefix;
+                    const pTrim = p.trim();
+                    if (pTrim.startsWith('TR')) pfx = 'TR-';
+                    else if (pTrim.startsWith('O')) pfx = 'O-';
+                    else if (pTrim.startsWith('C')) pfx = 'C-';
+                    const num = parseInt(pTrim.replace(/^[A-Z\-]+/, ''));
+                    if (!isNaN(num)) {
+                        const key = `${pfx}${String(num).padStart(2, '0')}`;
+                        occupied[key] = { partNo: r.part_no, partName: r.part_name || r.part_no };
+                    }
+                });
+            } else {
+                const num = parseInt(slotRaw.replace(/^[A-Z\-]+/, ''));
+                if (!isNaN(num)) {
+                    const key = `${prefix}${String(num).padStart(2, '0')}`;
+                    occupied[key] = { partNo: r.part_no, partName: r.part_name || r.part_no };
+                }
+            }
+        });
+
+        return occupied;
+    }
 
     function openFeederSlotPickerModal(detailId, bomId, currentSlot, partNo, location = '', partName = '') {
         fspState.detailId = detailId;
@@ -5653,17 +5703,9 @@ async function deleteCompany(id, name) {
         fspState.location = location;
         fspState.partName = partName;
         fspState.selectedSlots = [];
-        fspState.spanMode = 1;
 
-        // Collect currently occupied slots in current BOM detail view
-        fspState.occupiedSlots = {};
-        if (typeof currentBomComponents !== 'undefined' && Array.isArray(currentBomComponents)) {
-            currentBomComponents.forEach(r => {
-                if (r.detail_id != detailId && r.feeder_slot) {
-                    fspState.occupiedSlots[String(r.feeder_slot).trim().toUpperCase()] = r.part_no;
-                }
-            });
-        }
+        // Collect all occupied slots from other components in current BOM
+        fspState.occupiedSlots = parseAllOccupiedSlots(window.currentBomDetailsList, detailId);
 
         // Set info header
         const pNoEl = document.getElementById('fsp-part-no');
@@ -5700,17 +5742,13 @@ async function deleteCompany(id, name) {
                 const start = parseInt(parts[0]);
                 const end = parseInt(parts[1]);
                 if (!isNaN(start) && !isNaN(end) && end >= start) {
-                    fspState.spanMode = Math.min(4, Math.max(2, end - start + 1));
-                    fspState.selectedSlots = [];
                     for (let i = start; i <= end; i++) fspState.selectedSlots.push(i);
                 }
             } else if (curr.includes(',')) {
-                fspState.spanMode = 'multi';
                 fspState.selectedSlots = curr.split(',').map(s => parseInt(s.replace(/^[A-Z\-]+/, '').trim())).filter(n => !isNaN(n));
             } else {
                 const num = parseInt(curr.replace(/^[A-Z\-]+/, ''));
                 if (!isNaN(num)) {
-                    fspState.spanMode = 1;
                     fspState.selectedSlots = [num];
                 }
             }
@@ -5726,76 +5764,32 @@ async function deleteCompany(id, name) {
         renderFeederSlotPickerUI();
     }
 
-    function setFspSpanMode(mode) {
-        fspState.spanMode = mode;
-        if (fspState.selectedSlots.length > 0) {
-            const base = fspState.selectedSlots[0];
-            if (typeof mode === 'number') {
-                fspState.selectedSlots = [];
-                for (let i = 0; i < mode; i++) fspState.selectedSlots.push(base + i);
-            }
-        }
-        renderFeederSlotPickerUI();
-    }
-
     function onFspSlotTileClick(slotNum) {
-        if (fspState.spanMode === 'multi') {
-            const idx = fspState.selectedSlots.indexOf(slotNum);
-            if (idx >= 0) fspState.selectedSlots.splice(idx, 1);
-            else fspState.selectedSlots.push(slotNum);
-            fspState.selectedSlots.sort((a, b) => a - b);
-        } else {
-            const span = typeof fspState.spanMode === 'number' ? fspState.spanMode : 1;
-            fspState.selectedSlots = [];
-            for (let i = 0; i < span; i++) {
-                fspState.selectedSlots.push(slotNum + i);
-            }
+        const prefix = fspState.machineType === 'TRAY' ? 'TR-' : (fspState.machineType === 'ODD' ? 'O-' : 'C-');
+        const slotKey = `${prefix}${String(slotNum).padStart(2, '0')}`;
+        
+        // 🔒 Locked check
+        const occupied = fspState.occupiedSlots[slotKey];
+        if (occupied) {
+            alert(`🔒 [${slotKey}] 슬롯은 이미 다른 자재 [${occupied.partNo}]에 배정되어 잠겨 있습니다.\n다른 빈 슬롯을 선택하세요.`);
+            return;
         }
+
+        // Multi-select toggle
+        const idx = fspState.selectedSlots.indexOf(slotNum);
+        if (idx >= 0) {
+            fspState.selectedSlots.splice(idx, 1);
+        } else {
+            fspState.selectedSlots.push(slotNum);
+        }
+        fspState.selectedSlots.sort((a, b) => a - b);
         renderFeederSlotPickerUI();
     }
 
     function getFspFormattedSlotString() {
         if (!fspState.selectedSlots || fspState.selectedSlots.length === 0) return '';
         const prefix = fspState.machineType === 'TRAY' ? 'TR-' : (fspState.machineType === 'ODD' ? 'O-' : 'C-');
-        
-        if (fspState.spanMode === 'multi') {
-            return fspState.selectedSlots.map(n => `${prefix}${String(n).padStart(2, '0')}`).join(', ');
-        } else if (typeof fspState.spanMode === 'number' && fspState.spanMode > 1) {
-            const start = fspState.selectedSlots[0];
-            const end = fspState.selectedSlots[fspState.selectedSlots.length - 1];
-            return `${prefix}${String(start).padStart(2, '0')}~${String(end).padStart(2, '0')}`;
-        } else {
-            return `${prefix}${String(fspState.selectedSlots[0]).padStart(2, '0')}`;
-        }
-    }
-
-    function autoAssignNextFspSlot() {
-        const totalSlots = fspState.machineType === 'CHIP' ? 80 : (fspState.machineType === 'ODD' ? 40 : 20);
-        const prefix = fspState.machineType === 'TRAY' ? 'TR-' : (fspState.machineType === 'ODD' ? 'O-' : 'C-');
-        const span = typeof fspState.spanMode === 'number' ? fspState.spanMode : 1;
-
-        for (let i = 1; i <= totalSlots - span + 1; i++) {
-            let isFree = true;
-            for (let s = 0; s < span; s++) {
-                const checkKey = `${prefix}${String(i + s).padStart(2, '0')}`;
-                if (fspState.occupiedSlots[checkKey]) {
-                    isFree = false;
-                    break;
-                }
-            }
-            if (isFree) {
-                fspState.selectedSlots = [];
-                for (let s = 0; s < span; s++) fspState.selectedSlots.push(i + s);
-                renderFeederSlotPickerUI();
-                return;
-            }
-        }
-        alert('남아있는 연속 빈 슬롯이 없습니다.');
-    }
-
-    function clearFspSlot() {
-        fspState.selectedSlots = [];
-        renderFeederSlotPickerUI();
+        return fspState.selectedSlots.map(n => `${prefix}${String(n).padStart(2, '0')}`).join(', ');
     }
 
     async function saveFeederSlotFromPicker() {
@@ -5847,23 +5841,7 @@ async function deleteCompany(id, name) {
             }
         });
 
-        // 2. Update Span Mode Buttons
-        [1, 2, 3, 4, 'multi'].forEach(m => {
-            const btn = document.getElementById(`fsp-span-${m}`);
-            if (btn) {
-                if (fspState.spanMode === m) {
-                    btn.style.background = '#2563eb';
-                    btn.style.color = '#ffffff';
-                    btn.style.borderColor = '#3b82f6';
-                } else {
-                    btn.style.background = 'rgba(255,255,255,0.06)';
-                    btn.style.color = '#94a3b8';
-                    btn.style.borderColor = 'rgba(255,255,255,0.12)';
-                }
-            }
-        });
-
-        // 3. Render Grid Tiles
+        // 2. Render Grid Tiles
         const gridEl = document.getElementById('fsp-slot-grid');
         if (!gridEl) return;
 
@@ -5879,6 +5857,8 @@ async function deleteCompany(id, name) {
             let bg = 'rgba(30,41,59,0.85)';
             let border = '1px solid rgba(255,255,255,0.1)';
             let color = '#cbd5e1';
+            let opacity = '1';
+            let cursor = 'pointer';
             let subText = `<span style="font-size:9.5px; color:#64748b; font-family:'JetBrains Mono',monospace;">${slotKey}</span>`;
 
             if (isSelected) {
@@ -5897,14 +5877,20 @@ async function deleteCompany(id, name) {
                 }
                 subText = `<span style="font-size:10px; color:#a7f3d0; font-weight:800;">✓ 선택</span>`;
             } else if (occupiedBy) {
-                bg = 'rgba(239,68,68,0.08)';
-                border = '1px solid rgba(239,68,68,0.3)';
-                color = '#fca5a5';
-                subText = `<span style="font-size:9px; color:#f87171; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:54px; display:inline-block;" title="이미 배정됨: ${escHtml(occupiedBy)}">${escHtml(occupiedBy)}</span>`;
+                bg = 'rgba(15,23,42,0.95)';
+                border = '1px solid rgba(239,68,68,0.35)';
+                color = '#ef4444';
+                opacity = '0.45';
+                cursor = 'not-allowed';
+                subText = `<span style="font-size:9.5px; color:#ef4444; font-weight:700;">🔒 잠김</span>`;
             }
 
+            const titleAttr = occupiedBy 
+                ? `🔒 이미 배정됨: ${escHtml(occupiedBy.partNo)} (${escHtml(occupiedBy.partName)})` 
+                : `클릭하여 ${slotKey} 선택/해제`;
+
             html += `
-                <button type="button" class="fsp-tile-btn" onclick="onFspSlotTileClick(${i})" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px 2px; border-radius:6px; background:${bg}; border:${border}; color:${color}; cursor:pointer; min-height:46px; transition:all 0.12s ease;">
+                <button type="button" class="fsp-tile-btn" onclick="onFspSlotTileClick(${i})" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px 2px; border-radius:6px; background:${bg}; border:${border}; color:${color}; opacity:${opacity}; cursor:${cursor}; min-height:46px; transition:all 0.12s ease;" title="${titleAttr}">
                     <span style="font-size:13px; font-weight:800; font-family:'JetBrains Mono',monospace; line-height:1.1;">#${String(i).padStart(2, '0')}</span>
                     ${subText}
                 </button>
@@ -5912,7 +5898,7 @@ async function deleteCompany(id, name) {
         }
         gridEl.innerHTML = html;
 
-        // 4. Update preview badge
+        // 3. Update preview badge
         const badgeEl = document.getElementById('fsp-selected-badge');
         const slotStr = getFspFormattedSlotString();
         if (badgeEl) {
@@ -12887,7 +12873,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span style="font-size:22px;">🎯</span>
                 <div>
                     <div class="modal-title" style="font-size:16.5px; color:#f8fafc; font-weight:800;">피더 슬롯 비주얼 배정기 (Feeder Slot Selector)</div>
-                    <div style="font-size:11.5px; color:#94a3b8; margin-top:2px;">타이핑 없이 클릭만으로 설비 및 슬롯(단일 / 광폭 점유 / 멀티 분산)을 지정합니다.</div>
+                    <div style="font-size:11.5px; color:#94a3b8; margin-top:2px;">원하는 슬롯을 클릭하여 배정/해제하세요. (다른 자재가 사용 중인 슬롯은 🔒 잠김 처리됩니다.)</div>
                 </div>
             </div>
             <button class="modal-close" onclick="closeModal('feederSlotPickerModal')">✕</button>
@@ -12906,35 +12892,20 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <!-- Step 1: 설비 유형 선택 탭 -->
-        <div style="display:flex; gap:8px; margin-bottom:12px;">
-            <button type="button" id="fsp-tab-chip" class="btn-tab" onclick="setFspMachineType('CHIP')" style="flex:1; padding:9px 12px; font-size:13px; font-weight:800; border-radius:6px; cursor:pointer;">
-                🔵 칩 마운터 (C-01 ~ C-80) <span style="font-size:11px; opacity:0.8; font-weight:normal;">[R, L, C, D 등 소형칩]</span>
+        <div style="display:flex; gap:8px; margin-bottom:14px;">
+            <button type="button" id="fsp-tab-chip" class="btn-tab" onclick="setFspMachineType('CHIP')" style="flex:1; padding:10px 12px; font-size:13px; font-weight:800; border-radius:6px; cursor:pointer;">
+                🔵 칩 마운터 (C-01 ~ C-80) <span style="font-size:11px; opacity:0.8; font-weight:normal;">[소형 칩 저항/커패시터]</span>
             </button>
-            <button type="button" id="fsp-tab-odd" class="btn-tab" onclick="setFspMachineType('ODD')" style="flex:1; padding:9px 12px; font-size:13px; font-weight:800; border-radius:6px; cursor:pointer;">
+            <button type="button" id="fsp-tab-odd" class="btn-tab" onclick="setFspMachineType('ODD')" style="flex:1; padding:10px 12px; font-size:13px; font-weight:800; border-radius:6px; cursor:pointer;">
                 🟡 이형 마운터 릴/스틱 (O-01 ~ O-40) <span style="font-size:11px; opacity:0.8; font-weight:normal;">[광폭릴, 커넥터]</span>
             </button>
-            <button type="button" id="fsp-tab-tray" class="btn-tab" onclick="setFspMachineType('TRAY')" style="flex:1; padding:9px 12px; font-size:13px; font-weight:800; border-radius:6px; cursor:pointer;">
+            <button type="button" id="fsp-tab-tray" class="btn-tab" onclick="setFspMachineType('TRAY')" style="flex:1; padding:10px 12px; font-size:13px; font-weight:800; border-radius:6px; cursor:pointer;">
                 🟣 이형 트레이 (TR-01 ~ TR-20) <span style="font-size:11px; opacity:0.8; font-weight:normal;">[대형 IC, BGA, QFP]</span>
             </button>
         </div>
 
-        <!-- Step 2: 점유 모드 선택 (1칸, 2칸~, 3칸~, 4칸~, 다중분산) -->
-        <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(15,23,42,0.6); padding:8px 12px; border-radius:6px; border:1px solid rgba(255,255,255,0.06); margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                <span style="font-size:12px; color:#94a3b8; font-weight:700; margin-right:4px;">점유 방식:</span>
-                <button type="button" id="fsp-span-1" class="card-btn" style="padding:4px 9px; font-size:12px; font-weight:700; border-radius:4px; cursor:pointer;" onclick="setFspSpanMode(1)">1칸 (단일)</button>
-                <button type="button" id="fsp-span-2" class="card-btn" style="padding:4px 9px; font-size:12px; font-weight:700; border-radius:4px; cursor:pointer;" onclick="setFspSpanMode(2)">2칸 점유 (광폭 ~ )</button>
-                <button type="button" id="fsp-span-3" class="card-btn" style="padding:4px 9px; font-size:12px; font-weight:700; border-radius:4px; cursor:pointer;" onclick="setFspSpanMode(3)">3칸 점유 (광폭 ~ )</button>
-                <button type="button" id="fsp-span-4" class="card-btn" style="padding:4px 9px; font-size:12px; font-weight:700; border-radius:4px; cursor:pointer;" onclick="setFspSpanMode(4)">4칸 점유 (광폭 ~ )</button>
-                <button type="button" id="fsp-span-multi" class="card-btn" style="padding:4px 9px; font-size:12px; font-weight:700; border-radius:4px; cursor:pointer;" onclick="setFspSpanMode('multi')">다중 분산 (+ 복수선택)</button>
-            </div>
-            <button type="button" class="card-btn" style="background:#059669; color:#fff; border:1px solid #10b981; padding:5px 12px; font-size:12px; font-weight:800; cursor:pointer;" onclick="autoAssignNextFspSlot()">
-                ✨ 빈 슬롯 자동 추천
-            </button>
-        </div>
-
-        <!-- Step 3: 슬롯 타일 그리드 영역 -->
-        <div style="max-height:280px; overflow-y:auto; padding:10px 8px; background:rgba(0,0,0,0.3); border-radius:6px; border:1px solid rgba(255,255,255,0.08); margin-bottom:16px;">
+        <!-- Step 2: 슬롯 타일 그리드 영역 -->
+        <div style="max-height:300px; overflow-y:auto; padding:10px 8px; background:rgba(0,0,0,0.3); border-radius:6px; border:1px solid rgba(255,255,255,0.08); margin-bottom:16px;">
             <div id="fsp-slot-grid" style="display:grid; grid-template-columns:repeat(10, 1fr); gap:6px;">
                 <!-- Rendered dynamically by renderFeederSlotPickerUI() -->
             </div>
@@ -12942,9 +12913,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <!-- 하단 액션 버튼 -->
         <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px;">
-            <button type="button" class="card-btn" style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3); padding:7px 14px; font-size:12.5px; font-weight:700; cursor:pointer;" onclick="clearFspSlot()">
-                🗑️ 슬롯 할당 해제 (비우기)
-            </button>
+            <div style="font-size:12px; color:#94a3b8;">
+                💡 슬롯 번호를 클릭하여 <strong>선택 및 해제</strong>할 수 있으며, 2개 이상 클릭 시 <strong>다중 분산 배정</strong>됩니다.
+            </div>
             <div style="display:flex; gap:8px;">
                 <button type="button" class="card-btn" style="background:rgba(255,255,255,0.08); color:#cbd5e1; border:1px solid rgba(255,255,255,0.15); padding:7px 16px; font-size:13px; font-weight:700; cursor:pointer;" onclick="closeModal('feederSlotPickerModal')">
                     취소
