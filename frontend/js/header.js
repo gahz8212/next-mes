@@ -275,6 +275,62 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// ── 시스템 리셋 컨트롤러 (전체 초기화 & 실적 트랜잭션 초기화) ──
+async function confirmFullReset() {
+    const ok = confirm(
+        "⚡ [전체 공장 데이터 초기화]\n\n" +
+        "수주, 작업지시, 사급 자재, 바코드 실적, 출하 이력, 알림 등 모든 데이터와 시뮬레이션을 공장 출하 초기 데모 상태로 완전 리셋합니다.\n\n" +
+        "정말 전체 초기화를 진행하시겠습니까?"
+    );
+    if (!ok) return;
+
+    try {
+        const res = await fetch('/backend/api/reset_system.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode: 'full' })
+        });
+        const json = await res.json();
+        if (json.status === 'success') {
+            alert(json.message || "전체 공장 데이터가 성공적으로 초기화되었습니다.");
+            window.location.reload();
+        } else {
+            alert("초기화 실패: " + (json.message || "알 수 없는 오류"));
+        }
+    } catch(e) {
+        alert("서버 통신 오류: " + e.message);
+    }
+}
+window.confirmFullReset = confirmFullReset;
+
+async function confirmTransactionReset() {
+    const ok = confirm(
+        "🔄 [생산/수주 트랜잭션 실적 초기화]\n\n" +
+        "거래처, 품목, 기준 BOM, 사용자 등 기초 마스터 정보는 안전하게 보존하고,\n" +
+        "진행 중이던 수주, 작업지시, 바코드, 출하, 설비 가동 실적만 처음 대기(READY) 상태로 깨끗이 되돌립니다.\n\n" +
+        "실적 초기화를 진행하시겠습니까?"
+    );
+    if (!ok) return;
+
+    try {
+        const res = await fetch('/backend/api/reset_system.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode: 'transactions' })
+        });
+        const json = await res.json();
+        if (json.status === 'success') {
+            alert(json.message || "트랜잭션 실적이 성공적으로 초기화되었습니다.");
+            window.location.reload();
+        } else {
+            alert("초기화 실패: " + (json.message || "알 수 없는 오류"));
+        }
+    } catch(e) {
+        alert("서버 통신 오류: " + e.message);
+    }
+}
+window.confirmTransactionReset = confirmTransactionReset;
+
 // 자동 실행 (DOMContentLoaded)
 document.addEventListener('DOMContentLoaded', () => {
     const headerEl = document.querySelector('.mes-unified-header');

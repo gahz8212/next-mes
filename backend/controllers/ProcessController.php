@@ -458,4 +458,112 @@ class ProcessController {
             Response::error("정비 이력 저장 실패: " . $e->getMessage(), 500);
         }
     }
+
+    /**
+     * 6. 시스템 초기화 (전체 초기화 'full' vs 기초정보 유지 초기화 'transactions')
+     */
+    public static function resetSystem(): void {
+        $pdo = Database::getConnection();
+        try {
+            $input = Request::getBody();
+            $mode = trim($input['mode'] ?? ($_GET['mode'] ?? 'transactions')); // 'full' or 'transactions'
+
+            $pdo->beginTransaction();
+
+            // 1. Stop Node-RED simulator if running
+            $nrHost = defined('NODERED_HOST') ? NODERED_HOST : '127.0.0.1';
+            $nrPort = defined('NODERED_PORT') ? NODERED_PORT : 1881;
+            $fp = @fsockopen($nrHost, $nrPort, $errno, $errstr, 0.5);
+            if ($fp) {
+                $stopData = json_encode(["wo_id" => "ALL"]);
+                $out = "POST /stop-sim HTTP/1.1\r\nHost: {$nrHost}:{$nrPort}\r\nContent-Type: application/json\r\nContent-Length: " . strlen($stopData) . "\r\nConnection: Close\r\n\r\n" . $stopData;
+                fwrite($fp, $out);
+                fclose($fp);
+            }
+
+            // 2. Clear transactional logs & history
+            $pdo->exec("DELETE FROM shipment");
+            $pdo->exec("DELETE FROM barcode_history");
+            $pdo->exec("DELETE FROM consigned_return_detail");
+            $pdo->exec("DELETE FROM consigned_return_master");
+            $pdo->exec("DELETE FROM system_notification");
+
+            if ($mode === 'full') {
+                // [FULL RESET]
+                // 3. Delete temporary/split test work orders
+                $pdo->exec("DELETE FROM barcode_master WHERE wo_id LIKE 'WO-%'");
+                $pdo->exec("DELETE FROM feeder_setup WHERE wo_id LIKE 'WO-%'");
+                $pdo->exec("DELETE FROM work_order WHERE wo_id LIKE 'WO-%'");
+
+                // 4. Reset standard demo work orders to default target quantities and READY
+                $pdo->exec("UPDATE work_order SET status = 'READY', completed_at = NULL, shipped = 0, shipped_at = NULL, remark = ''");
+
+                // Reset C1-20260813-2A6 (Samsung, 20 EA)
+                $pdo->prepare("UPDATE work_order SET target_qty = 20 WHERE wo_id = 'C1-20260813-2A6'")->execute();
+                // Reset C2-20260818-DA4 (LG, 30 EA)
+                $pdo->prepare("UPDATE work_order SET target_qty = 30 WHERE wo_id = 'C2-20260818-DA4'")->execute();
+
+                // 5. Re-generate barcode_master for all active work orders
+                $pdo->exec("DELETE FROM barcode_master");
+                $wos = $pdo->query("SELECT wo_id, target_qty FROM work_order")->fetchAll();
+                $bcIns = $pdo->prepare("INSERT INTO barcode_master (barcode, wo_id, status) VALUES (?, ?, 'WAIT')");
+                foreach ($wos as $w) {
+                    $qty = (int)$w['target_qty'];
+                    for ($i = 1; $i <= $qty; $i++) {
+                        $bc = sprintf("%s-%04d", $w['wo_id'], $i);
+                        $bcIns->execute([$bc, $w['wo_id']]);
+                    }
+                }
+
+                // 6. Reset all sales orders to RECEIVED
+                $pdo->exec("UPDATE sales_order SET status = 'RECEIVED'");
+                $pdo->exec("UPDATE sales_order_item SET status = 'RECEIVED'");
+
+                // 7. Reset feeder setup to PENDING
+                $pdo->exec("UPDATE feeder_setup SET status = 'PENDING', reel_barcode = NULL, scanned_at = NULL, scanned_by = NULL");
+
+                // 8. Reset line status
+                $pdo->exec("UPDATE line_status SET status = 'IDLE', current_wo_id = 'C1-20260813-2A6'");
+
+                // 9. Insert initial welcome notification
+                $pdo->prepare("INSERT INTO system_notification (type, title, message, is_read, link_url, created_at) VALUES ('SUCCESS', '공장 전체 초기화 완료', '모든 수주, 작업지시, 자재 키팅, 출하 데이터가 초기 데모 상태로 완전 리셋되었습니다.', 0, 'admin.html', NOW())")->execute();
+
+                $msg = "⚡ 전체 공장 데이터가 성공적으로 초기 데모 상태로 완전 초기화되었습니다.";
+            } else {
+                // [TRANSACTIONS ONLY RESET - Master Data Preserved]
+                // 3. Reset existing work orders to READY
+                $pdo->exec("UPDATE work_order SET status = 'READY', completed_at = NULL, shipped = 0, shipped_at = NULL");
+
+                // 4. Reset barcode master to WAIT
+                $pdo->exec("UPDATE barcode_master SET status = 'WAIT'");
+
+                // 5. Reset sales orders & items to RECEIVED
+                $pdo->exec("UPDATE sales_order SET status = 'RECEIVED'");
+                $pdo->exec("UPDATE sales_order_item SET status = 'RECEIVED'");
+
+                // 6. Reset feeder setups to PENDING
+                $pdo->exec("UPDATE feeder_setup SET status = 'PENDING', reel_barcode = NULL, scanned_at = NULL, scanned_by = NULL");
+
+                // 7. Reset line status
+                $pdo->exec("UPDATE line_status SET status = 'IDLE'");
+
+                // 8. Insert notification
+                $pdo->prepare("INSERT INTO system_notification (type, title, message, is_read, link_url, created_at) VALUES ('SUCCESS', '트랜잭션 실적 초기화 완료', '거래처/품목/BOM 기초정보는 안전하게 보존되고, 모든 생산/수주/출하 실적만 대기(READY) 상태로 초기화되었습니다.', 0, 'admin.html', NOW())")->execute();
+
+                $msg = "🔄 기초 마스터 정보(거래처, 품목, BOM 등)는 유지하고, 모든 생산/수주/출하 실적이 대기(READY) 상태로 깨끗이 초기화되었습니다.";
+            }
+
+            $pdo->commit();
+
+            Response::json([
+                "status" => "success",
+                "mode"   => $mode,
+                "message" => $msg
+            ]);
+
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            Response::error("시스템 초기화 실패: " . $e->getMessage(), 500);
+        }
+    }
 }

@@ -191,6 +191,7 @@ Router::any('/get_defects.php',            [ProcessController::class, 'getDefect
 Router::any('/repair_board.php',           [ProcessController::class, 'repairBoard']);
 Router::any('/reset_line.php',             [ProcessController::class, 'resetLine']);
 Router::any('/reset_maintenance.php',      [ProcessController::class, 'resetMaintenance']);
+Router::any('/reset_system.php',           [ProcessController::class, 'resetSystem']);
 
 Router::any('/get_materials.php',          [MaterialController::class, 'getMaterials']);
 Router::any('/create_material.php',        [MaterialController::class, 'createMaterial']);

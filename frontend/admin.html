@@ -1962,7 +1962,7 @@
         <div class="sidebar-brand">
             <div class="brand-logo" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <div class="brand-icon">⚡</div>
+                    <div class="brand-icon" style="cursor: pointer;" onclick="confirmFullReset()" title="⚡ 클릭 시 전체 데이터 공장 초기화 (Full Reset)">⚡</div>
                     <div class="brand-name">SMT MES</div>
                 </div>
                 <button class="sidebar-toggle-btn" onclick="toggleAdminSidebar('left')" title="메뉴 접기">◀</button>
@@ -2108,7 +2108,7 @@
                     </div>
                 </div>
 
-                <div class="mes-user-badge">
+                <div class="mes-user-badge" onclick="confirmTransactionReset()" title="🔄 클릭 시 기초정보(마스터) 유지 & 생산/수주 트랜잭션 실적 초기화">
                     <div class="user-dot"></div>
                     <span class="user-name-text" id="hdrUserName">관리자</span>
                 </div>
