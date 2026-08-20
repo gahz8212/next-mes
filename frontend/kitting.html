@@ -282,16 +282,16 @@
                 const targetQty = data.target_qty || 100;
                 const totalRequiredQty = points * targetQty; // 이번 작업지시 총 소요수량 (목표생산량 * 개소수)
                 
-                // 최초 제공 수량 (BOM에 등록된 사급/지급 수량)
-                const bomProvideQty = (slot.provide_qty && parseFloat(slot.provide_qty) > 0)
+                // 기입고량 (수주 BOM 입고 또는 사급 입고로 등록된 실제 입고 수량)
+                const inboundQty = (slot.provide_qty && parseFloat(slot.provide_qty) > 0)
                     ? Math.round(parseFloat(slot.provide_qty))
-                    : Math.round(points * targetQty);
+                    : ((slot.inbound_qty && parseFloat(slot.inbound_qty) > 0) ? Math.round(parseFloat(slot.inbound_qty)) : 0);
 
-                // 현재 피더에 장착된 릴의 실제 용량 (스플라이싱 시 표준 신품 4,000 EA 팩 적용)
+                // 현재 피더에 장착된 릴의 실제 용량 (기입고량 우선, 스플라이싱 시 표준 신품 4,000 EA 팩 적용)
                 const isSpliced = (slotSpliceReelQty[slot.slot_no] !== undefined);
                 const activeReelCapacity = isSpliced
                     ? slotSpliceReelQty[slot.slot_no]
-                    : (bomProvideQty > 0 ? bomProvideQty : (points > 10 ? 5000 : 4000));
+                    : (inboundQty > 0 ? inboundQty : (totalRequiredQty > 0 ? totalRequiredQty : 4000));
 
                 // ── 실시간 릴 잔량 계산 로직 (스플라이싱 오프셋 차감 반영) ──
                 const consumedSinceSplice = Math.max(0, simulatedProducedQty - (slotSpliceOffset[slot.slot_no] || 0));
@@ -333,7 +333,7 @@
                     : `<span class="reel-code-none">미장착 (스캔 대기)</span>`;
 
                 // 2행 우측 텍스트: 단일 자재 잔여 수량 및 % 표시 + 소요량 충족 여부 배지
-                let liveInfoHtml = `<span style="color:#64748b; font-size:10.5px;">스캔 후 실시간 잔량 연동</span>`;
+                let liveInfoHtml = `<span style="color:#94a3b8; font-size:11px; font-family:'JetBrains Mono',monospace;">${inboundQty > 0 ? `기입고: <b style="color:#38bdf8;">${inboundQty.toLocaleString()}</b> EA` : `소요: <b style="color:#f8fafc;">${totalRequiredQty.toLocaleString()}</b> EA`}</span>`;
                 if (isVerified) {
                     if (isCriticalLow) {
                         if (isRequirementMet) {
@@ -367,7 +367,7 @@
                     <div class="feeder-line-main">
                         <div class="feeder-left-group">
                             <span class="slot-pill">Slot #${slot.slot_no}</span>
-                            <span class="points-pill">총 ${points}개소</span>
+                            <span class="points-pill">${points}P (총 ${totalRequiredQty.toLocaleString()} EA)</span>
                             <span class="part-number-text" title="${slot.part_no}">${slot.part_no}</span>
                         </div>
 
@@ -577,13 +577,15 @@
             currentFeederData.slots.forEach(slot => {
                 if (slot.status === 'VERIFIED') {
                     const points = Math.round(parseFloat(slot.points !== undefined && slot.points !== null ? slot.points : slot.req_qty)) || 1;
-                    const bomProvideQty = (slot.provide_qty && parseFloat(slot.provide_qty) > 0)
+                    const targetQty = currentFeederData.target_qty || 100;
+                    const totalRequiredQty = points * targetQty;
+                    const inboundQty = (slot.provide_qty && parseFloat(slot.provide_qty) > 0)
                         ? Math.round(parseFloat(slot.provide_qty))
-                        : Math.round(points * (currentFeederData.target_qty || 100));
+                        : ((slot.inbound_qty && parseFloat(slot.inbound_qty) > 0) ? Math.round(parseFloat(slot.inbound_qty)) : 0);
                     const isSpliced = (slotSpliceReelQty[slot.slot_no] !== undefined);
                     const activeCapacity = isSpliced
                         ? slotSpliceReelQty[slot.slot_no]
-                        : (bomProvideQty > 0 ? bomProvideQty : (points > 10 ? 5000 : 4000));
+                        : (inboundQty > 0 ? inboundQty : (totalRequiredQty > 0 ? totalRequiredQty : 4000));
 
                     const drainQty = Math.floor(activeCapacity * 0.95);
                     const consumedSteps = Math.floor(drainQty / points);

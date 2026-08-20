@@ -250,11 +250,38 @@ class ConsignedMaterialController {
 
             $pdo->beginTransaction();
 
+            $woId = null;
+            if ($orderNo) {
+                $stmtFind = $pdo->prepare("
+                    SELECT soi.wo_id, so.company_id,
+                           (SELECT bm.bom_id FROM bom_master bm 
+                            WHERE bm.product_id = soi.item_name 
+                               OR bm.product_id = soi.item_code
+                               OR bm.product_id = CONCAT('PROD-', soi.wo_id)
+                               OR bm.product_id = soi.wo_id
+                               OR bm.item_id IN (SELECT im.id FROM item im WHERE im.item_name = soi.item_name OR im.item_code = soi.item_code)
+                               OR bm.bom_id IN (SELECT wo.bom_id FROM work_order wo WHERE wo.wo_id = soi.wo_id)
+                            ORDER BY bm.bom_id DESC LIMIT 1) as auto_bom_id
+                    FROM sales_order_item soi
+                    LEFT JOIN sales_order so ON soi.order_no = so.order_no
+                    WHERE soi.order_no = ? LIMIT 1
+                ");
+                $stmtFind->execute([$orderNo]);
+                $found = $stmtFind->fetch();
+                if ($found) {
+                    if (!$companyId && !empty($found['company_id'])) $companyId = (int)$found['company_id'];
+                    if (!$bomId && !empty($found['auto_bom_id'])) $bomId = (int)$found['auto_bom_id'];
+                    if (!empty($found['wo_id'])) $woId = $found['wo_id'];
+                }
+            }
+
             $insStmt = $pdo->prepare("
                 INSERT INTO material_inout 
-                (part_no, part_name, inout_type, supply_type, qty, unit, company_id, order_no, bom_id, note)
-                VALUES (?, ?, 'IN', 'CONSIGNED', ?, ?, ?, ?, ?, ?)
+                (part_no, part_name, inout_type, supply_type, qty, unit, wo_id, company_id, order_no, bom_id, note)
+                VALUES (?, ?, 'IN', 'CONSIGNED', ?, ?, ?, ?, ?, ?, ?)
             ");
+
+            $updBomDetail = $bomId ? $pdo->prepare("UPDATE bom_detail SET provide_qty = ? WHERE bom_id = ? AND part_no = ?") : null;
 
             $savedCount = 0;
             $totalQty = 0;
@@ -272,11 +299,16 @@ class ConsignedMaterialController {
                     $partName,
                     $qty,
                     $unit,
+                    $woId,
                     $companyId,
                     $orderNo,
                     $bomId,
                     $note
                 ]);
+
+                if ($updBomDetail && $bomId) {
+                    $updBomDetail->execute([$qty, $bomId, $partNo]);
+                }
 
                 $savedCount++;
                 $totalQty += $qty;

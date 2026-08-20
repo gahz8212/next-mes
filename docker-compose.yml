@@ -26,6 +26,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - nodered_data:/data
+      - ./flows.json:/data/flows.json
 
 volumes:
   db_data:

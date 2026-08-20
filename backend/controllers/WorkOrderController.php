@@ -3,18 +3,39 @@
 
 class WorkOrderController {
     /**
-     * 헬퍼: Node-RED 논블로킹 HTTP 요청
+     * 헬퍼: Node-RED HTTP 요청 및 404 시 자동 플로우 배포 자가 치유
      */
     private static function triggerNodeRed(string $path, array $data): void {
         $nrHost = defined('NODERED_HOST') ? NODERED_HOST : '127.0.0.1';
         $nrPort = defined('NODERED_PORT') ? NODERED_PORT : 1881;
+        $url = "http://{$nrHost}:{$nrPort}{$path}";
         $json = json_encode($data, JSON_UNESCAPED_UNICODE);
 
-        $fp = @fsockopen($nrHost, $nrPort, $errno, $errstr, 0.5);
-        if ($fp) {
-            $out = "POST {$path} HTTP/1.1\r\nHost: {$nrHost}:{$nrPort}\r\nContent-Type: application/json\r\nContent-Length: " . strlen($json) . "\r\nConnection: Close\r\n\r\n" . $json;
-            fwrite($fp, $out);
-            fclose($fp);
+        $sendHttp = function($targetUrl, $payload) {
+            $ctx = stream_context_create([
+                'http' => [
+                    'method' => 'POST',
+                    'header' => "Content-Type: application/json\r\nContent-Length: " . strlen($payload) . "\r\nConnection: close\r\n",
+                    'content' => $payload,
+                    'timeout' => 2.0,
+                    'ignore_errors' => true
+                ]
+            ]);
+            $res = @file_get_contents($targetUrl, false, $ctx);
+            return $http_response_header ?? [];
+        };
+
+        $headers = $sendHttp($url, $json);
+        $statusLine = $headers[0] ?? '';
+
+        // Node-RED 컨테이너 재시작 등으로 플로우가 비어 404가 발생한 경우 자동 재배포 후 재시도
+        if (strpos($statusLine, '404') !== false) {
+            $deployScript = dirname(__DIR__, 2) . '/deploy_nodered_docker.py';
+            if (file_exists($deployScript)) {
+                @exec("python3 " . escapeshellarg($deployScript) . " > /dev/null 2>&1");
+                usleep(200000); // 0.2초 대기
+                $sendHttp($url, $json);
+            }
         }
     }
 
@@ -599,16 +620,17 @@ class WorkOrderController {
             $year  = Request::query('year') !== null && Request::query('year') !== '' ? (int)Request::query('year') : (int)date('Y');
             $month = Request::query('month') !== null && Request::query('month') !== '' ? (int)Request::query('month') : (int)date('m');
 
-            $whereSql = "((YEAR(w.due_date) = :year1";
-            $params = [':year1' => $year, ':year2' => $year];
-            if ($month > 0) {
-                $whereSql .= " AND MONTH(w.due_date) = :month1)";
-                $whereSql .= " OR (w.delivery_date IS NOT NULL AND YEAR(w.delivery_date) = :year2 AND MONTH(w.delivery_date) = :month2))";
-                $params[':month1'] = $month;
-                $params[':month2'] = $month;
-            } else {
-                $whereSql .= ") OR (w.delivery_date IS NOT NULL AND YEAR(w.delivery_date) = :year2))";
-            }
+            $whereSql = "(
+                (YEAR(w.due_date) = :year1 AND MONTH(w.due_date) = :month1)
+                OR (w.delivery_date IS NOT NULL AND YEAR(w.delivery_date) = :year2 AND MONTH(w.delivery_date) = :month2)
+                OR (w.completed_at IS NOT NULL AND YEAR(w.completed_at) = :year3 AND MONTH(w.completed_at) = :month3)
+                OR (w.due_date IS NULL)
+            )";
+            $params = [
+                ':year1' => $year, ':month1' => $month,
+                ':year2' => $year, ':month2' => $month,
+                ':year3' => $year, ':month3' => $month
+            ];
 
             $stmt = $pdo->prepare("
                 SELECT 

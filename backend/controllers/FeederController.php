@@ -89,7 +89,7 @@ class FeederController {
             $count = (int)$checkStmt->fetchColumn();
 
             if ($count === 0) {
-                $bomStmt = $pdo->prepare("SELECT part_no, COALESCE(points, req_qty, 1) as points, COALESCE(provide_qty, 0) as provide_qty, location, COALESCE(is_nc, 0) as is_nc FROM bom_detail WHERE bom_id = ? ORDER BY detail_id ASC");
+                $bomStmt = $pdo->prepare("SELECT part_no, COALESCE(points, req_qty, 1) as points, COALESCE(provide_qty, 0) as provide_qty, location, COALESCE(is_nc, 0) as is_nc, feeder_slot FROM bom_detail WHERE bom_id = ? ORDER BY detail_id ASC");
                 $bomStmt->execute([$bom_id]);
                 $bomList = $bomStmt->fetchAll();
 
@@ -108,9 +108,11 @@ class FeederController {
                 $insStmt = $pdo->prepare("
                     INSERT INTO feeder_setup (wo_id, slot_no, part_no, location, req_qty, status, reel_barcode, scanned_at, scanned_by)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE part_no = VALUES(part_no), location = VALUES(location), req_qty = VALUES(req_qty)
                 ");
 
-                $slot = 1;
+                $slotIdx = 1;
+                $insertedSlots = [];
                 foreach ($bomList as $item) {
                     $pts = (int)round((float)($item['points'] ?? $item['req_qty'] ?? 1));
                     $isNc = !empty($item['is_nc']) || $pts <= 0 || (stripos($item['location'] ?? '', 'NC') !== false);
@@ -119,27 +121,78 @@ class FeederController {
                     $scannedAt = $isNc ? date('Y-m-d H:i:s') : null;
                     $scannedBy = $isNc ? 'SYSTEM (NC)' : null;
 
-                    $insStmt->execute([
-                        $wo_id,
-                        $slot++,
-                        $item['part_no'],
-                        $item['location'] ?? 'U' . $slot,
-                        $pts,
-                        $status,
-                        $barcode,
-                        $scannedAt,
-                        $scannedBy
-                    ]);
+                    $rawSlot = trim((string)($item['feeder_slot'] ?? ''));
+                    if (!empty($rawSlot)) {
+                        $slots = array_map('trim', explode(',', $rawSlot));
+                        foreach ($slots as $sNo) {
+                            if (empty($sNo) || isset($insertedSlots[$sNo])) continue;
+                            $insertedSlots[$sNo] = true;
+                            $insStmt->execute([
+                                $wo_id,
+                                $sNo,
+                                $item['part_no'],
+                                $item['location'] ?? 'U' . $sNo,
+                                $pts,
+                                $status,
+                                $barcode,
+                                $scannedAt,
+                                $scannedBy
+                            ]);
+                        }
+                    } else {
+                        while (isset($insertedSlots[(string)$slotIdx])) {
+                            $slotIdx++;
+                        }
+                        $sNo = (string)$slotIdx++;
+                        $insertedSlots[$sNo] = true;
+                        $insStmt->execute([
+                            $wo_id,
+                            $sNo,
+                            $item['part_no'],
+                            $item['location'] ?? 'U' . $sNo,
+                            $pts,
+                            $status,
+                            $barcode,
+                            $scannedAt,
+                            $scannedBy
+                        ]);
+                    }
                 }
             }
 
-            // 3. feeder_setup 및 MSL 정보 조회 (BOM 포인트 및 제공수량 매핑)
+            // 3. feeder_setup 및 MSL 정보 조회 (사급 기입고량 / BOM 제공수량 매핑)
             $listStmt = $pdo->prepare("
                 SELECT 
                     fs.id, fs.wo_id, fs.slot_no, fs.part_no, fs.location,
                     COALESCE(bd.points, fs.req_qty, 1) as points,
                     COALESCE(bd.points, fs.req_qty, 1) as req_qty,
-                    COALESCE(bd.provide_qty, 0) as provide_qty,
+                    COALESCE(
+                        (SELECT SUM(CASE WHEN m.inout_type = 'IN' THEN m.qty ELSE -m.qty END)
+                         FROM material_inout m
+                         WHERE m.part_no = fs.part_no
+                           AND (
+                               m.wo_id = fs.wo_id
+                               OR m.order_no IN (SELECT soi.order_no FROM sales_order_item soi WHERE soi.wo_id = fs.wo_id)
+                               OR m.order_no IN (SELECT so.order_no FROM sales_order so WHERE so.wo_id = fs.wo_id)
+                           )
+                        ),
+                        (SELECT SUM(CASE WHEN m.inout_type = 'IN' THEN m.qty ELSE -m.qty END)
+                         FROM material_inout m
+                         WHERE m.part_no = fs.part_no
+                           AND m.company_id = w.company_id
+                        ),
+                        bd.provide_qty,
+                        0
+                    ) as provide_qty,
+                    (SELECT SUM(CASE WHEN m.inout_type = 'IN' THEN m.qty ELSE -m.qty END)
+                     FROM material_inout m
+                     WHERE m.part_no = fs.part_no
+                       AND (
+                           m.wo_id = fs.wo_id
+                           OR m.order_no IN (SELECT soi.order_no FROM sales_order_item soi WHERE soi.wo_id = fs.wo_id)
+                           OR m.order_no IN (SELECT so.order_no FROM sales_order so WHERE so.wo_id = fs.wo_id)
+                       )
+                    ) as inbound_qty,
                     fs.reel_barcode, fs.status, fs.scanned_at, fs.scanned_by,
                     rm.msl_level, rm.floor_life_hours, rm.unsealed_at, rm.status as reel_status
                 FROM feeder_setup fs
@@ -156,6 +209,7 @@ class FeederController {
                 $s['points'] = (int)round((float)($s['points'] ?? 1));
                 $s['req_qty'] = (int)round((float)($s['req_qty'] ?? 1));
                 $s['provide_qty'] = (int)round((float)($s['provide_qty'] ?? 0));
+                $s['inbound_qty'] = (int)round((float)($s['inbound_qty'] ?? $s['provide_qty'] ?? 0));
             }
             unset($s);
 
@@ -200,7 +254,7 @@ class FeederController {
             $input = Request::getBody();
             $wo_id          = trim($input['wo_id'] ?? '');
             $reel_barcode   = trim($input['reel_barcode'] ?? '');
-            $target_slot_no = !empty($input['slot_no']) ? (int)$input['slot_no'] : null;
+            $target_slot_no = isset($input['slot_no']) && trim((string)$input['slot_no']) !== '' ? trim((string)$input['slot_no']) : null;
             $scanned_by     = $input['scanned_by'] ?? 'Worker';
 
             if (!$wo_id || !$reel_barcode) {
@@ -223,7 +277,7 @@ class FeederController {
 
                 if ($reel) {
                     $reel_barcode = $reel['reel_barcode'];
-                } else if ($target_slot_no) {
+                } else if ($target_slot_no !== null) {
                     // 1-2. 슬롯 지정 스플라이싱/스캔: 해당 슬롯의 품번으로 신규 릴 자동 등록 및 검증
                     $slotStmt = $pdo->prepare("SELECT part_no FROM feeder_setup WHERE wo_id = ? AND slot_no = ?");
                     $slotStmt->execute([$wo_id, $target_slot_no]);
@@ -271,7 +325,7 @@ class FeederController {
                 $is_first_scan = true;
             }
 
-            if ($target_slot_no) {
+            if ($target_slot_no !== null) {
                 $slotStmt = $pdo->prepare("SELECT id, slot_no, part_no, location, status FROM feeder_setup WHERE wo_id = ? AND slot_no = ?");
                 $slotStmt->execute([$wo_id, $target_slot_no]);
                 $targetSlot = $slotStmt->fetch();
@@ -328,7 +382,7 @@ class FeederController {
             ");
             $upStmt->execute([$reel_barcode, $scanned_by, $matched_slot_id]);
 
-            $isSpliceAction = (!empty($input['action']) && $input['action'] === 'splice') || !empty($target_slot_no);
+            $isSpliceAction = (!empty($input['action']) && $input['action'] === 'splice') || ($target_slot_no !== null);
             if ($isSpliceAction) {
                 try {
                     $logStmt = $pdo->prepare("INSERT INTO system_log (event_type, description, wo_id, created_at) VALUES ('SPLICING', ?, ?, NOW())");

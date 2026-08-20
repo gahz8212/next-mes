@@ -487,3 +487,53 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
   - 상단 `[✕ 취소]` 버튼 또는 키보드 `ESC` 키로 언제든지 지정 모드 해제 가능.
   - 모달 팝업 형태의 `[⚙️ 상세설정]`을 통해 메모 입력 및 일정 해제(미정 처리)도 지원.
 
+### 8. 피더 슬롯 DB 컬럼 문자열(`VARCHAR`) 마이그레이션 및 타입 불일치 에러 완벽 해결
+- **문제 원인**: BOM 상세 부품에 비주얼 피더 슬롯(`C-01`, `O-01`, `TR-01` 등)을 배정할 때, MySQL `bom_detail.feeder_slot` 및 `feeder_setup.slot_no` 컬럼이 `INT`로 선언되어 있어 `SQLSTATE[22007]: Truncated incorrect INTEGER value: 'C-01'` 에러가 발생함.
+- **해결 조치**:
+  - DB 스키마 마이그레이션 적용:
+    - `bom_detail.feeder_slot`: `INT` $\rightarrow$ `VARCHAR(100)` (다중 슬롯 `C-01, C-02` 등 지원)
+    - `feeder_setup.slot_no`: `INT` $\rightarrow$ `VARCHAR(50)`
+  - `database/init/02_DB_Schema.sql` 최신 스키마 동기화.
+  - `backend/controllers/FeederController.php`: 슬롯 번호 파싱 시 `(int)` 강제 형변환 제거 및 BOM 피더 슬롯 자동 승계 로직 연동.
+
+### 9. 자재 피킹(Kitting) 단말기 [수주 BOM 사급 기입고량] 실시간 연동 및 카드 표기 최적화
+- **문제 현상**:
+  - `[📥 수주 BOM 입고]`에서 실제 입고 수량(예: 10,000 EA, 100 EA 등)을 등록했음에도, `kitting.html` 단말기 카드의 수량이 기판 1장당 소요 포인트(1~4 EA)로 작게 표시되어 소요량 충족 여부가 왜곡되는 현상 발생.
+- **개선 및 해결 조치**:
+  - **백엔드 사급 입고 연계 (`ConsignedMaterialController::receiveBatch`)**:
+    - 수주 BOM 입고 시 작업지시(`wo_id`) 및 `bom_id`를 자동 매핑하고 `bom_detail.provide_qty`를 실제 입고 수량으로 실시간 동기화.
+  - **피더 셋업 조회 API (`FeederController::getFeederSetup`)**:
+    - `material_inout` 테이블에서 해당 작업지시/수주번호/거래처의 실제 사급 기입고량 합계(`inbound_qty`, `provide_qty`)를 우선 조회하도록 쿼리 개편.
+  - **자재 피킹 UI (`frontend/kitting.html`)**:
+    - **상단 1행**: `Slot #1`, `4P (총 120 EA 소요)`, `부품번호` 명확히 표기.
+    - **스캔 대기 상태 (2행)**: `기입고: 10,000 EA` (또는 `소요: 120 EA`)를 사전 안내하여 피킹 편의 극대화.
+    - **스캔 검증 완료 (2행)**: 실제 기입고량(`10,000 EA`)을 기준 용량으로 삼아 실시간 생산 소진 잔량(EA) 및 잔량률(%) 계산, 총 소요량 이상일 경우 **`[소요량 충족]`** 뱃지 정상 부여.
+
+### 10. 라인 대시보드 [▶ 자삽 시작] 가동 트리거 및 Node-RED 시뮬레이터 연동 복구
+- **문제 현상**:
+  - 라인 대시보드(`dashboard.html`)에서 `[▶ 자삽 시작]` 버튼을 클릭했을 때 설비 라인 시뮬레이션 및 데이터 파이프라인이 구동되지 않는 현상 발생.
+- **원인 분석**:
+  - Docker 컨테이너 재부팅 후 Node-RED(`localhost:1881`)에 SMT/DIP 설비 시뮬레이션 플로우가 배포되지 않아 빈 플로우 상태로 대기 중이었으며, 이에 따라 백엔드의 `/start-sim` 트리거 호출이 `404 (Cannot POST /start-sim)`를 반환함.
+- **개선 및 해결 조치**:
+  - **시뮬레이션 플로우 즉시 배포**: `python3 deploy_nodered_docker.py` 실행으로 SMT/DIP 10대 설비 파이프라인 및 PdM 텔레메트리 연동 플로우를 Node-RED에 정상 배포 완료.
+  - **백엔드 자가 치유(Self-Healing) 엔진 탑재 (`WorkOrderController::triggerNodeRed`)**:
+    - Node-RED 트리거 요청 시 HTTP 상태 코드를 감지하여, 404 발생 시 자동으로 플로우 배포 스크립트를 즉시 실행하고 재시도하는 자가 복구 메커니즘 구축.
+    - `curl` 확장 대신 PHP 표준 내장 스트림(`stream_context_create`, `file_get_contents`) 통신으로 전환하여 무결성 보장.
+
+### 11. 생산계획 [완료된 품목 및 납품 일정] 조회/표시 복구 및 DB 컬럼 마이그레이션
+- **문제 현상**:
+  - 생산계획(`admin.html#page-plan`) 화면에서 완료된 작업지시/품목이 목록 및 달력에 나타나지 않는 현상 발생.
+- **원인 분석**:
+  - `work_order` 테이블에 `delivery_date` (납품 예정일) 컬럼이 누락되어 있어, `get_production_plan.php` 실행 시 MySQL 1054 (`Unknown column 'delivery_date'`) 에러가 발생하여 API가 실패함.
+- **개선 및 해결 조치**:
+  - **DB 컬럼 추가**: `ALTER TABLE work_order ADD COLUMN delivery_date DATE DEFAULT NULL AFTER due_date;` 적용 완료.
+  - **백엔드 조회 쿼리 포괄성 강화 (`WorkOrderController::getProductionPlan`)**:
+    - 생산 목표 납기일(`due_date`), 고객사 납품 예정일(`delivery_date`), 생산 완료일(`completed_at`), 납기 미지정 건을 모두 포함하여 해당 월의 생산/납품 계획이 누락 없이 정상 집계되도록 쿼리 최적화.
+  - **생산계획 UI 연동**:
+    - **목록 뷰**: `전체 상태` 또는 `완료` 필터 선택 시 완료된 품목(`✅ 완료(100%)` 또는 `🚚 납품예정`) 정상 노출 및 상세 진척률/KPI 완벽 관제.
+    - **달력 뷰**: 납품 예정일(또는 납기일) 칸에 `🚚` / `✅` 뱃지 및 일자별 상세 내역 실시간 연동.
+
+
+
+
+

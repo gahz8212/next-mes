@@ -45,8 +45,13 @@ CREATE TABLE IF NOT EXISTS bom_detail (
     detail_id INT AUTO_INCREMENT PRIMARY KEY,
     bom_id INT NOT NULL,
     part_no VARCHAR(50) NOT NULL,
+    part_name VARCHAR(255) DEFAULT NULL,
     req_qty DECIMAL(10,4) NOT NULL,
-    location VARCHAR(50) DEFAULT NULL
+    points DECIMAL(10,4) DEFAULT '1.0000',
+    provide_qty DECIMAL(12,2) DEFAULT NULL,
+    location VARCHAR(100) DEFAULT NULL,
+    feeder_slot VARCHAR(100) DEFAULT NULL,
+    is_nc TINYINT(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 6. 작업지시
@@ -100,14 +105,15 @@ CREATE TABLE IF NOT EXISTS reel_master (
 CREATE TABLE IF NOT EXISTS feeder_setup (
     id INT AUTO_INCREMENT PRIMARY KEY,
     wo_id VARCHAR(50) NOT NULL,
-    slot_no INT NOT NULL,
+    slot_no VARCHAR(50) NOT NULL,
     part_no VARCHAR(50) NOT NULL,
-    location VARCHAR(50) DEFAULT NULL,
-    req_qty DECIMAL(10,2) NOT NULL,
-    status ENUM('PENDING', 'VERIFIED') DEFAULT 'PENDING',
+    location VARCHAR(100) DEFAULT NULL,
+    req_qty DECIMAL(10,4) NOT NULL,
+    status ENUM('PENDING', 'VERIFIED', 'MISMATCH') DEFAULT 'PENDING',
     reel_barcode VARCHAR(100) DEFAULT NULL,
     scanned_at DATETIME DEFAULT NULL,
-    scanned_by VARCHAR(50) DEFAULT NULL
+    scanned_by VARCHAR(50) DEFAULT 'Worker',
+    UNIQUE KEY uk_wo_slot (wo_id, slot_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 12. 자재 입출고
