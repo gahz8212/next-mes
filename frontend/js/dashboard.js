@@ -577,6 +577,17 @@ function updateMachine(processId, status, barcode, pDataObj) {
 
     lastActiveTimestamp[processId] = Date.now();
     
+    // 자동 복귀 타이머 (3.8초간 후속 이벤트 미수신 시 대기 모드로 자연스럽게 전환)
+    if (machineResetTimers[processId]) {
+        clearTimeout(machineResetTimers[processId]);
+    }
+    machineResetTimers[processId] = setTimeout(() => {
+        const currentMac = document.getElementById(`mac-${processId}`);
+        if (currentMac && currentMac.classList.contains('run')) {
+            updateMachine(processId, 'IDLE', '-', null);
+        }
+    }, 3800);
+
     // 1. 상태 분류 (설비 고장 vs 제품 불량 vs 정상 가동)
     const isMachineAlarm = (status === 'ALARM' || status === 'MACHINE_ALARM' || (pDataObj && pDataObj.is_machine_alarm));
     const isPass = (status === 'PASS');
@@ -1338,7 +1349,7 @@ startIdleAmbientLoop();
 
 syncKPI().then(() => {
     pollLiveStream();
-    setInterval(pollLiveStream, 800);
+    setInterval(pollLiveStream, 600);
 });
 
 // 화면 크기 변경 시 고해상도 즉시 재렌더링

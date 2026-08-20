@@ -647,13 +647,13 @@ html, body {
 }
 
 .machine-card.run {
-    border-color: rgba(16, 185, 129, 0.6);
-    box-shadow: 0 0 12px rgba(16, 185, 129, 0.25);
+    border-color: rgba(16, 185, 129, 0.85);
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.35);
 }
 .machine-card.run .mac-status-indicator {
     background: #059669;
     color: #ffffff;
-    box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
 }
 .machine-card.run .mac-title {
     color: #6ee7b7;
@@ -662,12 +662,12 @@ html, body {
 .machine-card.run .mac-data {
     color: #34d399 !important;
     background: rgba(6, 78, 59, 0.6) !important;
-    border: 1px solid rgba(16, 185, 129, 0.4);
+    border: 1px solid rgba(16, 185, 129, 0.5);
     font-weight: 700;
     text-shadow: 0 0 8px rgba(52, 211, 153, 0.6);
 }
 
-/* 테두리를 따라 한 바퀴 회전하는 에메랄드 광선 (Node-RED 3초 주기에 100% 동기화) */
+/* 테두리를 따라 한 바퀴 회전하는 에메랄드 광선 (Node-RED 1.5초 주기에 100% 동기화) */
 .machine-card.run::after,
 .machine-card.pulse-active::after {
     content: '';
@@ -684,7 +684,7 @@ html, body {
         #10b981 325deg,
         #34d399 360deg
     );
-    animation: borderBeamSweep 3s linear infinite;
+    animation: borderBeamSweep 1.5s linear infinite;
     z-index: 0;
 }
 
