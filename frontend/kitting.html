@@ -492,7 +492,7 @@
         async function quickSpliceSlot(slotNo, partNo) {
             if (!currentWoId) return;
 
-            // 신규 릴 바코드 생성 (예: REEL-SKRPACE010-B102)
+            // 신규 릴 바코드 생성 (예: REEL-MBR0530-B102)
             const cleanPn = (partNo || 'PART').replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
             const randCode = Math.floor(Math.random() * 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
             const autoNewReel = `REEL-${cleanPn}-${randCode}`;
@@ -504,6 +504,7 @@
                     body: JSON.stringify({
                         wo_id: currentWoId,
                         slot_no: slotNo,
+                        part_no: partNo,
                         reel_barcode: autoNewReel,
                         action: 'splice'
                     })

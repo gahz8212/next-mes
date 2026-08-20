@@ -216,30 +216,43 @@ class FeederController {
             $reel = $stmt->fetch();
 
             if (!$reel) {
+                // 1-1. 바코드 문자열 자체가 part_no로 입력된 경우
                 $stmtPart = $pdo->prepare("SELECT reel_barcode, part_no, msl_level, floor_life_hours, unsealed_at, status FROM reel_master WHERE part_no = ? LIMIT 1");
                 $stmtPart->execute([$reel_barcode]);
                 $reel = $stmtPart->fetch();
 
                 if ($reel) {
                     $reel_barcode = $reel['reel_barcode'];
-                } else {
+                } else if ($target_slot_no) {
+                    // 1-2. 슬롯 지정 스플라이싱/스캔: 해당 슬롯의 품번으로 신규 릴 자동 등록 및 검증
+                    $slotStmt = $pdo->prepare("SELECT part_no FROM feeder_setup WHERE wo_id = ? AND slot_no = ?");
+                    $slotStmt->execute([$wo_id, $target_slot_no]);
+                    $ts = $slotStmt->fetch();
+                    if ($ts) {
+                        $insReel = $pdo->prepare("INSERT IGNORE INTO reel_master (reel_barcode, part_no, msl_level, floor_life_hours, unsealed_at, status) VALUES (?, ?, 1, 0, NOW(), 'IN_USE')");
+                        $insReel->execute([$reel_barcode, $ts['part_no']]);
+                        $reel = ['reel_barcode' => $reel_barcode, 'part_no' => $ts['part_no'], 'msl_level' => 1, 'floor_life_hours' => 0, 'unsealed_at' => date('Y-m-d H:i:s'), 'status' => 'IN_USE'];
+                    }
+                }
+
+                if (!$reel) {
                     $checkBom = $pdo->prepare("SELECT part_no FROM bom_detail bd JOIN work_order wo ON bd.bom_id = wo.bom_id WHERE wo.wo_id = ?");
                     $checkBom->execute([$wo_id]);
                     $bomParts = $checkBom->fetchAll(PDO::FETCH_COLUMN);
 
-                    $isMatch = false;
+                    $matchedPartNo = null;
                     foreach ($bomParts as $bp) {
                         if (self::isPartCompatible($pdo, $bp, $reel_barcode, $vendorInfo)) {
-                            $isMatch = true;
+                            $matchedPartNo = $bp;
                             break;
                         }
                     }
 
-                    if ($isMatch) {
+                    if ($matchedPartNo) {
                         $autoBarcode = 'REEL-' . substr(md5($reel_barcode), 0, 8);
                         $insReel = $pdo->prepare("INSERT IGNORE INTO reel_master (reel_barcode, part_no, msl_level, floor_life_hours, unsealed_at, status) VALUES (?, ?, 1, 0, NOW(), 'IN_USE')");
-                        $insReel->execute([$autoBarcode, $reel_barcode]);
-                        $reel = ['part_no' => $reel_barcode, 'msl_level' => 1, 'floor_life_hours' => 0, 'unsealed_at' => date('Y-m-d H:i:s'), 'status' => 'IN_USE'];
+                        $insReel->execute([$autoBarcode, $matchedPartNo]);
+                        $reel = ['reel_barcode' => $autoBarcode, 'part_no' => $matchedPartNo, 'msl_level' => 1, 'floor_life_hours' => 0, 'unsealed_at' => date('Y-m-d H:i:s'), 'status' => 'IN_USE'];
                         $reel_barcode = $autoBarcode;
                     } else {
                         throw new Exception("등록되지 않았거나 BOM에 호환되지 않는 릴 바코드/품번입니다: [{$reel_barcode}]");
