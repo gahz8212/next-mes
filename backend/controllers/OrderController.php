@@ -537,11 +537,26 @@ class OrderController {
                 $stmtDetails->execute([$bom_id]);
                 $details = $stmtDetails->fetchAll();
 
-                $insFeeder = $pdo->prepare("INSERT INTO feeder_setup (wo_id, slot_no, part_no, location, req_qty, status) VALUES (?, ?, ?, ?, ?, 'PENDING')");
+                $insFeeder = $pdo->prepare("INSERT INTO feeder_setup (wo_id, slot_no, part_no, location, req_qty, status) VALUES (?, ?, ?, ?, ?, 'PENDING') ON DUPLICATE KEY UPDATE part_no = VALUES(part_no), location = VALUES(location), req_qty = VALUES(req_qty)");
                 $slotIdx = 1;
+                $insertedSlots = [];
                 foreach ($details as $d) {
-                    $sNo = !empty($d['feeder_slot']) ? (int)$d['feeder_slot'] : $slotIdx++;
-                    $insFeeder->execute([$wo_id, $sNo, $d['part_no'], $d['location'] ?? '', $d['req_qty'] ?? 1]);
+                    $rawSlot = trim((string)($d['feeder_slot'] ?? ''));
+                    if (!empty($rawSlot)) {
+                        $slots = array_map('trim', explode(',', $rawSlot));
+                        foreach ($slots as $sNo) {
+                            if (empty($sNo) || isset($insertedSlots[$sNo])) continue;
+                            $insertedSlots[$sNo] = true;
+                            $insFeeder->execute([$wo_id, $sNo, $d['part_no'], $d['location'] ?? '', $d['req_qty'] ?? 1]);
+                        }
+                    } else {
+                        while (isset($insertedSlots[(string)$slotIdx])) {
+                            $slotIdx++;
+                        }
+                        $sNo = (string)$slotIdx++;
+                        $insertedSlots[$sNo] = true;
+                        $insFeeder->execute([$wo_id, $sNo, $d['part_no'], $d['location'] ?? '', $d['req_qty'] ?? 1]);
+                    }
                 }
             }
 
@@ -649,11 +664,26 @@ class OrderController {
                     $stmtDetails->execute([$bom_id]);
                     $details = $stmtDetails->fetchAll();
 
-                    $insFeeder = $pdo->prepare("INSERT INTO feeder_setup (wo_id, slot_no, part_no, location, req_qty, status) VALUES (?, ?, ?, ?, ?, 'PENDING')");
+                    $insFeeder = $pdo->prepare("INSERT INTO feeder_setup (wo_id, slot_no, part_no, location, req_qty, status) VALUES (?, ?, ?, ?, ?, 'PENDING') ON DUPLICATE KEY UPDATE part_no = VALUES(part_no), location = VALUES(location), req_qty = VALUES(req_qty)");
                     $slotIdx = 1;
+                    $insertedSlots = [];
                     foreach ($details as $d) {
-                        $sNo = !empty($d['feeder_slot']) ? (int)$d['feeder_slot'] : $slotIdx++;
-                        $insFeeder->execute([$wo_id, $sNo, $d['part_no'], $d['location'] ?? '', $d['req_qty'] ?? 1]);
+                        $rawSlot = trim((string)($d['feeder_slot'] ?? ''));
+                        if (!empty($rawSlot)) {
+                            $slots = array_map('trim', explode(',', $rawSlot));
+                            foreach ($slots as $sNo) {
+                                if (empty($sNo) || isset($insertedSlots[$sNo])) continue;
+                                $insertedSlots[$sNo] = true;
+                                $insFeeder->execute([$wo_id, $sNo, $d['part_no'], $d['location'] ?? '', $d['req_qty'] ?? 1]);
+                            }
+                        } else {
+                            while (isset($insertedSlots[(string)$slotIdx])) {
+                                $slotIdx++;
+                            }
+                            $sNo = (string)$slotIdx++;
+                            $insertedSlots[$sNo] = true;
+                            $insFeeder->execute([$wo_id, $sNo, $d['part_no'], $d['location'] ?? '', $d['req_qty'] ?? 1]);
+                        }
                     }
                 }
 

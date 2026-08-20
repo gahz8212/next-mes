@@ -212,11 +212,16 @@ class BomController {
                 $points = (int)round((float)($row['points'] ?? $row['req_qty'] ?? 1));
                 $provQty = (!empty($row['provide_qty']) && (float)$row['provide_qty'] > 0) ? (int)round((float)$row['provide_qty']) : null;
                 $loc = trim($row['location'] ?? '');
-                $slotNo = !empty($row['feeder_slot']) ? (int)$row['feeder_slot'] : null;
+                $slotNo = !empty($row['feeder_slot']) ? trim((string)$row['feeder_slot']) : null;
 
                 $detailStmt->execute([$bom_id, $pNo, $pName, $points, $points, $provQty, $loc, $slotNo]);
-                if (!empty($wo_id) && $slotNo !== null && isset($insFeeder)) {
-                    $insFeeder->execute([$wo_id, $slotNo, $pNo, $loc, $points]);
+                if (!empty($wo_id) && !empty($slotNo) && isset($insFeeder)) {
+                    $slots = array_map('trim', explode(',', $slotNo));
+                    foreach ($slots as $sNo) {
+                        if (!empty($sNo)) {
+                            $insFeeder->execute([$wo_id, $sNo, $pNo, $loc, $points]);
+                        }
+                    }
                 }
             }
 
