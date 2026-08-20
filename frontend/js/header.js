@@ -185,7 +185,7 @@ async function loadMesNotifications() {
     if (!countBadge && !listEl) return;
 
     try {
-        const res = await fetch('/backend/api/get_notifications.php');
+        const res = await fetch('../backend/api/get_notifications.php');
         const json = await res.json();
         if (json.status === 'success' && json.data) {
             const { unread_count, notifications } = json.data;
@@ -239,7 +239,7 @@ window.toggleNotificationPopup = toggleNotificationPopup;
 
 async function markAllNotificationsRead() {
     try {
-        await fetch('/backend/api/read_notification.php', {
+        await fetch('../backend/api/read_notification.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ read_all: true })
@@ -251,7 +251,7 @@ window.markAllNotificationsRead = markAllNotificationsRead;
 
 async function onMesNotificationClick(id, linkUrl) {
     try {
-        await fetch('/backend/api/read_notification.php', {
+        await fetch('../backend/api/read_notification.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: id })
@@ -285,12 +285,18 @@ async function confirmFullReset() {
     if (!ok) return;
 
     try {
-        const res = await fetch('/backend/api/reset_system.php', {
+        const res = await fetch('../backend/api/reset_system.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ mode: 'full' })
         });
-        const json = await res.json();
+        const text = await res.text();
+        let json;
+        try {
+            json = JSON.parse(text);
+        } catch(err) {
+            throw new Error(`서버 응답 오류 (HTTP ${res.status}): ${text.substring(0, 100)}`);
+        }
         if (json.status === 'success') {
             alert(json.message || "전체 공장 데이터가 성공적으로 초기화되었습니다.");
             window.location.reload();
@@ -313,12 +319,18 @@ async function confirmTransactionReset() {
     if (!ok) return;
 
     try {
-        const res = await fetch('/backend/api/reset_system.php', {
+        const res = await fetch('../backend/api/reset_system.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ mode: 'transactions' })
         });
-        const json = await res.json();
+        const text = await res.text();
+        let json;
+        try {
+            json = JSON.parse(text);
+        } catch(err) {
+            throw new Error(`서버 응답 오류 (HTTP ${res.status}): ${text.substring(0, 100)}`);
+        }
         if (json.status === 'success') {
             alert(json.message || "트랜잭션 실적이 성공적으로 초기화되었습니다.");
             window.location.reload();
