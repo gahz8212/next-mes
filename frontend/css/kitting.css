@@ -541,38 +541,87 @@ html, body {
 .checklist-scroll-area::-webkit-scrollbar { width: 5px; }
 .checklist-scroll-area::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 4px; }
 
-/* Multi-Column Feeder Card Item (3-Cols Optimized) */
+/* Multi-Column Feeder Card Item (Full-Card Gauge Background Style) */
 .feeder-card-item {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-left: 3.5px solid #64748b;
+    position: relative;
+    background: #0f172a; /* 어두운 베이스 배경 (우측에서 게이지가 빠져나간 영역) */
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--radius-sm);
-    padding: 9px 12px;
+    padding: 10px 14px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    transition: all 0.15s ease;
-    min-height: 68px;
+    gap: 7px;
+    transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    min-height: 72px;
+    overflow: hidden;
+    cursor: default;
 }
 
 .feeder-card-item:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-}
-
-.feeder-card-item.is-verified {
-    border-left-color: var(--success);
-    background: rgba(16, 185, 129, 0.05);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 }
 
 .feeder-card-item.is-highlight {
-    border-left-color: var(--accent) !important;
-    background: rgba(59, 130, 246, 0.15) !important;
-    box-shadow: 0 0 14px rgba(59, 130, 246, 0.4);
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 16px rgba(59, 130, 246, 0.5) !important;
+    transform: translateY(-2px);
 }
 
-/* 1st Line: Main Info (Slot, Location, Part No, Status) */
+/* ── Full-Card Background Gauge Fill Layer (우측부터 줄어드는 배경 게이지) ── */
+.feeder-gauge-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    z-index: 1;
+    pointer-events: none;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease, border-color 0.3s ease;
+    border-right: 2.5px solid #38bdf8;
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.18) 0%, rgba(56, 189, 248, 0.32) 100%);
+}
+
+/* 상태별 게이지 색상 테마 */
+.feeder-card-item.gauge-safe .feeder-gauge-fill {
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.15) 0%, rgba(56, 189, 248, 0.32) 100%);
+    border-right-color: #38bdf8;
+}
+
+.feeder-card-item.gauge-warning .feeder-gauge-fill {
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.42) 100%);
+    border-right-color: #f59e0b;
+}
+
+.feeder-card-item.gauge-danger .feeder-gauge-fill {
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.25) 0%, rgba(239, 68, 68, 0.55) 100%);
+    border-right-color: #ef4444;
+}
+
+.feeder-card-item.gauge-danger {
+    border-color: rgba(239, 68, 68, 0.6) !important;
+    animation: dangerPulse 1.5s infinite;
+}
+
+@keyframes dangerPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    50% { box-shadow: 0 0 14px 2px rgba(239, 68, 68, 0.3); }
+}
+
+.feeder-card-item.gauge-pending .feeder-gauge-fill {
+    width: 0% !important;
+    border-right: none;
+}
+
+/* 카드 내부 컨텐츠 레이어 (게이지 위에 선명하게 렌더링) */
+.feeder-line-main,
+.feeder-line-sub {
+    position: relative;
+    z-index: 2;
+}
+
+/* 1st Line: Main Info (Slot, Total Points, Part No, Status, Remainder Badge) */
 .feeder-line-main {
     display: flex;
     align-items: center;
@@ -591,36 +640,39 @@ html, body {
 .slot-pill {
     font-size: 11px;
     font-weight: 800;
-    background: var(--bg);
-    border: 1px solid rgba(59, 130, 246, 0.4);
-    padding: 2px 6px;
-    border-radius: 3px;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1.5px solid rgba(59, 130, 246, 0.6);
+    padding: 2px 7px;
+    border-radius: 4px;
     color: #93c5fd;
     font-family: 'JetBrains Mono', monospace;
     flex-shrink: 0;
+    letter-spacing: -0.02em;
 }
 
-.location-pill {
+.points-pill {
     font-size: 11px;
-    font-weight: 800;
-    background: rgba(245, 158, 11, 0.15);
-    border: 1px solid rgba(245, 158, 11, 0.35);
+    font-weight: 700;
+    background: rgba(245, 158, 11, 0.2);
+    border: 1px solid rgba(245, 158, 11, 0.4);
     padding: 2px 6px;
-    border-radius: 3px;
+    border-radius: 4px;
     color: #fcd34d;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', sans-serif;
     flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .part-number-text {
-    font-size: 13px;
-    font-weight: 700;
+    font-size: 13.5px;
+    font-weight: 800;
     color: #ffffff;
     font-family: 'JetBrains Mono', monospace;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
 .feeder-right-group {
@@ -628,6 +680,37 @@ html, body {
     align-items: center;
     gap: 6px;
     flex-shrink: 0;
+}
+
+.remain-percent-badge {
+    font-size: 11.5px;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #38bdf8;
+    text-shadow: 0 0 6px rgba(56, 189, 248, 0.4);
+}
+
+.remain-percent-badge.warn {
+    color: #fbbf24;
+    border-color: rgba(245, 158, 11, 0.5);
+    text-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
+}
+
+.remain-percent-badge.danger {
+    color: #f87171;
+    border-color: rgba(239, 68, 68, 0.6);
+    background: rgba(239, 68, 68, 0.2);
+    text-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+    animation: blinkText 1s infinite;
+}
+
+@keyframes blinkText {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
 }
 
 .status-badge-chip {
@@ -638,77 +721,95 @@ html, body {
     text-transform: uppercase;
 }
 .status-badge-chip.verified {
-    background: var(--success-light);
+    background: rgba(16, 185, 129, 0.25);
     color: #34d399;
-    border: 1px solid rgba(16, 185, 129, 0.35);
+    border: 1px solid rgba(16, 185, 129, 0.45);
 }
 .status-badge-chip.pending {
-    background: rgba(100, 116, 139, 0.2);
-    color: var(--text-muted);
-    border: 1px solid rgba(100, 116, 139, 0.3);
+    background: rgba(100, 116, 139, 0.25);
+    color: #94a3b8;
+    border: 1px solid rgba(100, 116, 139, 0.35);
 }
 
-/* 2nd Line: Sub Info (Qty, Reel, MSL) */
+/* 2nd Line: Sub Info (Reel Barcode, Live Remaining Qty) */
 .feeder-line-sub {
     display: flex;
     align-items: center;
     justify-content: space-between;
     font-size: 11px;
-    color: var(--text-muted);
-    border-top: 1px dashed rgba(255, 255, 255, 0.05);
-    padding-top: 5px;
-    gap: 6px;
+    color: var(--text-dim);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 6px;
+    gap: 8px;
 }
 
 .reel-meta-info {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     min-width: 0;
     overflow: hidden;
-}
-
-.req-qty-badge {
-    font-size: 11px;
-    color: var(--text-dim);
-    flex-shrink: 0;
-}
-.req-qty-badge b {
-    color: #f1f5f9;
-    font-weight: 700;
 }
 
 .reel-code-tag {
     font-family: 'JetBrains Mono', monospace;
     font-weight: 700;
     color: #34d399;
-    background: rgba(16, 185, 129, 0.1);
-    padding: 1px 5px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    padding: 1px 6px;
     border-radius: 3px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 .reel-code-none {
-    color: var(--text-muted);
+    color: #64748b;
     font-style: italic;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.msl-meta-info {
+.live-qty-info {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
     flex-shrink: 0;
 }
 
-.msl-tag {
-    color: #93c5fd;
-    font-weight: 600;
-    font-size: 10.5px;
+.live-qty-info.normal-state {
+    color: #94a3b8;
 }
+.live-qty-info.normal-state b {
+    color: #f1f5f9;
+}
+
+.live-qty-info.alert-state {
+    color: #f87171;
+    font-size: 11.5px;
+    font-weight: 800;
+    text-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+    animation: blinkText 1.2s infinite;
+}
+.live-qty-info.alert-state b {
+    color: #ffffff;
+}
+
+.live-qty-info .alert-pill {
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 10px;
+    padding: 1.5px 6px;
+    border-radius: 3px;
+    font-weight: 800;
+    margin-right: 2px;
+    letter-spacing: -0.02em;
+}
+
 
 /* ── Responsive Adaptations ── */
 @media (max-width: 1300px) {

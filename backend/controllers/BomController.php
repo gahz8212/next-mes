@@ -46,6 +46,15 @@ class BomController {
             $stmt->execute([$bom_id]);
             $details = $stmt->fetchAll();
 
+            foreach ($details as &$d) {
+                $d['points'] = (int)round((float)($d['points'] ?? 1));
+                $d['req_qty'] = (int)round((float)($d['req_qty'] ?? 1));
+                if ($d['provide_qty'] !== null && $d['provide_qty'] !== '') {
+                    $d['provide_qty'] = (int)round((float)$d['provide_qty']);
+                }
+            }
+            unset($d);
+
             Response::json(["status" => "success", "data" => $details, "bom_id" => $bom_id, "version" => $version]);
         } catch (Exception $e) {
             Response::error($e->getMessage());
@@ -200,8 +209,8 @@ class BomController {
             foreach ($bom_data as $row) {
                 $pNo = trim($row['part_no'] ?? '');
                 $pName = trim($row['part_name'] ?? '') ?: $pNo;
-                $points = (float)($row['points'] ?? $row['req_qty'] ?? 1);
-                $provQty = !empty($row['provide_qty']) ? (float)$row['provide_qty'] : null;
+                $points = (int)round((float)($row['points'] ?? $row['req_qty'] ?? 1));
+                $provQty = (!empty($row['provide_qty']) && (float)$row['provide_qty'] > 0) ? (int)round((float)$row['provide_qty']) : null;
                 $loc = trim($row['location'] ?? '');
                 $slotNo = !empty($row['feeder_slot']) ? (int)$row['feeder_slot'] : null;
 
@@ -652,6 +661,15 @@ class BomController {
             $stmtDetails->execute([$bom_id]);
             $details = $stmtDetails->fetchAll();
 
+            foreach ($details as &$d) {
+                $d['points'] = (int)round((float)($d['points'] ?? 1));
+                $d['req_qty'] = (int)round((float)($d['req_qty'] ?? 1));
+                if ($d['provide_qty'] !== null && $d['provide_qty'] !== '') {
+                    $d['provide_qty'] = (int)round((float)$d['provide_qty']);
+                }
+            }
+            unset($d);
+
             Response::json([
                 "status" => "success",
                 "data"   => [
@@ -878,7 +896,7 @@ class BomController {
 
             $part_no = trim($input['part_no'] ?? '');
             $part_name = trim($input['part_name'] ?? '') ?: $part_no;
-            $req_qty = (float)($input['req_qty'] ?? 1);
+            $req_qty = (int)round((float)($input['req_qty'] ?? 1));
             $location = trim($input['location'] ?? '');
             $feeder_slot = !empty($input['feeder_slot']) ? (int)$input['feeder_slot'] : null;
 

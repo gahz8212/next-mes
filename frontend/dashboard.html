@@ -577,7 +577,7 @@
                                 <th style="width: 70px;">슬롯</th>
                                 <th style="width: 90px;">위치</th>
                                 <th>BOM 필요 부품 (Part No)</th>
-                                <th style="width: 80px;">소요량</th>
+                                <th style="width: 80px;">포인트</th>
                                 <th>장착 릴 바코드</th>
                                 <th style="width: 80px;">MSL 수명</th>
                                 <th style="width: 100px; text-align: center;">상태</th>
@@ -770,13 +770,20 @@
                                 `;
                             }
                         } else if (wo.status === 'IN_PROGRESS') {
-                            statusBadge = `<span style="font-size: 10px; background: rgba(56,189,248,0.2); color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-weight: bold;">자삽 진행중</span>`;
-                            btnHtml = `
-                                <div style="display:flex; gap:6px;">
-                                    <button class="wo-action-btn btn-running" disabled style="flex:1;">자삽 가동중</button>
-                                    <button class="wo-action-btn" style="width: auto; padding: 6px 10px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.4);" onclick="stopWo('${wo.wo_id}')" title="가동 강제 중단">중단</button>
-                                </div>
-                            `;
+                            const isSmtDoneByQty = (parseInt(wo.processed_qty || 0) >= parseInt(wo.target_qty || 0) && parseInt(wo.target_qty || 0) > 0);
+                            if (isSmtDoneByQty) {
+                                if (typeof resetAllMachines === 'function') resetAllMachines('SMT');
+                                statusBadge = `<span style="font-size: 10px; background: rgba(16,185,129,0.2); color: #6ee7b7; padding: 2px 6px; border-radius: 4px; font-weight: bold;">자삽 완료</span>`;
+                                btnHtml = `<button class="wo-action-btn btn-start-dip" onclick="startDip('${wo.wo_id}')">▶ 수삽(DIP) 시작</button>`;
+                            } else {
+                                statusBadge = `<span style="font-size: 10px; background: rgba(56,189,248,0.2); color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-weight: bold;">자삽 진행중</span>`;
+                                btnHtml = `
+                                    <div style="display:flex; gap:6px;">
+                                        <button class="wo-action-btn btn-running" disabled style="flex:1;">자삽 가동중</button>
+                                        <button class="wo-action-btn" style="width: auto; padding: 6px 10px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.4);" onclick="stopWo('${wo.wo_id}')" title="가동 강제 중단">중단</button>
+                                    </div>
+                                `;
+                            }
                         } else if (wo.status === 'SMT_DONE') {
                             if (typeof resetAllMachines === 'function') resetAllMachines('SMT');
                             statusBadge = `<span style="font-size: 10px; background: rgba(16,185,129,0.2); color: #6ee7b7; padding: 2px 6px; border-radius: 4px; font-weight: bold;">자삽 완료</span>`;
@@ -903,7 +910,7 @@
                         <td><span class="slot-badge">#${slot.slot_no}</span></td>
                         <td><b style="color:#e2e8f0;">${slot.location || '-'}</b></td>
                         <td><span style="font-family:'JetBrains Mono'; color:#f1f5f9; font-weight:600;">${slot.part_no}</span></td>
-                        <td>${parseFloat(slot.req_qty)}</td>
+                        <td><b style="color:#34d399; font-family:'JetBrains Mono';">${Math.round(parseFloat(slot.points !== undefined && slot.points !== null ? slot.points : slot.req_qty))}</b>개소</td>
                         <td>${reelCode}</td>
                         <td>${mslInfo}</td>
                         <td style="text-align: center;">${statusChip}</td>

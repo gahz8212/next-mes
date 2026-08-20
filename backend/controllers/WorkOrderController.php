@@ -24,6 +24,18 @@ class WorkOrderController {
     public static function getWoList(): void {
         try {
             $pdo = Database::getConnection();
+            // SMT 실적 목표 수량 도달 시 SMT_DONE 자동 동기화
+            $pdo->query("
+                UPDATE work_order w
+                JOIN (
+                    SELECT wo_id, count(*) as proc_cnt 
+                    FROM barcode_master 
+                    WHERE status != 'WAIT' 
+                    GROUP BY wo_id
+                ) b ON w.wo_id = b.wo_id
+                SET w.status = 'SMT_DONE'
+                WHERE w.status = 'IN_PROGRESS' AND b.proc_cnt >= w.target_qty AND w.target_qty > 0
+            ");
             $stmt = $pdo->query("
                 SELECT 
                     w.wo_id, w.target_qty, w.due_date, w.status, w.bom_id,
@@ -59,6 +71,18 @@ class WorkOrderController {
     public static function getAdminWoList(): void {
         try {
             $pdo = Database::getConnection();
+            // SMT 실적 목표 수량 도달 시 SMT_DONE 자동 동기화
+            $pdo->query("
+                UPDATE work_order w
+                JOIN (
+                    SELECT wo_id, count(*) as proc_cnt 
+                    FROM barcode_master 
+                    WHERE status != 'WAIT' 
+                    GROUP BY wo_id
+                ) b ON w.wo_id = b.wo_id
+                SET w.status = 'SMT_DONE'
+                WHERE w.status = 'IN_PROGRESS' AND b.proc_cnt >= w.target_qty AND w.target_qty > 0
+            ");
             $stmt = $pdo->query("
                 SELECT
                     w.wo_id, w.target_qty, w.due_date, w.status, w.bom_id, w.company_id,
@@ -430,7 +454,7 @@ class WorkOrderController {
             $wo = $stmt->fetch();
 
             if (!$wo) throw new Exception("해당 작업지시를 찾을 수 없습니다: " . $wo_id);
-            if ($wo['status'] !== 'SMT_DONE' && $wo['status'] !== 'DIP_IN_PROGRESS') {
+            if (!in_array($wo['status'], ['SMT_DONE', 'DIP_IN_PROGRESS', 'IN_PROGRESS'])) {
                 throw new Exception("해당 작업지시를 수삽 시작할 수 없습니다. (현재 상태: " . $wo['status'] . ")");
             }
 

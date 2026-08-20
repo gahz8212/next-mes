@@ -89,7 +89,7 @@ class FeederController {
             $count = (int)$checkStmt->fetchColumn();
 
             if ($count === 0) {
-                $bomStmt = $pdo->prepare("SELECT part_no, req_qty, location, COALESCE(is_nc, 0) as is_nc FROM bom_detail WHERE bom_id = ? ORDER BY detail_id ASC");
+                $bomStmt = $pdo->prepare("SELECT part_no, COALESCE(points, req_qty, 1) as points, COALESCE(provide_qty, 0) as provide_qty, location, COALESCE(is_nc, 0) as is_nc FROM bom_detail WHERE bom_id = ? ORDER BY detail_id ASC");
                 $bomStmt->execute([$bom_id]);
                 $bomList = $bomStmt->fetchAll();
 
@@ -112,7 +112,8 @@ class FeederController {
 
                 $slot = 1;
                 foreach ($bomList as $item) {
-                    $isNc = !empty($item['is_nc']) || (float)($item['req_qty'] ?? 1) <= 0 || (stripos($item['location'] ?? '', 'NC') !== false);
+                    $pts = (int)round((float)($item['points'] ?? $item['req_qty'] ?? 1));
+                    $isNc = !empty($item['is_nc']) || $pts <= 0 || (stripos($item['location'] ?? '', 'NC') !== false);
                     $status = $isNc ? 'VERIFIED' : 'PENDING';
                     $barcode = $isNc ? 'NC (미실장 SKIP)' : null;
                     $scannedAt = $isNc ? date('Y-m-d H:i:s') : null;
@@ -123,7 +124,7 @@ class FeederController {
                         $slot++,
                         $item['part_no'],
                         $item['location'] ?? 'U' . $slot,
-                        $item['req_qty'] ?? 10,
+                        $pts,
                         $status,
                         $barcode,
                         $scannedAt,
@@ -132,19 +133,31 @@ class FeederController {
                 }
             }
 
-            // 3. feeder_setup 및 MSL 정보 조회
+            // 3. feeder_setup 및 MSL 정보 조회 (BOM 포인트 및 제공수량 매핑)
             $listStmt = $pdo->prepare("
                 SELECT 
-                    fs.id, fs.wo_id, fs.slot_no, fs.part_no, fs.location, fs.req_qty,
+                    fs.id, fs.wo_id, fs.slot_no, fs.part_no, fs.location,
+                    COALESCE(bd.points, fs.req_qty, 1) as points,
+                    COALESCE(bd.points, fs.req_qty, 1) as req_qty,
+                    COALESCE(bd.provide_qty, 0) as provide_qty,
                     fs.reel_barcode, fs.status, fs.scanned_at, fs.scanned_by,
                     rm.msl_level, rm.floor_life_hours, rm.unsealed_at, rm.status as reel_status
                 FROM feeder_setup fs
+                JOIN work_order w ON fs.wo_id = w.wo_id
+                LEFT JOIN bom_detail bd ON w.bom_id = bd.bom_id AND fs.part_no = bd.part_no
                 LEFT JOIN reel_master rm ON fs.reel_barcode = rm.reel_barcode
                 WHERE fs.wo_id = ?
                 ORDER BY fs.slot_no ASC
             ");
             $listStmt->execute([$wo_id]);
             $slots = $listStmt->fetchAll();
+
+            foreach ($slots as &$s) {
+                $s['points'] = (int)round((float)($s['points'] ?? 1));
+                $s['req_qty'] = (int)round((float)($s['req_qty'] ?? 1));
+                $s['provide_qty'] = (int)round((float)($s['provide_qty'] ?? 0));
+            }
+            unset($s);
 
             $total_count = count($slots);
             $verified_count = 0;

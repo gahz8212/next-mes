@@ -3794,25 +3794,46 @@
 
         container.innerHTML = list.map(wo => {
             const isSelected = wo.wo_id === selectedWoId;
-            const isDone = currentWoTab === 'completed';
-            const isDip = wo.status === 'DIP_IN_PROGRESS';
-            const currentQty = isDone 
-                ? parseInt(wo.processed_qty || wo.target_qty || 0)
-                : (isDip ? parseInt(wo.dip_qty || 0) : parseInt(wo.processed_qty || 0));
+            const isDone = (wo.status === 'COMPLETED' || currentWoTab === 'completed');
+            const isSmtDone = (wo.status === 'SMT_DONE');
+            const isSmtProgress = (wo.status === 'IN_PROGRESS');
+            const isDipProgress = (wo.status === 'DIP_IN_PROGRESS');
             const targetQty = parseInt(wo.target_qty || 0);
-            const pct = targetQty > 0 ? Math.min(100, Math.round(currentQty / targetQty * 100)) : 0;
+
+            // SMT 실적 & 진행률 (0~100%)
+            let smtQty = 0;
+            if (isDone || isSmtDone || isDipProgress) {
+                smtQty = targetQty;
+            } else if (isSmtProgress) {
+                smtQty = parseInt(wo.processed_qty || 0);
+            }
+            const smtPct = targetQty > 0 ? Math.min(100, Math.round(smtQty / targetQty * 100)) : 0;
+
+            // DIP 실적 & 진행률 (0~100%)
+            let dipQty = 0;
+            if (isDone) {
+                dipQty = targetQty;
+            } else if (isDipProgress) {
+                dipQty = parseInt(wo.dip_qty || wo.processed_qty || 0);
+            }
+            const dipPct = targetQty > 0 ? Math.min(100, Math.round(dipQty / targetQty * 100)) : 0;
+
+            // 전체 종합 진행률 (SMT 50% + DIP 50%)
+            const totalPct = Math.min(100, Math.round((smtPct * 0.5) + (dipPct * 0.5)));
+
+            const currentQty = isDone ? targetQty : (isDipProgress ? dipQty : smtQty);
 
             let statusBadge = '';
             if (wo.status === 'HOLD') {
                 statusBadge = `<span style="font-size:11px; font-weight:700; color:#fbbf24; background:rgba(245,158,11,0.15); padding:1px 6px; border-radius:3px;">⏸️ 보류</span>`;
-            } else if (wo.status === 'IN_PROGRESS') {
-                statusBadge = `<span style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.15); padding:1px 6px; border-radius:3px;">⚡ 자삽(SMT)</span>`;
-            } else if (wo.status === 'SMT_DONE') {
-                statusBadge = `<span style="font-size:11px; font-weight:700; color:#93c5fd; background:rgba(59,130,246,0.15); padding:1px 6px; border-radius:3px;">자삽완료</span>`;
-            } else if (wo.status === 'DIP_IN_PROGRESS') {
-                statusBadge = `<span style="font-size:11px; font-weight:700; color:#a78bfa; background:rgba(167,139,250,0.15); padding:1px 6px; border-radius:3px;">수삽(DIP)</span>`;
-            } else if (wo.status === 'COMPLETED' || isDone) {
-                statusBadge = `<span style="font-size:11px; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); padding:1px 6px; border-radius:3px;">✅ 완료</span>`;
+            } else if (isSmtProgress) {
+                statusBadge = `<span style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.15); padding:1px 6px; border-radius:3px;">⚡ SMT(${smtPct}%)</span>`;
+            } else if (isSmtDone) {
+                statusBadge = `<span style="font-size:11px; font-weight:700; color:#93c5fd; background:rgba(59,130,246,0.15); padding:1px 6px; border-radius:3px;">자삽완료(50%)</span>`;
+            } else if (isDipProgress) {
+                statusBadge = `<span style="font-size:11px; font-weight:700; color:#a78bfa; background:rgba(167,139,250,0.15); padding:1px 6px; border-radius:3px;">수삽(DIP ${dipPct}%)</span>`;
+            } else if (isDone) {
+                statusBadge = `<span style="font-size:11px; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); padding:1px 6px; border-radius:3px;">✅ 완료(100%)</span>`;
             } else {
                 statusBadge = `<span style="font-size:11px; font-weight:700; color:#94a3b8; background:rgba(100,116,139,0.2); padding:1px 6px; border-radius:3px;">⏳ 대기</span>`;
             }
@@ -3830,15 +3851,15 @@
                 </div>
                 <div style="font-size:13.5px; font-weight:700; color:#ffffff; margin-bottom:3px; display:flex; justify-content:space-between; align-items:center;">
                     <code style="color:#f8fafc; font-family:'JetBrains Mono',monospace;">${escHtml(wo.wo_id)}</code>
-                    <span style="font-size:12px; color:${pct>=100?'#34d399':'#38bdf8'}; font-weight:700;">${pct}%</span>
+                    <span style="font-size:12px; color:${totalPct>=100?'#34d399':totalPct>=50?'#a78bfa':'#38bdf8'}; font-weight:800; font-family:'JetBrains Mono',monospace;">종합 ${totalPct}%</span>
                 </div>
                 <div style="font-size:12.5px; color:#e2e8f0; font-weight:600; margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                     ${escHtml(wo.item_name || '—')}
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; font-size:11.5px; color:#94a3b8;">
                     <span>${wo.order_no ? `수주: <code style="color:#cbd5e1;">${escHtml(wo.order_no)}</code>` : '개별 작업'}</span>
-                    <span style="font-family:'JetBrains Mono',monospace; font-weight:700; color:#cbd5e1;">
-                        <strong style="color:${pct>=100?'#34d399':'#38bdf8'};">${currentQty.toLocaleString()}</strong> / ${targetQty.toLocaleString()} EA
+                    <span style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:11px;">
+                        <span style="color:#38bdf8;">SMT ${smtPct}%</span> | <span style="color:#a78bfa;">DIP ${dipPct}%</span>
                     </span>
                 </div>
             </div>`;
@@ -3876,15 +3897,37 @@
 
         const isDone = (wo.status === 'COMPLETED' || currentWoTab === 'completed');
         const isHold = (wo.status === 'HOLD');
-        const isDip = (wo.status === 'DIP_IN_PROGRESS');
+        const isSmtDone = (wo.status === 'SMT_DONE');
+        const isSmtProgress = (wo.status === 'IN_PROGRESS');
+        const isDipProgress = (wo.status === 'DIP_IN_PROGRESS');
         const targetQty = parseInt(wo.target_qty || 0);
-        const processedQty = isDone 
-            ? parseInt(wo.processed_qty || wo.target_qty || 0)
-            : (isDip ? parseInt(wo.dip_qty || 0) : parseInt(wo.processed_qty || 0));
-        const goodQty = parseInt(wo.good_qty || (isDone ? processedQty : 0));
+
+        // ── 1. SMT 50% 진행률 계산 (각인 ➔ 리플로우 완료 시 100%) ──
+        let smtQty = 0;
+        if (isDone || isSmtDone || isDipProgress) {
+            smtQty = targetQty;
+        } else if (isSmtProgress) {
+            smtQty = parseInt(wo.processed_qty || 0);
+        }
+        const smtPct = targetQty > 0 ? Math.min(100, Math.round(smtQty / targetQty * 100)) : 0;
+
+        // ── 2. DIP 50% 진행률 계산 (수삽검사 ➔ 최종완료 시 100%) ──
+        let dipQty = 0;
+        if (isDone) {
+            dipQty = targetQty;
+        } else if (isDipProgress) {
+            dipQty = parseInt(wo.dip_qty || wo.processed_qty || 0);
+        }
+        const dipPct = targetQty > 0 ? Math.min(100, Math.round(dipQty / targetQty * 100)) : 0;
+
+        // ── 3. 전체 종합 진행률 (SMT 50% + DIP 50%) ──
+        const totalPct = Math.min(100, Math.round((smtPct * 0.5) + (dipPct * 0.5)));
+
+        const currentQty = isDone ? targetQty : (isDipProgress ? dipQty : smtQty);
+        const goodQty = parseInt(wo.good_qty || (isDone ? targetQty : (isDipProgress ? dipQty : smtQty)));
         const failQty = parseInt(wo.fail_qty || 0);
-        const pct = targetQty > 0 ? Math.min(100, Math.round(processedQty / targetQty * 100)) : 0;
-        const yieldRate = processedQty > 0 ? ((goodQty / processedQty) * 100).toFixed(1) : '100.0';
+        const totalProcessed = isDone ? targetQty : (isDipProgress ? dipQty : smtQty);
+        const yieldRate = totalProcessed > 0 ? ((goodQty / totalProcessed) * 100).toFixed(1) : '100.0';
 
         const ddayBadge = renderDDay(wo.dday, isDone);
 
@@ -3901,6 +3944,7 @@
                 <!-- 툴바 버튼 그룹 -->
                 <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                     <button type="button" class="card-btn card-btn-bom" style="padding:5px 10px; font-size:12px; font-weight:700;" onclick="openBOMModal('${wo.wo_id}', '${wo.company_id}')">📋 BOM 부품</button>
+
                     ${!isDone ? `
                         ${isHold 
                             ? `<button type="button" class="card-btn" style="padding:5px 10px; font-size:12px; font-weight:700; background:#059669; color:#fff; border:none;" onclick="toggleWoHold('${wo.wo_id}', false)">▶️ 보류 해제</button>`
@@ -3919,64 +3963,87 @@
 
             <!-- 하단 상세 관제 영역 (독립 스크롤) -->
             <div style="flex:1; overflow-y:auto; padding:16px 20px; display:flex; flex-direction:column; gap:16px;">
-                <!-- 1. 진척도 & 생산 실적 KPI 카드 행 -->
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
-                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px 14px;">
+                <!-- 1. 진척도 & 생산 실적 KPI 카드 행 (4대 지표) -->
+                <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px;">
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:10px 14px;">
                         <div style="font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:4px;">🎯 목표 생산량</div>
                         <div style="font-size:20px; font-weight:800; color:#f8fafc; font-family:'JetBrains Mono',monospace;">${targetQty.toLocaleString()} <span style="font-size:12px; color:#94a3b8;">EA</span></div>
                     </div>
-                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px 14px;">
-                        <div style="font-size:11px; font-weight:700; color:#38bdf8; margin-bottom:4px;">⚡ 현재 생산 실적</div>
-                        <div style="font-size:20px; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace;">${processedQty.toLocaleString()} <span style="font-size:12px; color:#94a3b8;">(${pct}%)</span></div>
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(56,189,248,0.25); border-radius:6px; padding:10px 14px;">
+                        <div style="font-size:11px; font-weight:700; color:#38bdf8; margin-bottom:4px;">⚡ SMT 실적 (50% 비중)</div>
+                        <div style="font-size:20px; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace;">${smtQty.toLocaleString()} <span style="font-size:12px; color:#94a3b8;">(${smtPct}%)</span></div>
                     </div>
-                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px 14px;">
-                        <div style="font-size:11px; font-weight:700; color:#34d399; margin-bottom:4px;">✅ 양품 / ❌ 불량</div>
-                        <div style="font-size:18px; font-weight:800; font-family:'JetBrains Mono',monospace;">
-                            <span style="color:#34d399;">${goodQty.toLocaleString()}</span> <span style="font-size:12px; color:#64748b;">/</span> <span style="color:#f87171;">${failQty.toLocaleString()}</span>
-                        </div>
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(167,139,250,0.25); border-radius:6px; padding:10px 14px;">
+                        <div style="font-size:11px; font-weight:700; color:#a78bfa; margin-bottom:4px;">⚡ DIP 실적 (50% 비중)</div>
+                        <div style="font-size:20px; font-weight:800; color:#a78bfa; font-family:'JetBrains Mono',monospace;">${dipQty.toLocaleString()} <span style="font-size:12px; color:#94a3b8;">(${dipPct}%)</span></div>
                     </div>
-                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px 14px;">
-                        <div style="font-size:11px; font-weight:700; color:#fbbf24; margin-bottom:4px;">📊 누적 공정 수율</div>
-                        <div style="font-size:20px; font-weight:800; color:${parseFloat(yieldRate)>=95?'#34d399':parseFloat(yieldRate)>=80?'#fbbf24':'#f87171'}; font-family:'JetBrains Mono',monospace;">${yieldRate}%</div>
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:10px 14px;">
+                        <div style="font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:4px;">📊 전체 종합 진행률</div>
+                        <div style="font-size:20px; font-weight:800; color:${totalPct>=100?'#34d399':totalPct>=50?'#a78bfa':'#38bdf8'}; font-family:'JetBrains Mono',monospace;">${totalPct}%</div>
                     </div>
                 </div>
 
-                <!-- 2. 전체 공정 진행 단계 플로우 -->
+                <!-- 2. SMT(50%) + DIP(50%) 2단계 독립 공정 진행 단계 플로우 -->
                 <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:16px;">
-                    <div style="font-size:13px; font-weight:800; color:#38bdf8; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-                        <span>🔄 SMT / DIP 공정 진행 단계</span>
-                        <span style="font-size:12px; color:#cbd5e1; font-weight:600;">진행률: <strong style="color:#38bdf8;">${pct}%</strong></span>
+                    <!-- 상단 전체 2분할 종합 진행 바 (SMT 50% + DIP 50%) -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-size:12.5px; font-weight:800; color:#e2e8f0; display:flex; align-items:center; gap:6px;">
+                            <span>🔄 전체 공정 진척도 (SMT 50% + DIP 50%)</span>
+                        </span>
+                        <span style="font-size:12px; color:#cbd5e1; font-weight:700;">종합 진행률: <strong style="color:${totalPct>=100?'#34d399':totalPct>=50?'#a78bfa':'#38bdf8'}; font-size:14px;">${totalPct}%</strong></span>
+                    </div>
+                    <div style="display:flex; gap:6px; height:12px; background:rgba(0,0,0,0.3); border-radius:6px; padding:2px; border:1px solid rgba(255,255,255,0.08); margin-bottom:16px;">
+                        <!-- SMT 50% 구간 -->
+                        <div style="flex:1; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; position:relative;" title="SMT 공정: ${smtPct}% (전체 50% 중 ${Math.round(smtPct*0.5)}%)">
+                            <div style="width:${smtPct}%; height:100%; background:linear-gradient(90deg, #0284c7, #38bdf8); transition:width 0.3s ease;"></div>
+                        </div>
+                        <!-- DIP 50% 구간 -->
+                        <div style="flex:1; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; position:relative;" title="DIP 공정: ${dipPct}% (전체 50% 중 ${Math.round(dipPct*0.5)}%)">
+                            <div style="width:${dipPct}%; height:100%; background:linear-gradient(90deg, #7c3aed, #34d399); transition:width 0.3s ease;"></div>
+                        </div>
                     </div>
 
-                    <!-- Progress Bar -->
-                    <div style="width:100%; height:8px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden; margin-bottom:16px;">
-                        <div style="width:${pct}%; height:100%; background:linear-gradient(90deg, #38bdf8, #34d399); border-radius:4px; transition:width 0.3s ease;"></div>
+                    <!-- Step 1: SMT 라인 (자체 100% / 전체의 50% 비중) -->
+                    <div style="background:rgba(30,41,59,0.4); border:1px solid rgba(56,189,248,0.25); border-radius:6px; padding:10px 12px; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="font-size:12px; font-weight:800; color:#38bdf8; display:flex; align-items:center; gap:6px;">
+                                <span style="background:#0284c7; color:#fff; font-size:10px; padding:1px 5px; border-radius:3px;">SMT 50%</span>
+                                SMT 표면실장 공정 (각인 ➔ 리플로우 100%)
+                            </span>
+                            <span style="font-size:11.5px; font-weight:700; color:#38bdf8; font-family:'JetBrains Mono',monospace;">진행률: ${smtPct}% (${smtQty}/${targetQty} EA)</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:4px; overflow-x:auto;">
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>0?'rgba(56,189,248,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>0?'#38bdf8':'#64748b'}; border:1px solid ${smtPct>0?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.08)'};">1. 각인 (Laser)</span>
+                            <span style="color:#64748b; font-size:10px;">➔</span>
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>15?'rgba(56,189,248,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>15?'#38bdf8':'#64748b'}; border:1px solid ${smtPct>15?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.08)'};">2. 납도포 (SPI)</span>
+                            <span style="color:#64748b; font-size:10px;">➔</span>
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>40?'rgba(56,189,248,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>40?'#38bdf8':'#64748b'}; border:1px solid ${smtPct>40?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.08)'};">3. #1 고속 마운터</span>
+                            <span style="color:#64748b; font-size:10px;">➔</span>
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>70?'rgba(56,189,248,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>70?'#38bdf8':'#64748b'}; border:1px solid ${smtPct>70?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.08)'};">4. #2 이형 마운터</span>
+                            <span style="color:#64748b; font-size:10px;">➔</span>
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>=100?'rgba(52,211,153,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>=100?'#34d399':'#64748b'}; border:1px solid ${smtPct>=100?'rgba(52,211,153,0.5)':'rgba(255,255,255,0.08)'};">5. 리플로우 (SMT완료)</span>
+                        </div>
                     </div>
 
-                    <!-- Process Step Badges -->
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
-                        <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; min-width:80px;">
-                            <span style="font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; background:${pct>0?'rgba(52,211,153,0.2)':'rgba(255,255,255,0.05)'}; color:${pct>0?'#34d399':'#94a3b8'}; border:1px solid ${pct>0?'rgba(52,211,153,0.4)':'rgba(255,255,255,0.1)'};">1. 각인 (Laser)</span>
+                    <!-- Step 2: DIP 라인 (자체 100% / 전체의 50% 비중) -->
+                    <div style="background:rgba(30,41,59,0.4); border:1px solid rgba(167,139,250,0.25); border-radius:6px; padding:10px 12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="font-size:12px; font-weight:800; color:#a78bfa; display:flex; align-items:center; gap:6px;">
+                                <span style="background:#7c3aed; color:#fff; font-size:10px; padding:1px 5px; border-radius:3px;">DIP 50%</span>
+                                DIP 수삽 & 후공정 검사 (수삽 ➔ 최종완료 100%)
+                            </span>
+                            <span style="font-size:11.5px; font-weight:700; color:#a78bfa; font-family:'JetBrains Mono',monospace;">진행률: ${dipPct}% (${dipQty}/${targetQty} EA)</span>
                         </div>
-                        <span style="color:#64748b; font-size:11px;">➔</span>
-                        <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; min-width:80px;">
-                            <span style="font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; background:${pct>10?'rgba(52,211,153,0.2)':'rgba(255,255,255,0.05)'}; color:${pct>10?'#34d399':'#94a3b8'}; border:1px solid ${pct>10?'rgba(52,211,153,0.4)':'rgba(255,255,255,0.1)'};">2. 납도포 (SPI)</span>
-                        </div>
-                        <span style="color:#64748b; font-size:11px;">➔</span>
-                        <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; min-width:80px;">
-                            <span style="font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; background:${pct>30?'rgba(56,189,248,0.2)':'rgba(255,255,255,0.05)'}; color:${pct>30?'#38bdf8':'#94a3b8'}; border:1px solid ${pct>30?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.1)'};">3. 마운터 (SMT)</span>
-                        </div>
-                        <span style="color:#64748b; font-size:11px;">➔</span>
-                        <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; min-width:80px;">
-                            <span style="font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; background:${pct>60?'rgba(56,189,248,0.2)':'rgba(255,255,255,0.05)'}; color:${pct>60?'#38bdf8':'#94a3b8'}; border:1px solid ${pct>60?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.1)'};">4. 리플로우</span>
-                        </div>
-                        <span style="color:#64748b; font-size:11px;">➔</span>
-                        <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; min-width:80px;">
-                            <span style="font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; background:${pct>80?'rgba(167,139,250,0.2)':'rgba(255,255,255,0.05)'}; color:${pct>80?'#a78bfa':'#94a3b8'}; border:1px solid ${pct>80?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.1)'};">5. 수삽 (DIP)</span>
-                        </div>
-                        <span style="color:#64748b; font-size:11px;">➔</span>
-                        <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; min-width:80px;">
-                            <span style="font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; background:${pct>=100?'rgba(52,211,153,0.2)':'rgba(255,255,255,0.05)'}; color:${pct>=100?'#34d399':'#94a3b8'}; border:1px solid ${pct>=100?'rgba(52,211,153,0.4)':'rgba(255,255,255,0.1)'};">6. 검사/완료</span>
+                        <div style="display:flex; align-items:center; gap:4px; overflow-x:auto;">
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>0?'rgba(167,139,250,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>0?'#a78bfa':'#64748b'}; border:1px solid ${dipPct>0?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.08)'};">6. 수삽 AOI 검사</span>
+                            <span style="color:#64748b; font-size:10px;">➔</span>
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>20?'rgba(167,139,250,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>20?'#a78bfa':'#64748b'}; border:1px solid ${dipPct>20?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.08)'};">7. 웨이브 솔더링</span>
+                            <span style="color:#64748b; font-size:10px;">➔</span>
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>50?'rgba(167,139,250,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>50?'#a78bfa':'#64748b'}; border:1px solid ${dipPct>50?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.08)'};">8. ICT 회로 검사</span>
+                            <span style="color:#64748b; font-size:10px;">➔</span>
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>80?'rgba(167,139,250,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>80?'#a78bfa':'#64748b'}; border:1px solid ${dipPct>80?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.08)'};">9. 방습 코팅</span>
+                            <span style="color:#64748b; font-size:10px;">➔</span>
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>=100?'rgba(52,211,153,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>=100?'#34d399':'#64748b'}; border:1px solid ${dipPct>=100?'rgba(52,211,153,0.5)':'rgba(255,255,255,0.08)'};">10. 기능검사 (완료)</span>
                         </div>
                     </div>
                 </div>
@@ -4001,12 +4068,14 @@
             <!-- 하단 고정 Summary 스트립 (호버 효과 없음, 안정적 하단 요약) -->
             <div class="detail-summary-strip">
                 <div style="display:flex; gap:16px; align-items:center;">
-                    <span>목표 수량: <strong style="color:#ffffff; font-size:14px; font-family:'JetBrains Mono',monospace;">${targetQty.toLocaleString()} EA</strong></span>
-                    <span>생산 실적: <strong style="color:#38bdf8; font-size:14px; font-family:'JetBrains Mono',monospace;">${processedQty.toLocaleString()} EA (${pct}%)</strong></span>
+                    <span>목표: <strong style="color:#ffffff; font-size:13px; font-family:'JetBrains Mono',monospace;">${targetQty.toLocaleString()} EA</strong></span>
+                    <span>SMT 실적: <strong style="color:#38bdf8; font-size:13px; font-family:'JetBrains Mono',monospace;">${smtQty.toLocaleString()} EA (${smtPct}%)</strong></span>
+                    <span>DIP 실적: <strong style="color:#a78bfa; font-size:13px; font-family:'JetBrains Mono',monospace;">${dipQty.toLocaleString()} EA (${dipPct}%)</strong></span>
                 </div>
                 <div style="display:flex; gap:16px; align-items:center;">
-                    <span>양품/불량: <strong style="color:#34d399; font-size:14px; font-family:'JetBrains Mono',monospace;">${goodQty.toLocaleString()}</strong> / <strong style="color:#f87171; font-size:14px; font-family:'JetBrains Mono',monospace;">${failQty.toLocaleString()}</strong></span>
-                    <span>종합 수율: <strong style="color:${parseFloat(yieldRate)>=95?'#34d399':parseFloat(yieldRate)>=80?'#fbbf24':'#f87171'}; font-size:15px; font-weight:800; font-family:'JetBrains Mono',monospace;">${yieldRate}%</strong></span>
+                    <span>종합 진행률: <strong style="color:${totalPct>=100?'#34d399':totalPct>=50?'#a78bfa':'#38bdf8'}; font-size:14px; font-weight:800; font-family:'JetBrains Mono',monospace;">${totalPct}%</strong></span>
+                    <span>양품/불량: <strong style="color:#34d399; font-size:13px; font-family:'JetBrains Mono',monospace;">${goodQty.toLocaleString()}</strong> / <strong style="color:#f87171; font-size:13px; font-family:'JetBrains Mono',monospace;">${failQty.toLocaleString()}</strong></span>
+                    <span>종합 수율: <strong style="color:${parseFloat(yieldRate)>=95?'#34d399':parseFloat(yieldRate)>=80?'#fbbf24':'#f87171'}; font-size:14px; font-weight:800; font-family:'JetBrains Mono',monospace;">${yieldRate}%</strong></span>
                 </div>
             </div>
         `;
@@ -4326,8 +4395,8 @@
         if (data.status === 'success' && data.data.length > 0) {
             let tsv = '파트번호\t파트명\t포인트\t제공수량\t실장위치\n';
             data.data.forEach(row => { 
-                const pts = row.points !== undefined && row.points !== null ? row.points : (row.req_qty || 1);
-                const prov = row.provide_qty !== undefined && row.provide_qty !== null ? row.provide_qty : '';
+                const pts = row.points !== undefined && row.points !== null ? Math.round(parseFloat(row.points)) : Math.round(parseFloat(row.req_qty) || 1);
+                const prov = (row.provide_qty !== undefined && row.provide_qty !== null && row.provide_qty !== '' && parseFloat(row.provide_qty) > 0) ? Math.round(parseFloat(row.provide_qty)) : '';
                 tsv += `${row.part_no}\t${row.part_name || row.part_no}\t${pts}\t${prov}\t${row.location || ''}\n`; 
             });
             document.getElementById('bomPaste').value = tsv.trim();
@@ -4358,8 +4427,8 @@
         if (data.status === 'success' && data.data.length > 0) {
             let tsv = '파트번호\t파트명\t포인트\t제공수량\t실장위치\n';
             data.data.forEach(row => { 
-                const pts = row.points !== undefined && row.points !== null ? row.points : (row.req_qty || 1);
-                const prov = row.provide_qty !== undefined && row.provide_qty !== null ? row.provide_qty : '';
+                const pts = row.points !== undefined && row.points !== null ? Math.round(parseFloat(row.points)) : Math.round(parseFloat(row.req_qty) || 1);
+                const prov = (row.provide_qty !== undefined && row.provide_qty !== null && row.provide_qty !== '' && parseFloat(row.provide_qty) > 0) ? Math.round(parseFloat(row.provide_qty)) : '';
                 tsv += `${row.part_no}\t${row.part_name || row.part_no}\t${pts}\t${prov}\t${row.location || ''}\n`; 
             });
             document.getElementById('bomPaste').value = tsv.trim();
@@ -4390,8 +4459,8 @@
         if (data.status === 'success' && data.data && data.data.details && data.data.details.length > 0) {
             let tsv = '파트번호\t파트명\t포인트\t제공수량\t실장위치\n';
             data.data.details.forEach(row => { 
-                const pts = row.points !== undefined && row.points !== null ? row.points : (row.req_qty || 1);
-                const prov = row.provide_qty !== undefined && row.provide_qty !== null ? row.provide_qty : '';
+                const pts = row.points !== undefined && row.points !== null ? Math.round(parseFloat(row.points)) : Math.round(parseFloat(row.req_qty) || 1);
+                const prov = (row.provide_qty !== undefined && row.provide_qty !== null && row.provide_qty !== '' && parseFloat(row.provide_qty) > 0) ? Math.round(parseFloat(row.provide_qty)) : '';
                 tsv += `${row.part_no}\t${row.part_name || row.part_no}\t${pts}\t${prov}\t${row.location || ''}\n`; 
             });
             document.getElementById('bomPaste').value = tsv.trim();
@@ -4662,9 +4731,9 @@
             const pNo = (row[mapping.part_no] || '').trim();
             const pName = mapping.part_name !== undefined ? (row[mapping.part_name] || '').trim() : pNo;
             const rawPointsStr = pointsCol !== undefined ? String(row[pointsCol] || '').trim() : '';
-            const pointsVal = parseFloat(rawPointsStr.replace(/,/g, '')) || 0;
+            const pointsVal = rawPointsStr !== '' ? Math.round(parseFloat(rawPointsStr.replace(/,/g, ''))) : 0;
             const rawProvStr = mapping.provide_qty !== undefined ? String(row[mapping.provide_qty] || '').trim() : '';
-            const provQtyVal = rawProvStr !== '' ? parseFloat(rawProvStr.replace(/,/g, '')) : null;
+            const provQtyVal = (rawProvStr !== '' && !isNaN(parseFloat(rawProvStr.replace(/,/g, '')))) ? Math.round(parseFloat(rawProvStr.replace(/,/g, ''))) : null;
             const loc = mapping.location !== undefined ? (row[mapping.location] || '').trim().replace(/[\r\n]+/g, ' ') : '';
             const rowNum = i + 1;
 
@@ -5631,7 +5700,7 @@ async function deleteCompany(id, name) {
         }
         const newPartName = prompt('파트명/규격을 입력하세요:', partName);
         if (newPartName === null) return;
-        const newQty = prompt('포인트(수량)를 입력하세요:', reqQty);
+        const newQty = prompt('포인트(수량)를 입력하세요 (정수):', Math.round(parseFloat(reqQty) || 1));
         if (newQty === null) return;
         const newLoc = prompt('실장 위치를 입력하세요:', location);
         if (newLoc === null) return;
@@ -5645,7 +5714,7 @@ async function deleteCompany(id, name) {
                     detail_id: detailId,
                     part_no: newPartNo.trim(),
                     part_name: newPartName.trim(),
-                    req_qty: parseFloat(newQty) || 1,
+                    req_qty: Math.round(parseFloat(newQty)) || 1,
                     location: newLoc.trim(),
                     feeder_slot: slot ? parseInt(slot) : null
                 })
@@ -5689,7 +5758,7 @@ async function deleteCompany(id, name) {
         const partNo = prompt('추가할 파트번호를 입력하세요:');
         if (!partNo || !partNo.trim()) return;
         const partName = prompt('파트명/규격을 입력하세요 (선택):', partNo.trim());
-        const qty = prompt('포인트(수량)를 입력하세요:', '1');
+        const qty = prompt('포인트(수량)를 입력하세요 (정수):', '1');
         const loc = prompt('실장 위치를 입력하세요 (선택):', '');
 
         try {
@@ -5701,7 +5770,7 @@ async function deleteCompany(id, name) {
                     bom_id: bomId,
                     part_no: partNo.trim(),
                     part_name: (partName || partNo).trim(),
-                    req_qty: parseFloat(qty) || 1,
+                    req_qty: Math.round(parseFloat(qty)) || 1,
                     location: (loc || '').trim()
                 })
             });
@@ -6369,19 +6438,43 @@ async function deleteCompany(id, name) {
 
         container.innerHTML = list.map(o => {
             const isSelected = o.wo_id === selectedPlanWoId;
-            const isDone = o.status === 'DONE' || o.status === 'COMPLETED';
+            const isDone = (o.status === 'DONE' || o.status === 'COMPLETED');
+            const isSmtDone = (o.status === 'SMT_DONE');
+            const isSmtProgress = (o.status === 'IN_PROGRESS');
+            const isDipProgress = (o.status === 'DIP_IN_PROGRESS');
             const targetQty = parseInt(o.target_qty || 0);
-            const currentQty = parseInt(o.processed_qty || 0);
-            const pct = targetQty > 0 ? Math.min(100, Math.round(currentQty / targetQty * 100)) : 0;
+
+            // SMT 실적 & 진행률
+            let smtQty = 0;
+            if (isDone || isSmtDone || isDipProgress) {
+                smtQty = targetQty;
+            } else if (isSmtProgress) {
+                smtQty = parseInt(o.processed_qty || 0);
+            }
+            const smtPct = targetQty > 0 ? Math.min(100, Math.round(smtQty / targetQty * 100)) : 0;
+
+            // DIP 실적 & 진행률
+            let dipQty = 0;
+            if (isDone) {
+                dipQty = targetQty;
+            } else if (isDipProgress) {
+                dipQty = parseInt(o.dip_qty || o.processed_qty || 0);
+            }
+            const dipPct = targetQty > 0 ? Math.min(100, Math.round(dipQty / targetQty * 100)) : 0;
+
+            // 종합 진행률 (SMT 50% + DIP 50%)
+            const totalPct = Math.min(100, Math.round((smtPct * 0.5) + (dipPct * 0.5)));
+
+            const currentQty = isDone ? targetQty : (isDipProgress ? dipQty : smtQty);
             const dday = o.due_date ? Math.round((new Date(o.due_date) - new Date(today)) / 86400000) : null;
             const ddayBadge = dday === null ? '' : renderDDay(dday, isDone);
 
             let statusBadge = '';
             if (o.status === 'HOLD') statusBadge = `<span style="font-size:11px; font-weight:700; color:#fbbf24; background:rgba(245,158,11,0.15); padding:1px 6px; border-radius:3px;">⏸️ 보류</span>`;
-            else if (o.status === 'IN_PROGRESS') statusBadge = `<span style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.15); padding:1px 6px; border-radius:3px;">⚡ SMT</span>`;
-            else if (o.status === 'SMT_DONE') statusBadge = `<span style="font-size:11px; font-weight:700; color:#93c5fd; background:rgba(59,130,246,0.15); padding:1px 6px; border-radius:3px;">SMT완료</span>`;
-            else if (o.status === 'DIP_IN_PROGRESS') statusBadge = `<span style="font-size:11px; font-weight:700; color:#a78bfa; background:rgba(167,139,250,0.15); padding:1px 6px; border-radius:3px;">DIP</span>`;
-            else if (isDone) statusBadge = `<span style="font-size:11px; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); padding:1px 6px; border-radius:3px;">✅ 완료</span>`;
+            else if (isSmtProgress) statusBadge = `<span style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.15); padding:1px 6px; border-radius:3px;">⚡ SMT(${smtPct}%)</span>`;
+            else if (isSmtDone) statusBadge = `<span style="font-size:11px; font-weight:700; color:#93c5fd; background:rgba(59,130,246,0.15); padding:1px 6px; border-radius:3px;">자삽완료(50%)</span>`;
+            else if (isDipProgress) statusBadge = `<span style="font-size:11px; font-weight:700; color:#a78bfa; background:rgba(167,139,250,0.15); padding:1px 6px; border-radius:3px;">수삽(DIP ${dipPct}%)</span>`;
+            else if (isDone) statusBadge = `<span style="font-size:11px; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); padding:1px 6px; border-radius:3px;">✅ 완료(100%)</span>`;
             else statusBadge = `<span style="font-size:11px; font-weight:700; color:#94a3b8; background:rgba(100,116,139,0.2); padding:1px 6px; border-radius:3px;">⏳ 대기</span>`;
 
             return `
@@ -6395,15 +6488,15 @@ async function deleteCompany(id, name) {
                 </div>
                 <div style="font-size:13.5px; font-weight:700; color:#ffffff; margin-bottom:3px; display:flex; justify-content:space-between; align-items:center;">
                     <code style="color:#f8fafc; font-family:'JetBrains Mono',monospace;">${escHtml(o.wo_id)}</code>
-                    <span style="font-size:12px; color:${pct>=100?'#34d399':'#38bdf8'}; font-weight:700;">${pct}%</span>
+                    <span style="font-size:12px; color:${totalPct>=100?'#34d399':totalPct>=50?'#a78bfa':'#38bdf8'}; font-weight:800; font-family:'JetBrains Mono',monospace;">종합 ${totalPct}%</span>
                 </div>
                 <div style="font-size:12.5px; color:#e2e8f0; font-weight:600; margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                     ${escHtml(o.item_name || '—')}
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; font-size:11.5px; color:#94a3b8;">
                     <span>납기: <strong style="color:#ffffff; font-family:'JetBrains Mono',monospace;">${o.due_date || '—'}</strong></span>
-                    <span style="font-family:'JetBrains Mono',monospace; font-weight:700; color:#cbd5e1;">
-                        <strong style="color:${pct>=100?'#34d399':'#38bdf8'};">${currentQty.toLocaleString()}</strong> / ${targetQty.toLocaleString()} EA
+                    <span style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:11px;">
+                        <span style="color:#38bdf8;">SMT ${smtPct}%</span> | <span style="color:#a78bfa;">DIP ${dipPct}%</span>
                     </span>
                 </div>
             </div>`;
@@ -6438,13 +6531,38 @@ async function deleteCompany(id, name) {
             return;
         }
 
-        const isDone = o.status === 'DONE' || o.status === 'COMPLETED';
+        const isDone = (o.status === 'DONE' || o.status === 'COMPLETED');
+        const isSmtDone = (o.status === 'SMT_DONE');
+        const isSmtProgress = (o.status === 'IN_PROGRESS');
+        const isDipProgress = (o.status === 'DIP_IN_PROGRESS');
         const targetQty = parseInt(o.target_qty || 0);
-        const processedQty = parseInt(o.processed_qty || 0);
-        const goodQty = parseInt(o.good_qty || 0);
+
+        // ── 1. SMT 50% 진행률 계산 (각인 ➔ 리플로우 완료 시 100%) ──
+        let smtQty = 0;
+        if (isDone || isSmtDone || isDipProgress) {
+            smtQty = targetQty;
+        } else if (isSmtProgress) {
+            smtQty = parseInt(o.processed_qty || 0);
+        }
+        const smtPct = targetQty > 0 ? Math.min(100, Math.round(smtQty / targetQty * 100)) : 0;
+
+        // ── 2. DIP 50% 진행률 계산 (수삽검사 ➔ 최종완료 시 100%) ──
+        let dipQty = 0;
+        if (isDone) {
+            dipQty = targetQty;
+        } else if (isDipProgress) {
+            dipQty = parseInt(o.dip_qty || o.processed_qty || 0);
+        }
+        const dipPct = targetQty > 0 ? Math.min(100, Math.round(dipQty / targetQty * 100)) : 0;
+
+        // ── 3. 전체 종합 진행률 (SMT 50% + DIP 50%) ──
+        const totalPct = Math.min(100, Math.round((smtPct * 0.5) + (dipPct * 0.5)));
+
+        const currentQty = isDone ? targetQty : (isDipProgress ? dipQty : smtQty);
+        const goodQty = parseInt(o.good_qty || (isDone ? targetQty : (isDipProgress ? dipQty : smtQty)));
         const failQty = parseInt(o.fail_qty || 0);
-        const pct = targetQty > 0 ? Math.min(100, Math.round(processedQty / targetQty * 100)) : 0;
-        const yieldRate = processedQty > 0 ? ((goodQty / processedQty) * 100).toFixed(1) : '100.0';
+        const totalProcessed = isDone ? targetQty : (isDipProgress ? dipQty : smtQty);
+        const yieldRate = totalProcessed > 0 ? ((goodQty / totalProcessed) * 100).toFixed(1) : '100.0';
         const today = new Date().toISOString().slice(0, 10);
         const dday = o.due_date ? Math.round((new Date(o.due_date) - new Date(today)) / 86400000) : null;
         const ddayBadge = dday === null ? '' : renderDDay(dday, isDone);
@@ -6458,57 +6576,98 @@ async function deleteCompany(id, name) {
                     <span style="font-size:14px; font-weight:800; color:#ffffff;">${escHtml(o.item_name || '—')}</span>
                     ${ddayBadge}
                 </div>
-                <div style="display:flex; gap:6px; align-items:center;">
+
+                <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                     <button type="button" class="card-btn card-btn-bom" style="padding:5px 10px; font-size:12px; font-weight:700;" onclick="openBOMModal('${o.wo_id}', '${o.company_id||''}')">📋 BOM 부품</button>
+
                     <button type="button" class="card-btn card-btn-edit" style="padding:5px 10px; font-size:12px;" onclick="openEditWOModal('${o.wo_id}', ${o.target_qty}, '${o.due_date||''}', ${o.company_id || 'null'})">✏️ 일정 수정</button>
                 </div>
             </div>
 
-            <!-- 하단 상세 관제 영역 -->
+            <!-- 하단 상세 관제 영역 (독립 스크롤) -->
             <div style="flex:1; overflow-y:auto; padding:16px 20px; display:flex; flex-direction:column; gap:16px;">
-                <!-- 1. KPI 카드 행 -->
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
-                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px 14px;">
-                        <div style="font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:4px;">🎯 계획 목표 수량</div>
+                <!-- 1. 진척도 & 생산 실적 KPI 카드 행 (4대 지표) -->
+                <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px;">
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:10px 14px;">
+                        <div style="font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:4px;">🎯 목표 생산량</div>
                         <div style="font-size:20px; font-weight:800; color:#f8fafc; font-family:'JetBrains Mono',monospace;">${targetQty.toLocaleString()} <span style="font-size:12px; color:#94a3b8;">EA</span></div>
                     </div>
-                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px 14px;">
-                        <div style="font-size:11px; font-weight:700; color:#38bdf8; margin-bottom:4px;">⚡ 현재 생산 실적</div>
-                        <div style="font-size:20px; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace;">${processedQty.toLocaleString()} <span style="font-size:12px; color:#94a3b8;">(${pct}%)</span></div>
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(56,189,248,0.25); border-radius:6px; padding:10px 14px;">
+                        <div style="font-size:11px; font-weight:700; color:#38bdf8; margin-bottom:4px;">⚡ SMT 실적 (50% 비중)</div>
+                        <div style="font-size:20px; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace;">${smtQty.toLocaleString()} <span style="font-size:12px; color:#94a3b8;">(${smtPct}%)</span></div>
                     </div>
-                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px 14px;">
-                        <div style="font-size:11px; font-weight:700; color:#34d399; margin-bottom:4px;">✅ 양품 / ❌ 불량</div>
-                        <div style="font-size:18px; font-weight:800; font-family:'JetBrains Mono',monospace;">
-                            <span style="color:#34d399;">${goodQty.toLocaleString()}</span> <span style="font-size:12px; color:#64748b;">/</span> <span style="color:#f87171;">${failQty.toLocaleString()}</span>
-                        </div>
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(167,139,250,0.25); border-radius:6px; padding:10px 14px;">
+                        <div style="font-size:11px; font-weight:700; color:#a78bfa; margin-bottom:4px;">⚡ DIP 실적 (50% 비중)</div>
+                        <div style="font-size:20px; font-weight:800; color:#a78bfa; font-family:'JetBrains Mono',monospace;">${dipQty.toLocaleString()} <span style="font-size:12px; color:#94a3b8;">(${dipPct}%)</span></div>
                     </div>
-                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px 14px;">
-                        <div style="font-size:11px; font-weight:700; color:#fbbf24; margin-bottom:4px;">📊 누적 수율</div>
-                        <div style="font-size:20px; font-weight:800; color:${parseFloat(yieldRate)>=95?'#34d399':parseFloat(yieldRate)>=80?'#fbbf24':'#f87171'}; font-family:'JetBrains Mono',monospace;">${yieldRate}%</div>
+                    <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:10px 14px;">
+                        <div style="font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:4px;">📊 전체 종합 진행률</div>
+                        <div style="font-size:20px; font-weight:800; color:${totalPct>=100?'#34d399':totalPct>=50?'#a78bfa':'#38bdf8'}; font-family:'JetBrains Mono',monospace;">${totalPct}%</div>
                     </div>
                 </div>
 
-                <!-- 2. 공정 진행 흐름도 -->
+                <!-- 2. SMT(50%) + DIP(50%) 2단계 독립 공정 진행 단계 플로우 -->
                 <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:16px;">
-                    <div style="font-size:13px; font-weight:800; color:#38bdf8; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-                        <span>🔄 SMT / DIP 공정 진행 흐름도</span>
-                        <span style="font-size:12px; color:#cbd5e1; font-weight:600;">진행률: <strong style="color:#38bdf8;">${pct}%</strong></span>
+                    <!-- 상단 전체 2분할 종합 진행 바 (SMT 50% + DIP 50%) -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-size:12.5px; font-weight:800; color:#e2e8f0; display:flex; align-items:center; gap:6px;">
+                            <span>🔄 전체 공정 진척도 (SMT 50% + DIP 50%)</span>
+                        </span>
+                        <span style="font-size:12px; color:#cbd5e1; font-weight:700;">종합 진행률: <strong style="color:${totalPct>=100?'#34d399':totalPct>=50?'#a78bfa':'#38bdf8'}; font-size:14px;">${totalPct}%</strong></span>
                     </div>
-                    <div style="width:100%; height:8px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden; margin-bottom:14px;">
-                        <div style="width:${pct}%; height:100%; background:linear-gradient(90deg, #38bdf8, #34d399); border-radius:4px; transition:width 0.3s ease;"></div>
+                    <div style="display:flex; gap:6px; height:12px; background:rgba(0,0,0,0.3); border-radius:6px; padding:2px; border:1px solid rgba(255,255,255,0.08); margin-bottom:16px;">
+                        <!-- SMT 50% 구간 -->
+                        <div style="flex:1; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; position:relative;" title="SMT 공정: ${smtPct}% (전체 50% 중 ${Math.round(smtPct*0.5)}%)">
+                            <div style="width:${smtPct}%; height:100%; background:linear-gradient(90deg, #0284c7, #38bdf8); transition:width 0.3s ease;"></div>
+                        </div>
+                        <!-- DIP 50% 구간 -->
+                        <div style="flex:1; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; position:relative;" title="DIP 공정: ${dipPct}% (전체 50% 중 ${Math.round(dipPct*0.5)}%)">
+                            <div style="width:${dipPct}%; height:100%; background:linear-gradient(90deg, #7c3aed, #34d399); transition:width 0.3s ease;"></div>
+                        </div>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
-                        <span style="font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; background:${pct>0?'rgba(52,211,153,0.2)':'rgba(255,255,255,0.05)'}; color:${pct>0?'#34d399':'#94a3b8'};">1. 각인 (Laser)</span>
-                        <span style="color:#64748b; font-size:11px;">➔</span>
-                        <span style="font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; background:${pct>10?'rgba(52,211,153,0.2)':'rgba(255,255,255,0.05)'}; color:${pct>10?'#34d399':'#94a3b8'};">2. 납도포 (SPI)</span>
-                        <span style="color:#64748b; font-size:11px;">➔</span>
-                        <span style="font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; background:${pct>30?'rgba(56,189,248,0.2)':'rgba(255,255,255,0.05)'}; color:${pct>30?'#38bdf8':'#94a3b8'};">3. 마운터 (SMT)</span>
-                        <span style="color:#64748b; font-size:11px;">➔</span>
-                        <span style="font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; background:${pct>60?'rgba(56,189,248,0.2)':'rgba(255,255,255,0.05)'}; color:${pct>60?'#38bdf8':'#94a3b8'};">4. 리플로우</span>
-                        <span style="color:#64748b; font-size:11px;">➔</span>
-                        <span style="font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; background:${pct>80?'rgba(167,139,250,0.2)':'rgba(255,255,255,0.05)'}; color:${pct>80?'#a78bfa':'#94a3b8'};">5. 수삽 (DIP)</span>
-                        <span style="color:#64748b; font-size:11px;">➔</span>
-                        <span style="font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; background:${pct>=100?'rgba(52,211,153,0.2)':'rgba(255,255,255,0.05)'}; color:${pct>=100?'#34d399':'#94a3b8'};">6. 검사/완료</span>
+
+                    <!-- Step 1: SMT 라인 (자체 100% / 전체의 50% 비중) -->
+                    <div style="background:rgba(30,41,59,0.4); border:1px solid rgba(56,189,248,0.25); border-radius:6px; padding:10px 12px; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="font-size:12px; font-weight:800; color:#38bdf8; display:flex; align-items:center; gap:6px;">
+                                <span style="background:#0284c7; color:#fff; font-size:10px; padding:1px 5px; border-radius:3px;">SMT 50%</span>
+                                SMT 표면실장 공정 (각인 ➔ 리플로우 100%)
+                            </span>
+                            <span style="font-size:11.5px; font-weight:700; color:#38bdf8; font-family:'JetBrains Mono',monospace;">진행률: ${smtPct}% (${smtQty}/${targetQty} EA)</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:4px; overflow-x:auto;">
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>0?'rgba(56,189,248,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>0?'#38bdf8':'#64748b'}; border:1px solid ${smtPct>0?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.08)'};">1. 각인 (Laser)</span>
+                            <span style="color:#64748b; font-size:10px;">➔</span>
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>15?'rgba(56,189,248,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>15?'#38bdf8':'#64748b'}; border:1px solid ${smtPct>15?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.08)'};">2. 납도포 (SPI)</span>
+                            <span style="color:#64748b; font-size:10px;">➔</span>
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>40?'rgba(56,189,248,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>40?'#38bdf8':'#64748b'}; border:1px solid ${smtPct>40?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.08)'};">3. #1 고속 마운터</span>
+                            <span style="color:#64748b; font-size:10px;">➔</span>
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>70?'rgba(56,189,248,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>70?'#38bdf8':'#64748b'}; border:1px solid ${smtPct>70?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.08)'};">4. #2 이형 마운터</span>
+                            <span style="color:#64748b; font-size:10px;">➔</span>
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>=100?'rgba(52,211,153,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>=100?'#34d399':'#64748b'}; border:1px solid ${smtPct>=100?'rgba(52,211,153,0.5)':'rgba(255,255,255,0.08)'};">5. 리플로우 (SMT완료)</span>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: DIP 라인 (자체 100% / 전체의 50% 비중) -->
+                    <div style="background:rgba(30,41,59,0.4); border:1px solid rgba(167,139,250,0.25); border-radius:6px; padding:10px 12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="font-size:12px; font-weight:800; color:#a78bfa; display:flex; align-items:center; gap:6px;">
+                                <span style="background:#7c3aed; color:#fff; font-size:10px; padding:1px 5px; border-radius:3px;">DIP 50%</span>
+                                DIP 수삽 & 후공정 검사 (수삽 ➔ 최종완료 100%)
+                            </span>
+                            <span style="font-size:11.5px; font-weight:700; color:#a78bfa; font-family:'JetBrains Mono',monospace;">진행률: ${dipPct}% (${dipQty}/${targetQty} EA)</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:4px; overflow-x:auto;">
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>0?'rgba(167,139,250,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>0?'#a78bfa':'#64748b'}; border:1px solid ${dipPct>0?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.08)'};">6. 수삽 AOI 검사</span>
+                            <span style="color:#64748b; font-size:10px;">➔</span>
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>20?'rgba(167,139,250,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>20?'#a78bfa':'#64748b'}; border:1px solid ${dipPct>20?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.08)'};">7. 웨이브 솔더링</span>
+                            <span style="color:#64748b; font-size:10px;">➔</span>
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>50?'rgba(167,139,250,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>50?'#a78bfa':'#64748b'}; border:1px solid ${dipPct>50?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.08)'};">8. ICT 회로 검사</span>
+                            <span style="color:#64748b; font-size:10px;">➔</span>
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>80?'rgba(167,139,250,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>80?'#a78bfa':'#64748b'}; border:1px solid ${dipPct>80?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.08)'};">9. 방습 코팅</span>
+                            <span style="color:#64748b; font-size:10px;">➔</span>
+                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>=100?'rgba(52,211,153,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>=100?'#34d399':'#64748b'}; border:1px solid ${dipPct>=100?'rgba(52,211,153,0.5)':'rgba(255,255,255,0.08)'};">10. 기능검사 (완료)</span>
+                        </div>
                     </div>
                 </div>
 
@@ -6532,12 +6691,14 @@ async function deleteCompany(id, name) {
             <!-- 하단 고정 Summary 스트립 (호버 효과 없음, 항상 하단 안정적 표시) -->
             <div class="detail-summary-strip">
                 <div style="display:flex; gap:16px; align-items:center;">
-                    <span>목표 납기일: <strong style="color:#38bdf8; font-size:13.5px; font-family:'JetBrains Mono',monospace;">${o.due_date || '—'}</strong></span>
-                    <span>진행률: <strong style="color:${pct>=100?'#34d399':'#38bdf8'}; font-size:14px; font-weight:800;">${pct}%</strong></span>
+                    <span>목표: <strong style="color:#ffffff; font-size:13px; font-family:'JetBrains Mono',monospace;">${targetQty.toLocaleString()} EA</strong></span>
+                    <span>SMT 실적: <strong style="color:#38bdf8; font-size:13px; font-family:'JetBrains Mono',monospace;">${smtQty.toLocaleString()} EA (${smtPct}%)</strong></span>
+                    <span>DIP 실적: <strong style="color:#a78bfa; font-size:13px; font-family:'JetBrains Mono',monospace;">${dipQty.toLocaleString()} EA (${dipPct}%)</strong></span>
                 </div>
                 <div style="display:flex; gap:16px; align-items:center;">
-                    <span>목표/실적: <strong style="color:#ffffff; font-size:14px; font-family:'JetBrains Mono',monospace;">${processedQty.toLocaleString()}</strong> / <strong style="color:#cbd5e1; font-size:14px; font-family:'JetBrains Mono',monospace;">${targetQty.toLocaleString()} EA</strong></span>
-                    <span>수율: <strong style="color:${parseFloat(yieldRate)>=95?'#34d399':parseFloat(yieldRate)>=80?'#fbbf24':'#f87171'}; font-size:15px; font-weight:800; font-family:'JetBrains Mono',monospace;">${yieldRate}%</strong></span>
+                    <span>종합 진행률: <strong style="color:${totalPct>=100?'#34d399':totalPct>=50?'#a78bfa':'#38bdf8'}; font-size:14px; font-weight:800; font-family:'JetBrains Mono',monospace;">${totalPct}%</strong></span>
+                    <span>양품/불량: <strong style="color:#34d399; font-size:13px; font-family:'JetBrains Mono',monospace;">${goodQty.toLocaleString()}</strong> / <strong style="color:#f87171; font-size:13px; font-family:'JetBrains Mono',monospace;">${failQty.toLocaleString()}</strong></span>
+                    <span>종합 수율: <strong style="color:${parseFloat(yieldRate)>=95?'#34d399':parseFloat(yieldRate)>=80?'#fbbf24':'#f87171'}; font-size:14px; font-weight:800; font-family:'JetBrains Mono',monospace;">${yieldRate}%</strong></span>
                 </div>
             </div>
         `;
