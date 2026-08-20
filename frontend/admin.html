@@ -5488,6 +5488,7 @@ async function deleteCompany(id, name) {
                     ${currentVer ? `
                         <button type="button" class="card-btn card-btn-edit" style="padding:5px 9px; font-size:12px;" onclick="openEditBomVersionModal(${currentVer.bom_id}, ${item.item_id}, '${escHtml(item.item_code||'')}', '${escHtml(item.item_name)}', '${escHtml(currentVer.version)}')">BOM 수정</button>
                         <button type="button" class="card-btn" style="padding:5px 9px; font-size:12px; background:rgba(255,255,255,0.08); color:#cbd5e1; border:1px solid rgba(255,255,255,0.15);" onclick="copyBomTsv(${currentVer.bom_id})">📋 엑셀 복사</button>
+                        <button type="button" class="card-btn" style="padding:5px 9px; font-size:12px; background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.35);" title="현재 BOM의 모든 피더 슬롯 배정을 일괄 초기화(비우기)합니다." onclick="resetAllBomFeederSlots(${currentVer.bom_id}, '${escHtml(item.item_name)}')">🧹 슬롯 전체 초기화</button>
                         <button type="button" class="card-btn card-btn-del" style="padding:5px 9px; font-size:12px;" onclick="deleteBomVersion(${currentVer.bom_id}, '${escHtml(currentVer.version)}', '${escHtml(item.item_name)}')">BOM 삭제</button>
                     ` : ''}
                     <button type="button" class="card-btn" style="padding:5px 8px; font-size:12px; background:rgba(255,255,255,0.05); color:#94a3b8;" title="품목 정보 수정" onclick="openEditItemModal(${item.item_id}, ${item.company_id || 'null'}, '${escHtml(item.item_code||'')}', '${escHtml(item.item_name)}', '${escHtml(item.category||'')}', 'EA', '${escHtml(item.description||'')}')">⚙️ 품목 수정</button>
@@ -5916,6 +5917,35 @@ async function deleteCompany(id, name) {
             } else {
                 badgeEl.innerHTML = `<span style="color:#64748b; font-size:13px; font-weight:normal;">(선택된 슬롯 없음)</span>`;
             }
+        }
+    }
+
+    async function resetAllBomFeederSlots(bomId, itemName = '') {
+        if (!bomId) return;
+        const msg = itemName 
+            ? `[${itemName}] 의 현재 BOM 버전에 배정된 모든 피더 슬롯을 전부 초기화(비우기)하시겠습니까?\n\n이 작업은 모든 부품의 슬롯 잠금을 일괄 해제합니다.`
+            : `현재 BOM의 모든 부품에 배정된 피더 슬롯을 전부 초기화(비우기)하시겠습니까?\n\n이 작업은 모든 부품의 슬롯 잠금을 일괄 해제합니다.`;
+
+        if (!confirm(msg)) return;
+
+        try {
+            const res = await fetch('../backend/api/update_bom_component.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'reset_all_slots',
+                    bom_id: bomId
+                })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                closeModal('feederSlotPickerModal');
+                loadBomVersionTable(bomId);
+            } else {
+                alert('초기화 실패: ' + (data.message || '오류가 발생했습니다.'));
+            }
+        } catch (e) {
+            alert('초기화 중 통신 오류: ' + e.message);
         }
     }
 
@@ -12920,9 +12950,14 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <!-- 하단 액션 버튼 -->
-        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px;">
-            <div style="font-size:12px; color:#94a3b8;">
-                💡 슬롯 번호를 클릭하여 <strong>선택 및 해제</strong>할 수 있으며, 2개 이상 클릭 시 <strong>다중 분산 배정</strong>됩니다.
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px; gap:10px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <button type="button" class="card-btn" style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.35); padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer;" title="현재 BOM 버전의 모든 피더 슬롯 배정을 일괄 초기화(비우기)합니다." onclick="resetAllBomFeederSlots(fspState.bomId)">
+                    🧹 슬롯 전체 초기화
+                </button>
+                <span style="font-size:11.5px; color:#94a3b8;">
+                    💡 슬롯 번호를 클릭하여 <strong>선택 및 해제</strong> (다중 분산 가능)
+                </span>
             </div>
             <div style="display:flex; gap:8px;">
                 <button type="button" class="card-btn" style="background:rgba(255,255,255,0.08); color:#cbd5e1; border:1px solid rgba(255,255,255,0.15); padding:7px 16px; font-size:13px; font-weight:700; cursor:pointer;" onclick="closeModal('feederSlotPickerModal')">

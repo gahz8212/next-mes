@@ -856,6 +856,14 @@ class BomController {
                 return;
             }
 
+            if ($action === 'reset_all_slots') {
+                if (!$bom_id) Response::error("BOM ID가 필요합니다.");
+                $stmt = $pdo->prepare("UPDATE bom_detail SET feeder_slot = NULL WHERE bom_id = ?");
+                $stmt->execute([$bom_id]);
+                Response::success([], "현재 BOM의 모든 피더 슬롯이 초기화되었습니다.");
+                return;
+            }
+
             if ($action === 'update_slot') {
                 if (!$detail_id) Response::error("부품 ID가 필요합니다.");
                 $feeder_slot = isset($input['feeder_slot']) && trim((string)$input['feeder_slot']) !== '' ? trim((string)$input['feeder_slot']) : null;
