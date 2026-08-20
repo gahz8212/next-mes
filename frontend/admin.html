@@ -9008,12 +9008,18 @@ async function loadCompletedWorkOrders() {
     if (!container) return;
 
     try {
-        const res = await fetch('../backend/api/get_work_orders.php?limit=100');
-        const data = await res.json();
-        if (data.status === 'success') {
-            const allWo = data.data || [];
-            completedWorkOrdersList = allWo.filter(w => w.status === 'DONE' || (parseInt(w.shipped) !== 1 && (w.status === 'DONE' || w.status === 'SMT_DONE')));
+        const res = await fetch('../backend/api/get_admin_wo_list.php');
+        const json = await res.json();
+        if (json.status === 'success' && json.data) {
+            const completed = json.data.completed || [];
+            const ready = json.data.ready || [];
             
+            // 생산 완료된 작업지시 (status === 'DONE' 또는 SMT_DONE 또는 실적 충족)
+            completedWorkOrdersList = [
+                ...completed,
+                ...ready.filter(w => w.status === 'SMT_DONE' || (w.target_qty > 0 && w.good_qty >= w.target_qty))
+            ];
+
             if (countBadge) countBadge.textContent = `${completedWorkOrdersList.length}건`;
 
             if (!completedWorkOrdersList.length) {
@@ -9026,11 +9032,15 @@ async function loadCompletedWorkOrders() {
                 const itemName = wo.item_name || wo.product_name || '완제품 PBA';
                 const qty = parseInt(wo.target_qty || 0).toLocaleString();
                 const dueDate = wo.due_date || '-';
+                const isShipped = parseInt(wo.shipped) === 1;
+                const badgeHtml = isShipped
+                    ? `<span class="status-badge" style="background:rgba(59,130,246,0.2); color:#93c5fd; font-weight:800; font-size:11px;">📦 출하 완료됨</span>`
+                    : `<span class="status-badge" style="background:rgba(52,211,153,0.25); color:#34d399; font-weight:800; font-size:11px;">✅ 생산 완료 (출하대기)</span>`;
 
                 return `
-                    <div style="flex:0 0 auto; min-width:270px; max-width:320px; background:rgba(30,41,59,0.9); border:1px solid rgba(52,211,153,0.4); border-radius:6px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; box-shadow:0 4px 12px rgba(0,0,0,0.25);">
+                    <div style="flex:0 0 auto; min-width:270px; max-width:320px; background:rgba(30,41,59,0.9); border:1px solid ${isShipped ? 'rgba(59,130,246,0.3)' : 'rgba(52,211,153,0.45)'}; border-radius:6px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; box-shadow:0 4px 12px rgba(0,0,0,0.25);">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span class="status-badge" style="background:rgba(52,211,153,0.25); color:#34d399; font-weight:800; font-size:11px;">✅ 생산 완료 (출하대기)</span>
+                            ${badgeHtml}
                             <span style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono',monospace;">납기: ${dueDate}</span>
                         </div>
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top:2px;">
@@ -9352,16 +9362,18 @@ async function openShipmentModal() {
 
     // Populate Completed/Active Work Orders
     try {
-        const res = await fetch('../backend/api/get_work_orders.php?limit=100');
-        const data = await res.json();
-        if (data.status === 'success') {
-            completedWorkOrdersList = data.data || [];
+        const res = await fetch('../backend/api/get_admin_wo_list.php');
+        const json = await res.json();
+        if (json.status === 'success' && json.data) {
+            const completed = json.data.completed || [];
+            const ready = json.data.ready || [];
+            completedWorkOrdersList = [...completed, ...ready];
             const woSel = document.getElementById('sh-sel-wo');
             if (woSel) {
                 woSel.innerHTML = '<option value="">-- 출하할 완료/진행 작업지시 선택 --</option>' +
                     completedWorkOrdersList.map(wo => {
                         const compName = wo.company_name ? `[${wo.company_name}] ` : '';
-                        const statusLabel = wo.status === 'DONE' ? '✅ 완료' : '⚡ 진행중';
+                        const statusLabel = wo.status === 'DONE' ? '✅ 완료' : (wo.status === 'SMT_DONE' ? '⚡ SMT완료' : '⏳ 진행/대기');
                         return `<option value="${escHtml(wo.wo_id)}">${statusLabel} ${compName}${escHtml(wo.wo_id)} - ${escHtml(wo.item_name||'')} (${parseInt(wo.target_qty||0)} EA)</option>`;
                     }).join('');
             }
