@@ -5768,20 +5768,28 @@ async function deleteCompany(id, name) {
         const prefix = fspState.machineType === 'TRAY' ? 'TR-' : (fspState.machineType === 'ODD' ? 'O-' : 'C-');
         const slotKey = `${prefix}${String(slotNum).padStart(2, '0')}`;
         
-        // 🔒 Locked check
-        const occupied = fspState.occupiedSlots[slotKey];
-        if (occupied) {
-            alert(`🔒 [${slotKey}] 슬롯은 이미 다른 자재 [${occupied.partNo}]에 배정되어 잠겨 있습니다.\n다른 빈 슬롯을 선택하세요.`);
+        // 1. If this slot is already selected by the current material -> ALWAYS UNSELECT / UNLOCK FIRST!
+        const selIdx = fspState.selectedSlots.indexOf(slotNum);
+        if (selIdx >= 0) {
+            fspState.selectedSlots.splice(selIdx, 1);
+            // If duplicate was tracked in occupied map, remove it so it is completely released
+            delete fspState.occupiedSlots[slotKey];
+            renderFeederSlotPickerUI();
             return;
         }
 
-        // Multi-select toggle
-        const idx = fspState.selectedSlots.indexOf(slotNum);
-        if (idx >= 0) {
-            fspState.selectedSlots.splice(idx, 1);
-        } else {
-            fspState.selectedSlots.push(slotNum);
+        // 2. If locked by another material -> Prompt to unlock/reassign
+        const occupied = fspState.occupiedSlots[slotKey];
+        if (occupied) {
+            const ok = confirm(`🔓 [${slotKey}] 슬롯은 다른 자재 [${occupied.partNo}]에 이미 배정되어 있습니다.\n\n해당 자재의 배정을 해제(잠금 해제)하고, 현재 자재 [${fspState.partNo}]에 새로 배정하시겠습니까?`);
+            if (!ok) return;
+
+            // Remove from occupied map so it is now assigned to this material
+            delete fspState.occupiedSlots[slotKey];
         }
+
+        // 3. Add to current selection
+        fspState.selectedSlots.push(slotNum);
         fspState.selectedSlots.sort((a, b) => a - b);
         renderFeederSlotPickerUI();
     }
@@ -5801,6 +5809,7 @@ async function deleteCompany(id, name) {
                 body: JSON.stringify({
                     action: 'update_slot',
                     detail_id: fspState.detailId,
+                    bom_id: fspState.bomId,
                     feeder_slot: slotString
                 })
             });

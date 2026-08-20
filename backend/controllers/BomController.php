@@ -859,6 +859,19 @@ class BomController {
             if ($action === 'update_slot') {
                 if (!$detail_id) Response::error("부품 ID가 필요합니다.");
                 $feeder_slot = isset($input['feeder_slot']) && trim((string)$input['feeder_slot']) !== '' ? trim((string)$input['feeder_slot']) : null;
+                $bom_id = !empty($input['bom_id']) ? (int)$input['bom_id'] : 0;
+
+                // If bom_id provided and assigning a slot, clear duplicate slot on any other detail in same BOM
+                if ($bom_id > 0 && $feeder_slot !== null) {
+                    $slotsToClear = array_map('trim', explode(',', $feeder_slot));
+                    foreach ($slotsToClear as $s) {
+                        if (!empty($s)) {
+                            $stmtClear = $pdo->prepare("UPDATE bom_detail SET feeder_slot = NULL WHERE bom_id = ? AND feeder_slot = ? AND detail_id != ?");
+                            $stmtClear->execute([$bom_id, $s, $detail_id]);
+                        }
+                    }
+                }
+
                 $stmt = $pdo->prepare("UPDATE bom_detail SET feeder_slot = ? WHERE detail_id = ?");
                 $stmt->execute([$feeder_slot, $detail_id]);
                 Response::success(["feeder_slot" => $feeder_slot], "피더 슬롯 번호가 변경되었습니다.");
