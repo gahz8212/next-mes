@@ -136,8 +136,15 @@ function initMesHeader(currentKey) {
             const scr = SCREEN_INFO[scrKey];
             if (!scr) return;
             const isActive = (scrKey === currentKey);
+            let targetUrl = scr.url;
+            if (scrKey === 'admin') {
+                try {
+                    const savedTab = localStorage.getItem('mes_admin_active_tab');
+                    if (savedTab) targetUrl = `admin.html#${savedTab}`;
+                } catch(e) {}
+            }
             navHtml += `
-                <a href="${scr.url}" class="mes-nav-btn ${isActive ? 'active' : ''}" data-screen="${scrKey}">
+                <a href="${targetUrl}" class="mes-nav-btn ${isActive ? 'active' : ''}" data-screen="${scrKey}">
                     <span class="nav-icon">${scr.icon}</span>
                     <span>${scr.label}</span>
                 </a>
@@ -152,7 +159,14 @@ function initMesHeader(currentKey) {
         if (headerRight && !document.getElementById('mesRoleReturnBtn')) {
             const returnBtn = document.createElement('a');
             returnBtn.id = 'mesRoleReturnBtn';
-            returnBtn.href = userSpec.homeUrl;
+            let homeUrl = userSpec.homeUrl;
+            if (userSpec.homeKey === 'admin') {
+                try {
+                    const savedTab = localStorage.getItem('mes_admin_active_tab');
+                    if (savedTab) homeUrl = `admin.html#${savedTab}`;
+                } catch(e) {}
+            }
+            returnBtn.href = homeUrl;
             returnBtn.className = `mes-return-btn ${userSpec.returnBtnClass || ''}`;
             returnBtn.innerHTML = `
                 <span>${userSpec.returnIcon}</span>

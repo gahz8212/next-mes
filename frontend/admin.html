@@ -10904,6 +10904,13 @@ if (document.readyState === 'loading') {
     bootApp();
 }
 
+window.addEventListener('hashchange', () => {
+    const tab = getSavedAdminTab();
+    if (tab && typeof showPage === 'function') {
+        showPage(tab);
+    }
+});
+
 // 사이드바 접기/열기 함수
 function toggleAdminSidebar(side) {
     if (side === 'left') {
