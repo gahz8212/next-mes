@@ -5736,7 +5736,7 @@ async function deleteCompany(id, name) {
             }
         }
 
-        // Parse current assigned slots if exists
+        // Parse current assigned slots if exists, or auto-preselect next available slot
         if (curr) {
             if (curr.includes('~')) {
                 const parts = curr.replace(/^[A-Z\-]+/, '').split('~');
@@ -5753,15 +5753,59 @@ async function deleteCompany(id, name) {
                     fspState.selectedSlots = [num];
                 }
             }
+        } else {
+            // Auto pre-select next slot right after the highest configured slot
+            const nextSlot = getFspNextSuggestedSlot(fspState.machineType);
+            if (nextSlot !== null) {
+                fspState.selectedSlots = [nextSlot];
+            }
         }
 
         renderFeederSlotPickerUI();
         openModal('feederSlotPickerModal');
     }
 
+    function getFspNextSuggestedSlot(machineType) {
+        const totalSlots = machineType === 'CHIP' ? 80 : (machineType === 'ODD' ? 40 : 20);
+        const prefix = machineType === 'TRAY' ? 'TR-' : (machineType === 'ODD' ? 'O-' : 'C-');
+
+        // Find highest occupied slot number for this machine type
+        let highest = 0;
+        if (fspState.occupiedSlots) {
+            Object.keys(fspState.occupiedSlots).forEach(key => {
+                if (key.startsWith(prefix)) {
+                    const num = parseInt(key.replace(/^[A-Z\-]+/, ''));
+                    if (!isNaN(num) && num > highest) {
+                        highest = num;
+                    }
+                }
+            });
+        }
+
+        // Candidate is highest + 1
+        const candidate = highest + 1;
+        const candidateKey = `${prefix}${String(candidate).padStart(2, '0')}`;
+
+        // If candidate is within bounds and free, return candidate
+        if (candidate <= totalSlots && !fspState.occupiedSlots[candidateKey]) {
+            return candidate;
+        }
+
+        // If candidate is occupied or exceeded, find first free slot from 1 to totalSlots
+        for (let i = 1; i <= totalSlots; i++) {
+            const checkKey = `${prefix}${String(i).padStart(2, '0')}`;
+            if (!fspState.occupiedSlots[checkKey]) {
+                return i;
+            }
+        }
+
+        return null;
+    }
+
     function setFspMachineType(type) {
         fspState.machineType = type;
-        fspState.selectedSlots = [];
+        const nextSlot = getFspNextSuggestedSlot(type);
+        fspState.selectedSlots = nextSlot !== null ? [nextSlot] : [];
         renderFeederSlotPickerUI();
     }
 
