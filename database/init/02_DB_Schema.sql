@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS work_order (
     status ENUM('READY', 'IN_PROGRESS', 'SMT_DONE', 'DIP_IN_PROGRESS', 'DONE') DEFAULT 'READY',
     due_date DATE DEFAULT NULL COMMENT '납기일',
     completed_at DATETIME DEFAULT NULL COMMENT '완료 일시',
+    delivery_date DATE DEFAULT NULL COMMENT '납품(출하) 예정일',
     shipped TINYINT(1) DEFAULT 0 COMMENT '납품 여부',
     shipped_at DATETIME DEFAULT NULL COMMENT '납품 일시'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

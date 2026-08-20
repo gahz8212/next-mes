@@ -599,16 +599,20 @@ class WorkOrderController {
             $year  = Request::query('year') !== null && Request::query('year') !== '' ? (int)Request::query('year') : (int)date('Y');
             $month = Request::query('month') !== null && Request::query('month') !== '' ? (int)Request::query('month') : (int)date('m');
 
-            $whereSql = "YEAR(w.due_date) = :year";
-            $params = [':year' => $year];
+            $whereSql = "((YEAR(w.due_date) = :year1";
+            $params = [':year1' => $year, ':year2' => $year];
             if ($month > 0) {
-                $whereSql .= " AND MONTH(w.due_date) = :month";
-                $params[':month'] = $month;
+                $whereSql .= " AND MONTH(w.due_date) = :month1)";
+                $whereSql .= " OR (w.delivery_date IS NOT NULL AND YEAR(w.delivery_date) = :year2 AND MONTH(w.delivery_date) = :month2))";
+                $params[':month1'] = $month;
+                $params[':month2'] = $month;
+            } else {
+                $whereSql .= ") OR (w.delivery_date IS NOT NULL AND YEAR(w.delivery_date) = :year2))";
             }
 
             $stmt = $pdo->prepare("
                 SELECT 
-                  w.wo_id, w.target_qty, w.status, w.due_date, w.completed_at,
+                  w.wo_id, w.target_qty, w.status, w.due_date, w.completed_at, w.delivery_date,
                   w.shipped, w.shipped_at, w.remark, w.parent_wo_id, w.company_id,
                   c.name as company_name,
                   COALESCE(
@@ -634,13 +638,101 @@ class WorkOrderController {
                 LEFT JOIN company c ON w.company_id = c.id
                 LEFT JOIN barcode_master b ON w.wo_id = b.wo_id
                 WHERE {$whereSql}
-                GROUP BY w.wo_id, w.target_qty, w.status, w.due_date, w.completed_at, w.shipped, w.shipped_at, w.remark, w.parent_wo_id, w.company_id, c.name, w.bom_id
-                ORDER BY w.due_date ASC
+                GROUP BY w.wo_id, w.target_qty, w.status, w.due_date, w.completed_at, w.delivery_date, w.shipped, w.shipped_at, w.remark, w.parent_wo_id, w.company_id, c.name, w.bom_id
+                ORDER BY COALESCE(w.delivery_date, w.due_date) ASC
             ");
             $stmt->execute($params);
 
             $rows = $stmt->fetchAll();
             $orders = [];
+            foreach ($rows as $row) {
+                $orders[] = [
+                    'wo_id'         => $row['wo_id'],
+                    'target_qty'    => (int)$row['target_qty'],
+                    'status'        => $row['status'],
+                    'due_date'      => $row['due_date'],
+                    'completed_at'  => $row['completed_at'],
+                    'delivery_date' => $row['delivery_date'],
+                    'shipped'       => (int)$row['shipped'],
+                    'shipped_at'    => $row['shipped_at'],
+                    'remark'        => $row['remark'],
+                    'parent_wo_id'  => $row['parent_wo_id'],
+                    'company_id'    => $row['company_id'],
+                    'company_name'  => $row['company_name'],
+                    'item_name'     => $row['item_name'],
+                    'order_no'      => $row['order_no'],
+                    'processed_qty' => (int)$row['processed_qty'],
+                    'good_qty'      => (int)$row['good_qty'],
+                    'fail_qty'      => (int)$row['fail_qty']
+                ];
+            }
+
+            Response::json([
+                'status' => 'success',
+                'data'   => [
+                    'year'   => $year,
+                    'month'  => $month,
+                    'orders' => $orders
+                ]
+            ]);
+        } catch (Exception $e) {
+            Response::error($e->getMessage());
+        }
+    }
+
+    /**
+     * 12. 완료된 작업지시의 납품(출하) 일정 등록/수정
+     */
+    public static function updateDeliveryDate(): void {
+        try {
+            $pdo = Database::getConnection();
+            $input = Request::getBody();
+            $wo_id = trim($input['wo_id'] ?? '');
+            $delivery_date = trim($input['delivery_date'] ?? '');
+            $remark = trim($input['remark'] ?? '');
+
+            if (!$wo_id) {
+                Response::error("작업지시 ID(wo_id)가 필요합니다.");
+            }
+
+            $stmt = $pdo->prepare("SELECT wo_id, status, target_qty, company_id FROM work_order WHERE wo_id = ?");
+            $stmt->execute([$wo_id]);
+            $wo = $stmt->fetch();
+            if (!$wo) {
+                Response::error("해당 작업지시를 찾을 수 없습니다: " . $wo_id);
+            }
+
+            $deliveryVal = !empty($delivery_date) ? $delivery_date : null;
+
+            $upStmt = $pdo->prepare("UPDATE work_order SET delivery_date = ?, remark = COALESCE(NULLIF(?, ''), remark) WHERE wo_id = ?");
+            $upStmt->execute([$deliveryVal, $remark, $wo_id]);
+
+            // shipment 테이블 연계 (출하 대기 레코드 자동 연동)
+            if ($deliveryVal) {
+                $chkShip = $pdo->prepare("SELECT id FROM shipment WHERE wo_id = ? LIMIT 1");
+                $chkShip->execute([$wo_id]);
+                $shipRow = $chkShip->fetch();
+                if ($shipRow) {
+                    $pdo->prepare("UPDATE shipment SET ship_date = ? WHERE id = ?")->execute([$deliveryVal, $shipRow['id']]);
+                } else {
+                    $pdo->prepare("INSERT INTO shipment (wo_id, ship_qty, ship_date, company_id, status) VALUES (?, ?, ?, ?, 'PENDING')")
+                        ->execute([$wo_id, (int)$wo['target_qty'], $deliveryVal, $wo['company_id']]);
+                }
+            }
+
+            // 감사 로그
+            $pdo->prepare("INSERT INTO system_log (username, action_type, description) VALUES ('admin', 'WO_DELIVERY_DATE_SET', ?)")
+                ->execute(["작업지시 [{$wo_id}] 납품 일정 지정: " . ($deliveryVal ?: '미지정')]);
+
+            Response::success([
+                'wo_id' => $wo_id,
+                'delivery_date' => $deliveryVal
+            ], "납품 일정이 저장되었습니다.");
+
+        } catch (Exception $e) {
+            Response::error($e->getMessage());
+        }
+    }           $orders = [];
             foreach ($rows as $row) {
                 $orders[] = [
                     'wo_id'         => $row['wo_id'],

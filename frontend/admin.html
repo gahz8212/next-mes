@@ -3332,6 +3332,43 @@
     </div>
 </div>
 
+<!-- ════════ MODAL: 완료 작업지시 납품(출하) 일정 등록/변경 ════════ -->
+<div class="modal-overlay" id="deliveryModal">
+    <div class="modal-box" style="max-width:440px;">
+        <div class="modal-header">
+            <div class="modal-title">🚚 고객사 납품(출하) 일정 관리</div>
+            <button class="modal-close" onclick="closeModal('deliveryModal')">✕</button>
+        </div>
+
+        <input type="hidden" id="delivery-wo-id" value="">
+
+        <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:12px; margin-bottom:14px; font-size:12.5px;">
+            <div style="margin-bottom:4px;"><span style="color:#94a3b8;">작업지시:</span> <code id="delivery-wo-label" style="color:#93c5fd; font-weight:800; font-family:'JetBrains Mono',monospace;"></code></div>
+            <div style="margin-bottom:4px;"><span style="color:#94a3b8;">고객사:</span> <strong id="delivery-company-label" style="color:#ffffff;"></strong></div>
+            <div><span style="color:#94a3b8;">생산 품목:</span> <strong id="delivery-item-label" style="color:#38bdf8;"></strong></div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" style="color:#6ee7b7; font-weight:700;">고객사 납품(출하) 예정일 <span style="color:#f87171;">*</span></label>
+            <input type="date" id="delivery-date-input" class="form-control" style="font-size:13.5px; font-weight:700; color:#34d399; height:36px;">
+            <div style="font-size:11.5px; color:#94a3b8; margin-top:4px;">* 지정하신 날짜는 생산 계획 캘린더에 <strong>[🚚 납품 일정]</strong>으로 표시됩니다.</div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">납품/출하 비고 및 메모</label>
+            <input type="text" id="delivery-remark-input" class="form-control" placeholder="예: 직납 배송, 택배 발송 등" style="font-size:12.5px;">
+        </div>
+
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
+            <button type="button" class="btn-outline-sm" style="color:#f87171; border-color:rgba(248,113,113,0.4);" onclick="clearDeliveryDate()">일정 해제(미정)</button>
+            <div style="display:flex; gap:8px;">
+                <button type="button" class="btn-outline-sm" onclick="closeModal('deliveryModal')">취소</button>
+                <button type="button" class="btn-primary-sm" style="background:#059669; border-color:#10b981;" onclick="submitSetDeliveryDate()">💾 납품 일정 저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ════════ MODAL: WO 등록 / 수정 ════════ -->
 <div class="modal-overlay" id="woModal">
     <div class="modal-box">
@@ -6532,11 +6569,13 @@ async function deleteCompany(id, name) {
             selectedCalDateStr = todayStr;
         }
 
-        // Group orders by due_date day (1 ~ 31)
+        // Group orders by effective date: for completed items, use delivery_date (if set) or due_date; for active items, use due_date
         const dayMap = {};
         planOrdersData.forEach(o => {
-            if (o.due_date) {
-                const parts = o.due_date.split('-');
+            const isDone = (o.status === 'DONE' || o.status === 'COMPLETED');
+            const targetDateStr = (isDone && o.delivery_date) ? o.delivery_date : o.due_date;
+            if (targetDateStr) {
+                const parts = targetDateStr.split('-');
                 if (parseInt(parts[0]) === planYear && parseInt(parts[1]) === planMonth) {
                     const day = parseInt(parts[2]);
                     if (!dayMap[day]) dayMap[day] = [];
@@ -6577,12 +6616,20 @@ async function deleteCompany(id, name) {
             let countBadge = '';
             if (orders.length > 0) {
                 const activeCnt = orders.filter(o => !['DONE','COMPLETED'].includes(o.status)).length;
-                const doneCnt = orders.filter(o => ['DONE','COMPLETED'].includes(o.status)).length;
+                const deliveryCnt = orders.filter(o => ['DONE','COMPLETED'].includes(o.status) && o.delivery_date).length;
+                const doneNoDeliveryCnt = orders.filter(o => ['DONE','COMPLETED'].includes(o.status) && !o.delivery_date).length;
+
+                let badges = [];
                 if (activeCnt > 0) {
-                    countBadge = `<span style="font-size:10.5px; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.2); padding:1px 5px; border-radius:8px;">⚡ ${activeCnt}건</span>`;
-                } else {
-                    countBadge = `<span style="font-size:10.5px; font-weight:800; color:#34d399; background:rgba(16,185,129,0.2); padding:1px 5px; border-radius:8px;">✅ ${doneCnt}건</span>`;
+                    badges.push(`<span style="font-size:10px; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.25); padding:1px 5px; border-radius:6px;" title="생산 목표 납기 ${activeCnt}건">⚡${activeCnt}</span>`);
                 }
+                if (deliveryCnt > 0) {
+                    badges.push(`<span style="font-size:10px; font-weight:800; color:#34d399; background:rgba(16,185,129,0.25); padding:1px 5px; border-radius:6px;" title="고객사 납품 예정 ${deliveryCnt}건">🚚${deliveryCnt}</span>`);
+                }
+                if (doneNoDeliveryCnt > 0 && activeCnt === 0 && deliveryCnt === 0) {
+                    badges.push(`<span style="font-size:10px; font-weight:800; color:#a78bfa; background:rgba(167,139,250,0.25); padding:1px 5px; border-radius:6px;" title="완료(납품일정 미정) ${doneNoDeliveryCnt}건">✅${doneNoDeliveryCnt}</span>`);
+                }
+                countBadge = `<div style="display:flex; gap:3px; justify-content:center; flex-wrap:wrap;">${badges.join('')}</div>`;
             }
 
             html += `
@@ -6648,7 +6695,11 @@ async function deleteCompany(id, name) {
 
         const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
         const dayName = dayNames[dayOfWeek] || '';
-        const dayOrders = planOrdersData.filter(o => o.due_date === dateStr);
+        const dayOrders = planOrdersData.filter(o => {
+            const isDone = (o.status === 'DONE' || o.status === 'COMPLETED');
+            const targetDateStr = (isDone && o.delivery_date) ? o.delivery_date : o.due_date;
+            return targetDateStr === dateStr;
+        });
 
         let totalTarget = 0;
         let totalProcessed = 0;
@@ -6679,7 +6730,7 @@ async function deleteCompany(id, name) {
                     <!-- Summary Strip -->
                     <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:10px 14px; font-size:12.5px;">
                         <div style="color:#94a3b8;">
-                            이 날짜에 예정된 생산 목표 및 실적 합계:
+                            이 날짜에 예정된 생산 목표 / 납품 및 실적 합계:
                         </div>
                         <div style="font-family:'JetBrains Mono',monospace; font-weight:700; color:#cbd5e1;">
                             목표: <strong style="color:#ffffff;">${totalTarget.toLocaleString()} EA</strong> 
@@ -6702,7 +6753,13 @@ async function deleteCompany(id, name) {
                             else if (o.status === 'IN_PROGRESS') statusBadge = `<span style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.15); padding:2px 7px; border-radius:4px;">⚡ 자삽(SMT)</span>`;
                             else if (o.status === 'SMT_DONE') statusBadge = `<span style="font-size:11px; font-weight:700; color:#93c5fd; background:rgba(59,130,246,0.15); padding:2px 7px; border-radius:4px;">자삽완료</span>`;
                             else if (isDip) statusBadge = `<span style="font-size:11px; font-weight:700; color:#a78bfa; background:rgba(167,139,250,0.15); padding:2px 7px; border-radius:4px;">수삽(DIP)</span>`;
-                            else if (isDone) statusBadge = `<span style="font-size:11px; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); padding:2px 7px; border-radius:4px;">✅ 완료</span>`;
+                            else if (isDone) {
+                                if (o.delivery_date) {
+                                    statusBadge = `<span style="font-size:11px; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); padding:2px 7px; border-radius:4px;">🚚 납품예정</span>`;
+                                } else {
+                                    statusBadge = `<span style="font-size:11px; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); padding:2px 7px; border-radius:4px;">✅ 생산완료</span>`;
+                                }
+                            }
                             else statusBadge = `<span style="font-size:11px; font-weight:700; color:#94a3b8; background:rgba(100,116,139,0.2); padding:2px 7px; border-radius:4px;">⏳ 대기</span>`;
 
                             return `
@@ -6715,14 +6772,19 @@ async function deleteCompany(id, name) {
                                             ${statusBadge}
                                         </div>
                                         <div style="display:flex; gap:6px; align-items:center;">
+                                            ${isDone ? `
+                                                <button type="button" class="card-btn" style="padding:4px 8px; font-size:11.5px; background:#059669; color:#fff; border:1px solid #10b981;" onclick="openSetDeliveryDateModal('${o.wo_id}', '${o.delivery_date||''}', '${escHtml(o.company_name||'')}', '${escHtml(o.item_name||'')}')">🚚 납품일정</button>
+                                            ` : `
+                                                <button type="button" class="card-btn card-btn-edit" style="padding:4px 8px; font-size:11.5px;" onclick="openEditWOModal('${o.wo_id}', ${o.target_qty}, '${o.due_date||''}', ${o.company_id || 'null'})">✏️ 수정</button>
+                                            `}
                                             <button type="button" class="card-btn card-btn-bom" style="padding:4px 8px; font-size:11.5px;" onclick="openBOMModal('${o.wo_id}', '${o.company_id||''}')">📋 BOM</button>
-                                            <button type="button" class="card-btn card-btn-edit" style="padding:4px 8px; font-size:11.5px;" onclick="openEditWOModal('${o.wo_id}', ${o.target_qty}, '${o.due_date||''}', ${o.company_id || 'null'})">✏️ 수정</button>
                                         </div>
                                     </div>
 
                                     <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#94a3b8; background:rgba(15,23,42,0.4); padding:6px 10px; border-radius:4px;">
                                         <div>
-                                            ${o.order_no ? `연계 수주: <code style="color:#93c5fd;">${escHtml(o.order_no)}</code>` : '개별 작업지시'}
+                                            ${isDone && o.delivery_date ? `<span style="color:#6ee7b7; font-weight:700;">🚚 납품 예정: <strong style="color:#ffffff;">${o.delivery_date}</strong></span>` : `<span>생산 납기: <strong style="color:#e2e8f0;">${o.due_date || '—'}</strong></span>`}
+                                            ${o.order_no ? ` · 수주: <code style="color:#93c5fd;">${escHtml(o.order_no)}</code>` : ''}
                                             ${o.remark ? ` · <span style="color:#fcd34d;">⚠️ ${escHtml(o.remark)}</span>` : ''}
                                         </div>
                                         <div style="font-family:'JetBrains Mono',monospace; font-weight:700;">
@@ -6833,12 +6895,19 @@ async function deleteCompany(id, name) {
             const totalPct = Math.min(100, Math.round((smtPct * 0.5) + (dipPct * 0.5)));
 
             const currentQty = isDone ? targetQty : (isDipProgress ? dipQty : smtQty);
-            const dday = o.due_date ? Math.round((new Date(o.due_date) - new Date(today)) / 86400000) : null;
+            const targetDateStr = (isDone && o.delivery_date) ? o.delivery_date : o.due_date;
+            const dday = targetDateStr ? Math.round((new Date(targetDateStr) - new Date(today)) / 86400000) : null;
             const ddayBadge = dday === null ? '' : renderDDay(dday, isDone);
 
             let statusBadge = '';
             if (o.status === 'HOLD') statusBadge = `<span style="font-size:11px; font-weight:700; color:#fbbf24; background:rgba(245,158,11,0.15); padding:1px 6px; border-radius:3px;">⏸️ 보류</span>`;
-            else if (isDone) statusBadge = `<span style="font-size:11px; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); padding:1px 6px; border-radius:3px;">✅ 완료(100%)</span>`;
+            else if (isDone) {
+                if (o.delivery_date) {
+                    statusBadge = `<span style="font-size:11px; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); padding:1px 6px; border-radius:3px;">🚚 납품예정</span>`;
+                } else {
+                    statusBadge = `<span style="font-size:11px; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); padding:1px 6px; border-radius:3px;">✅ 완료(100%)</span>`;
+                }
+            }
             else if (isSmtProgress || isSmtDone || isDipProgress) statusBadge = `<span style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.15); padding:1px 6px; border-radius:3px;">⚡ 생산중(${totalPct}%)</span>`;
             else statusBadge = `<span style="font-size:11px; font-weight:700; color:#94a3b8; background:rgba(100,116,139,0.2); padding:1px 6px; border-radius:3px;">⏳ 대기</span>`;
 
@@ -6859,7 +6928,7 @@ async function deleteCompany(id, name) {
                     ${escHtml(o.item_name || '—')}
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; font-size:11.5px; color:#94a3b8;">
-                    <span>납기: <strong style="color:#ffffff; font-family:'JetBrains Mono',monospace;">${o.due_date || '—'}</strong></span>
+                    <span>${isDone && o.delivery_date ? `<strong style="color:#6ee7b7;">🚚 납품: ${o.delivery_date}</strong>` : `납기: <strong style="color:#ffffff; font-family:'JetBrains Mono',monospace;">${o.due_date || '—'}</strong>`}</span>
                     <span style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:11px;">
                         <span style="color:#38bdf8;">SMT ${smtPct}%</span> | <span style="color:#a78bfa;">DIP ${dipPct}%</span>
                     </span>
@@ -6929,7 +6998,8 @@ async function deleteCompany(id, name) {
         const totalProcessed = isDone ? targetQty : (isDipProgress ? dipQty : smtQty);
         const yieldRate = totalProcessed > 0 ? ((goodQty / totalProcessed) * 100).toFixed(1) : '100.0';
         const today = new Date().toISOString().slice(0, 10);
-        const dday = o.due_date ? Math.round((new Date(o.due_date) - new Date(today)) / 86400000) : null;
+        const targetDateStr = (isDone && o.delivery_date) ? o.delivery_date : o.due_date;
+        const dday = targetDateStr ? Math.round((new Date(targetDateStr) - new Date(today)) / 86400000) : null;
         const ddayBadge = dday === null ? '' : renderDDay(dday, isDone);
 
         panel.innerHTML = `
@@ -6943,9 +7013,14 @@ async function deleteCompany(id, name) {
                 </div>
 
                 <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                    ${isDone ? `
+                        <button type="button" class="card-btn" style="padding:5px 12px; font-size:12px; font-weight:700; background:#059669; color:#ffffff; border:1px solid #10b981; cursor:pointer;" onclick="openSetDeliveryDateModal('${o.wo_id}', '${o.delivery_date || ''}', '${escHtml(o.company_name||'')}', '${escHtml(o.item_name||'')}', '${escHtml(o.remark||'')}')">
+                            🚚 납품(출하) 일정 ${o.delivery_date ? '변경' : '지정'}
+                        </button>
+                    ` : `
+                        <button type="button" class="card-btn card-btn-edit" style="padding:5px 10px; font-size:12px;" onclick="openEditWOModal('${o.wo_id}', ${o.target_qty}, '${o.due_date||''}', ${o.company_id || 'null'})">✏️ 생산 일정 수정</button>
+                    `}
                     <button type="button" class="card-btn card-btn-bom" style="padding:5px 10px; font-size:12px; font-weight:700;" onclick="openBOMModal('${o.wo_id}', '${o.company_id||''}')">📋 BOM 부품</button>
-
-                    <button type="button" class="card-btn card-btn-edit" style="padding:5px 10px; font-size:12px;" onclick="openEditWOModal('${o.wo_id}', ${o.target_qty}, '${o.due_date||''}', ${o.company_id || 'null'})">✏️ 일정 수정</button>
                 </div>
             </div>
 
@@ -6991,18 +7066,33 @@ async function deleteCompany(id, name) {
                     </div>
                 </div>
 
-                <!-- 3. 납기 일정 및 연계 수주 정보 -->
+                <!-- 3. 납기 및 고객사 납품 일정 상세 -->
                 <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:16px;">
-                    <div style="font-size:13px; font-weight:800; color:#f8fafc; margin-bottom:10px;">📅 납기 일정 및 상세 명세</div>
+                    <div style="font-size:13px; font-weight:800; color:#f8fafc; margin-bottom:10px;">📅 생산 납기 및 납품(출하) 일정 명세</div>
                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; font-size:12.5px;">
-                        <div><span style="color:#94a3b8;">목표 납기일:</span> <strong style="color:#38bdf8; font-family:'JetBrains Mono',monospace;">${o.due_date || '—'}</strong></div>
+                        <div><span style="color:#94a3b8;">생산 목표 납기:</span> <strong style="color:#38bdf8; font-family:'JetBrains Mono',monospace;">${o.due_date || '—'}</strong></div>
                         <div><span style="color:#94a3b8;">연계 수주번호:</span> <code style="color:#93c5fd; font-family:'JetBrains Mono',monospace; font-weight:700;">${escHtml(o.order_no || '개별 작업지시')}</code></div>
-                        ${o.completed_at ? `<div><span style="color:#94a3b8;">생산 완료일:</span> <span style="color:#34d399;">${o.completed_at}</span></div>` : ''}
-                        ${o.shipped == 1 ? `<div><span style="color:#94a3b8;">출하 상태:</span> <span style="color:#34d399;">✅ 납품 완료 (${o.shipped_at || ''})</span></div>` : ''}
+                        ${o.completed_at ? `<div><span style="color:#94a3b8;">생산 완료일시:</span> <span style="color:#34d399; font-weight:700;">${o.completed_at}</span></div>` : ''}
+                        ${o.shipped == 1 ? `<div><span style="color:#94a3b8;">출하 상태:</span> <span style="color:#34d399; font-weight:700;">✅ 출하 완료 (${o.shipped_at || ''})</span></div>` : ''}
                     </div>
+
+                    ${isDone ? `
+                        <div style="margin-top:12px; padding:10px 14px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:6px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                            <div>
+                                <span style="color:#6ee7b7; font-weight:800; font-size:13px;">🚚 고객사 납품(출하) 예정일:</span>
+                                <strong style="color:#ffffff; font-size:14.5px; font-family:'JetBrains Mono',monospace; margin-left:8px;">
+                                    ${o.delivery_date ? o.delivery_date : '<span style="color:#fcd34d; font-size:12px; font-weight:normal;">미지정 (납품 일정을 지정하세요)</span>'}
+                                </strong>
+                            </div>
+                            <button type="button" class="card-btn" style="background:#059669; color:#fff; font-size:12px; font-weight:700; padding:4px 12px; cursor:pointer;" onclick="openSetDeliveryDateModal('${o.wo_id}', '${o.delivery_date || ''}', '${escHtml(o.company_name||'')}', '${escHtml(o.item_name||'')}', '${escHtml(o.remark||'')}')">
+                                ${o.delivery_date ? '✏️ 납품 일정 변경' : '📅 납품 일정 지정하기'}
+                            </button>
+                        </div>
+                    ` : ''}
+
                     ${o.remark ? `
                         <div style="margin-top:10px; padding:8px 12px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); border-radius:6px; font-size:12.5px; color:#fcd34d;">
-                            ⚠️ <strong>일정 특이사항:</strong> ${escHtml(o.remark)}
+                            ⚠️ <strong>일정/납품 특이사항:</strong> ${escHtml(o.remark)}
                         </div>
                     ` : ''}
                 </div>
@@ -7022,6 +7112,91 @@ async function deleteCompany(id, name) {
                 </div>
             </div>
         `;
+    }
+
+    // ── 4. Delivery Date Modal Handlers ──
+    function openSetDeliveryDateModal(woId, currentDeliveryDate, companyName, itemName, currentRemark) {
+        document.getElementById('delivery-wo-id').value = woId;
+        document.getElementById('delivery-wo-label').textContent = woId;
+        document.getElementById('delivery-company-label').textContent = companyName || '고객사 미지정';
+        document.getElementById('delivery-item-label').textContent = itemName || '품목 미지정';
+        
+        const dateInp = document.getElementById('delivery-date-input');
+        if (currentDeliveryDate && currentDeliveryDate !== 'null' && currentDeliveryDate !== 'undefined') {
+            dateInp.value = currentDeliveryDate;
+        } else {
+            // Default to today + 2 days
+            const defDate = new Date();
+            defDate.setDate(defDate.getDate() + 2);
+            dateInp.value = defDate.toISOString().slice(0, 10);
+        }
+
+        document.getElementById('delivery-remark-input').value = currentRemark || '';
+        openModal('deliveryModal');
+    }
+
+    async function submitSetDeliveryDate() {
+        const woId = document.getElementById('delivery-wo-id').value;
+        const deliveryDate = document.getElementById('delivery-date-input').value;
+        const remark = document.getElementById('delivery-remark-input').value;
+
+        if (!woId) return;
+        if (!deliveryDate) {
+            alert('납품(출하) 예정일을 선택해주세요.');
+            return;
+        }
+
+        try {
+            const res = await fetch('../backend/api/update_delivery_date.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    wo_id: woId,
+                    delivery_date: deliveryDate,
+                    remark: remark
+                })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                closeModal('deliveryModal');
+                await loadPlan();
+                if (typeof showToast === 'function') {
+                    showToast('납품 일정이 저장되었습니다.', 'success');
+                }
+            } else {
+                alert(data.message || '납품 일정 저장 실패');
+            }
+        } catch (e) {
+            alert('서버 통신 오류: ' + e.message);
+        }
+    }
+
+    async function clearDeliveryDate() {
+        const woId = document.getElementById('delivery-wo-id').value;
+        if (!woId) return;
+
+        if (!confirm('지정된 납품 일정을 해제(미정 처리)하시겠습니까?')) return;
+
+        try {
+            const res = await fetch('../backend/api/update_delivery_date.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    wo_id: woId,
+                    delivery_date: '',
+                    remark: ''
+                })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                closeModal('deliveryModal');
+                await loadPlan();
+            } else {
+                alert(data.message || '납품 일정 해제 실패');
+            }
+        } catch (e) {
+            alert('서버 통신 오류: ' + e.message);
+        }
     }
 
     // ── Utility ──

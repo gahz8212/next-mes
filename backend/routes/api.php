@@ -79,6 +79,7 @@ Router::post('/work-orders/start-dip', [WorkOrderController::class, 'startDipWo'
 Router::post('/work-orders/stop',  [WorkOrderController::class, 'stopWo']);
 Router::post('/work-orders/switch-line', [WorkOrderController::class, 'switchLineWo']);
 Router::post('/work-orders/ship',  [WorkOrderController::class, 'shipWo']);
+Router::post('/work-orders/delivery-date', [WorkOrderController::class, 'updateDeliveryDate']);
 
 // Feeder Setup Routes
 Router::get('/feeder-setup',       [FeederController::class, 'getFeederSetup']);
@@ -181,6 +182,7 @@ Router::any('/stop_wo.php',                [WorkOrderController::class, 'stopWo'
 Router::any('/switch_line_wo.php',         [WorkOrderController::class, 'switchLineWo']);
 Router::any('/ship_wo.php',                [WorkOrderController::class, 'shipWo']);
 Router::any('/get_production_plan.php',    [WorkOrderController::class, 'getProductionPlan']);
+Router::any('/update_delivery_date.php',    [WorkOrderController::class, 'updateDeliveryDate']);
 
 Router::any('/get_feeder_setup.php',       [FeederController::class, 'getFeederSetup']);
 Router::any('/scan_feeder.php',            [FeederController::class, 'scanFeeder']);
