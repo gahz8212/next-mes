@@ -326,10 +326,7 @@
                 let liveInfoHtml = `<span style="color:#64748b; font-size:10.5px;">스캔 후 실시간 잔량 연동</span>`;
                 if (isVerified) {
                     if (isCriticalLow) {
-                        liveInfoHtml = `
-                            <span class="live-qty-info alert-state">잔여: <b>${remainingQty.toLocaleString()}ea</b> (${remainPct}%)</span>
-                            <span class="splice-click-prompt" title="카드 클릭 시 신규 릴이 스캔되어 즉시 100% 충전됩니다">⚡ 클릭 시 리필</span>
-                        `;
+                        liveInfoHtml = `<span class="live-qty-info alert-state">잔여: <b>${remainingQty.toLocaleString()}ea</b> (${remainPct}%)</span>`;
                     } else {
                         liveInfoHtml = `<span class="live-qty-info normal-state">제공: <b>${provideQtyText}</b>ea (${remainPct}%)</span>`;
                     }
@@ -359,9 +356,7 @@
                             <span class="points-pill">총 ${points}개소</span>
                             <span class="part-number-text" title="${slot.part_no}">${slot.part_no}</span>
                         </div>
-                        ${isCriticalLow ? `
-                            <span class="critical-alarm-tag">🚨 소진 임박 (클릭 시 리필)</span>
-                        ` : ''}
+
                     </div>
 
                     <!-- 2nd Line: Reel Barcode, 10% 이하 시 긴급 잔량 수량 표시 -->
