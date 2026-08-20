@@ -3826,14 +3826,10 @@
             let statusBadge = '';
             if (wo.status === 'HOLD') {
                 statusBadge = `<span style="font-size:11px; font-weight:700; color:#fbbf24; background:rgba(245,158,11,0.15); padding:1px 6px; border-radius:3px;">⏸️ 보류</span>`;
-            } else if (isSmtProgress) {
-                statusBadge = `<span style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.15); padding:1px 6px; border-radius:3px;">⚡ SMT(${smtPct}%)</span>`;
-            } else if (isSmtDone) {
-                statusBadge = `<span style="font-size:11px; font-weight:700; color:#93c5fd; background:rgba(59,130,246,0.15); padding:1px 6px; border-radius:3px;">자삽완료(50%)</span>`;
-            } else if (isDipProgress) {
-                statusBadge = `<span style="font-size:11px; font-weight:700; color:#a78bfa; background:rgba(167,139,250,0.15); padding:1px 6px; border-radius:3px;">수삽(DIP ${dipPct}%)</span>`;
             } else if (isDone) {
                 statusBadge = `<span style="font-size:11px; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); padding:1px 6px; border-radius:3px;">✅ 완료(100%)</span>`;
+            } else if (isSmtProgress || isSmtDone || isDipProgress) {
+                statusBadge = `<span style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.15); padding:1px 6px; border-radius:3px;">⚡ 생산중(${totalPct}%)</span>`;
             } else {
                 statusBadge = `<span style="font-size:11px; font-weight:700; color:#94a3b8; background:rgba(100,116,139,0.2); padding:1px 6px; border-radius:3px;">⏳ 대기</span>`;
             }
@@ -6471,10 +6467,8 @@ async function deleteCompany(id, name) {
 
             let statusBadge = '';
             if (o.status === 'HOLD') statusBadge = `<span style="font-size:11px; font-weight:700; color:#fbbf24; background:rgba(245,158,11,0.15); padding:1px 6px; border-radius:3px;">⏸️ 보류</span>`;
-            else if (isSmtProgress) statusBadge = `<span style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.15); padding:1px 6px; border-radius:3px;">⚡ SMT(${smtPct}%)</span>`;
-            else if (isSmtDone) statusBadge = `<span style="font-size:11px; font-weight:700; color:#93c5fd; background:rgba(59,130,246,0.15); padding:1px 6px; border-radius:3px;">자삽완료(50%)</span>`;
-            else if (isDipProgress) statusBadge = `<span style="font-size:11px; font-weight:700; color:#a78bfa; background:rgba(167,139,250,0.15); padding:1px 6px; border-radius:3px;">수삽(DIP ${dipPct}%)</span>`;
             else if (isDone) statusBadge = `<span style="font-size:11px; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); padding:1px 6px; border-radius:3px;">✅ 완료(100%)</span>`;
+            else if (isSmtProgress || isSmtDone || isDipProgress) statusBadge = `<span style="font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.15); padding:1px 6px; border-radius:3px;">⚡ 생산중(${totalPct}%)</span>`;
             else statusBadge = `<span style="font-size:11px; font-weight:700; color:#94a3b8; background:rgba(100,116,139,0.2); padding:1px 6px; border-radius:3px;">⏳ 대기</span>`;
 
             return `

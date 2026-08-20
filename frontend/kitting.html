@@ -177,21 +177,24 @@
                 const select = document.getElementById('woSelect');
                 select.innerHTML = '';
 
-                if (json.status === 'success' && json.data && json.data.length > 0) {
-                    json.data.forEach(wo => {
+                // 피킹/피더 셋업 화면은 SMT 준비 및 가동 전용이므로 SMT 완료 작업지시는 제외
+                const kittingWOs = (json.data || []).filter(wo => wo.status === 'READY' || wo.status === 'IN_PROGRESS');
+
+                if (json.status === 'success' && kittingWOs.length > 0) {
+                    kittingWOs.forEach(wo => {
                         const opt = document.createElement('option');
                         opt.value = wo.wo_id;
                         const companyStr = wo.company_name ? `[${wo.company_name}] ` : '';
-                        const statusStr = (wo.status === 'READY') ? '대기' : wo.status;
-                        opt.innerText = `${companyStr}${wo.wo_id} (${statusStr})`;
+                        const statusStr = (wo.status === 'READY') ? '피더 셋업 대기' : 'SMT 가동중 (잔량 모니터링)';
+                        opt.innerText = `${companyStr}${wo.wo_id} — ${statusStr}`;
                         select.appendChild(opt);
                     });
 
                     // 첫 번째 작업지시 자동 선택
-                    currentWoId = json.data[0].wo_id;
+                    currentWoId = kittingWOs[0].wo_id;
                     await loadKittingData(currentWoId);
                 } else {
-                    select.innerHTML = '<option value="">대기/진행 중인 작업지시가 없습니다.</option>';
+                    select.innerHTML = '<option value="">피더 셋업이 필요한 작업지시가 없습니다.</option>';
                 }
             } catch (e) {
                 console.error("작업지시 로드 실패:", e);
