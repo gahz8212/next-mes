@@ -295,7 +295,9 @@ class FeederController {
 
                 if (!$matchedSlot) {
                     if ($alreadyVerifiedSlot) {
-                        throw new Exception("이미 검증 장착이 완료된 부품입니다: [{$reel['part_no']}] (피더 슬롯 {$alreadyVerifiedSlot['slot_no']}번)");
+                        // 모든 슬롯이 장착된 상태에서 동일 부품 스캔 시 ➔ 현장 핸즈프리 자동 스플라이싱(Splicing) 판정!
+                        $matchedSlot = $alreadyVerifiedSlot;
+                        $isSpliceAction = true;
                     } else {
                         throw new Exception("오투입(MISMATCH) 경고! 현재 작업지시의 BOM에 포함되지 않았거나 승인되지 않은 부품 품번입니다: [{$reel['part_no']}]");
                     }
