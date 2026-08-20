@@ -152,6 +152,7 @@
         let currentFeederData = null;
         let simulatedProducedQty = 0; // 실시간 릴 잔량 시뮬레이션용 생산 수량
         let slotSpliceOffset = {}; // 슬롯별 스플라이싱 시점 오프셋
+        let slotSpliceReelQty = {}; // 슬롯별 스플라이싱된 신규 릴의 실제 정규 포장 수량 (기본 4,000 EA)
 
         const currentRole = localStorage.getItem('role');
         if (currentRole !== 'worker' && currentRole !== 'admin') {
@@ -203,7 +204,7 @@
         async function onWoChanged() {
             const select = document.getElementById('woSelect');
             currentWoId = select.value;
-            simulatedProducedQty = 0; slotSpliceOffset = {};
+            simulatedProducedQty = 0; slotSpliceOffset = {}; slotSpliceReelQty = {};
             if (currentWoId) {
                 await loadKittingData(currentWoId);
             }
@@ -276,20 +277,30 @@
                 const isVerified = (slot.status === 'VERIFIED');
                 const isTargetHighlight = (highlightSlotNo && slot.slot_no === highlightSlotNo);
                 
-                // 포인트 (기판 1장당 소요 포인트 / 개소수, 예: 8개소)
+                // 포인트 (기판 1장당 소요 포인트 / 개소수)
                 const points = Math.round(parseFloat(slot.points !== undefined && slot.points !== null ? slot.points : slot.req_qty)) || 1;
+                const targetQty = data.target_qty || 100;
+                const totalRequiredQty = points * targetQty; // 이번 작업지시 총 소요수량 (목표생산량 * 개소수)
                 
-                // 제공 수량 (BOM에 등록된 provide_qty 우선, 없으면 points * 목표수량, 예: 4000)
-                const provideQty = (slot.provide_qty && parseFloat(slot.provide_qty) > 0)
+                // 최초 제공 수량 (BOM에 등록된 사급/지급 수량)
+                const bomProvideQty = (slot.provide_qty && parseFloat(slot.provide_qty) > 0)
                     ? Math.round(parseFloat(slot.provide_qty))
-                    : Math.round(points * (data.target_qty || 100));
+                    : Math.round(points * targetQty);
+
+                // 현재 피더에 장착된 릴의 실제 용량 (스플라이싱 시 표준 신품 4,000 EA 팩 적용)
+                const isSpliced = (slotSpliceReelQty[slot.slot_no] !== undefined);
+                const activeReelCapacity = isSpliced
+                    ? slotSpliceReelQty[slot.slot_no]
+                    : (bomProvideQty > 0 ? bomProvideQty : (points > 10 ? 5000 : 4000));
 
                 // ── 실시간 릴 잔량 계산 로직 (스플라이싱 오프셋 차감 반영) ──
-                const initialReelQty = provideQty > 0 ? provideQty : (points > 10 ? 5000 : 3000);
                 const consumedSinceSplice = Math.max(0, simulatedProducedQty - (slotSpliceOffset[slot.slot_no] || 0));
                 const totalConsumed = isVerified ? (points * consumedSinceSplice) : 0;
-                const remainingQty = Math.max(0, initialReelQty - totalConsumed);
-                const remainPct = isVerified ? Math.min(100, Math.max(0, Math.round((remainingQty / initialReelQty) * 100))) : 0;
+                const remainingQty = Math.max(0, activeReelCapacity - totalConsumed);
+                const remainPct = isVerified ? Math.min(100, Math.max(0, Math.round((remainingQty / activeReelCapacity) * 100))) : 0;
+
+                // 소요량 충족 여부 판정 (현재 릴 용량 >= 이번 작업지시 총 소요량)
+                const isRequirementMet = (activeReelCapacity >= totalRequiredQty);
 
                 // 잔량 상태 판정 (안전 >= 30%, 주의 10~29%, 위험 <= 10%)
                 let gaugeClass = 'gauge-pending';
@@ -301,7 +312,7 @@
                     } else if (remainPct > 10) {
                         gaugeClass = 'gauge-warning';
                     } else {
-                        gaugeClass = 'gauge-danger';
+                        gaugeClass = 'gauge-danger'; // 물리적 릴 끝 도달 위험 (빨간색 게이지 유지!)
                         isCriticalLow = true;
                     }
                 }
@@ -321,13 +332,18 @@
                     ? `<span class="reel-code-tag">${slot.reel_barcode}</span>`
                     : `<span class="reel-code-none">미장착 (스캔 대기)</span>`;
 
-                // 제공수량 텍스트
-                const provideQtyText = provideQty.toLocaleString();
-
-                // 2행 우측 텍스트: 단일 자재 잔여 수량 및 % 표시
+                // 2행 우측 텍스트: 단일 자재 잔여 수량 및 % 표시 + 소요량 충족 여부 배지
                 let liveInfoHtml = `<span style="color:#64748b; font-size:10.5px;">스캔 후 실시간 잔량 연동</span>`;
                 if (isVerified) {
-                    liveInfoHtml = `<span class="live-qty-info ${isCriticalLow ? 'alert-state' : 'normal-state'}">수량: <b>${remainingQty.toLocaleString()}</b> EA (${remainPct}%)</span>`;
+                    if (isCriticalLow) {
+                        if (isRequirementMet) {
+                            liveInfoHtml = `<span class="live-qty-info alert-state">수량: <b>${remainingQty.toLocaleString()}</b> EA (${remainPct}%) <span style="font-size:10px; padding:1px 5px; border-radius:3px; background:rgba(52,211,153,0.2); color:#34d399; font-weight:700; margin-left:4px;">소요량 충족</span></span>`;
+                        } else {
+                            liveInfoHtml = `<span class="live-qty-info alert-state">수량: <b>${remainingQty.toLocaleString()}</b> EA (${remainPct}%) <span style="font-size:10px; padding:1px 5px; border-radius:3px; background:rgba(239,68,68,0.25); color:#f87171; font-weight:700; margin-left:4px;">🚨 리필 필수</span></span>`;
+                        }
+                    } else {
+                        liveInfoHtml = `<span class="live-qty-info normal-state">수량: <b>${remainingQty.toLocaleString()}</b> EA (${remainPct}%)</span>`;
+                    }
                 }
 
                 const card = document.createElement('div');
@@ -453,6 +469,7 @@
             try {
                 simulatedProducedQty = 0;
                 slotSpliceOffset = {};
+                slotSpliceReelQty = {};
                 const res = await fetch('/backend/api/reset_feeder_setup.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -476,7 +493,7 @@
         async function resetFeederSetup() {
             if (!currentWoId) return;
             try {
-                simulatedProducedQty = 0; slotSpliceOffset = {};
+                simulatedProducedQty = 0; slotSpliceOffset = {}; slotSpliceReelQty = {};
                 const res = await fetch('/backend/api/reset_feeder_setup.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -512,14 +529,19 @@
                 const json = await res.json();
 
                 if (json.status === 'success') {
-                    // 해당 슬롯의 소비 기준점을 현재 생산 수량으로 리셋 ➔ 잔량 100% 즉시 리필!
+                    // 스플라이싱 시 표준 신품 완제품 릴(Full Reel 4,000 EA)을 장착하여 넉넉하게 리필!
+                    const currentSlot = currentFeederData && currentFeederData.slots ? currentFeederData.slots.find(s => s.slot_no === slotNo) : null;
+                    const slotPoints = currentSlot ? (Math.round(parseFloat(currentSlot.points || currentSlot.req_qty)) || 1) : 1;
+                    const standardFullPack = (slotPoints > 10 ? 5000 : 4000);
+                    
+                    slotSpliceReelQty[slotNo] = standardFullPack;
                     slotSpliceOffset[slotNo] = simulatedProducedQty;
 
                     const banner = document.getElementById('feedbackBanner');
                     const text = document.getElementById('feedbackText');
                     if (banner && text) {
                         banner.className = 'feedback-banner success';
-                        text.innerText = `[스플라이싱 리필 완료] Slot #${slotNo} [${partNo}] 신규 릴(${autoNewReel})이 연결되어 잔량이 100%로 리필되었습니다!`;
+                        text.innerText = `[스플라이싱 리필 완료] Slot #${slotNo} [${partNo}] 신규 표준 릴(${autoNewReel}, ${standardFullPack.toLocaleString()} EA)이 연결되어 잔량이 100%로 완충되었습니다!`;
                     }
 
                     await loadKittingData(currentWoId, slotNo);
@@ -555,11 +577,15 @@
             currentFeederData.slots.forEach(slot => {
                 if (slot.status === 'VERIFIED') {
                     const points = Math.round(parseFloat(slot.points !== undefined && slot.points !== null ? slot.points : slot.req_qty)) || 1;
-                    const provideQty = (slot.provide_qty && parseFloat(slot.provide_qty) > 0)
+                    const bomProvideQty = (slot.provide_qty && parseFloat(slot.provide_qty) > 0)
                         ? Math.round(parseFloat(slot.provide_qty))
                         : Math.round(points * (currentFeederData.target_qty || 100));
-                    const initialReelQty = provideQty > 0 ? provideQty : (points > 10 ? 5000 : 3000);
-                    const drainQty = Math.floor(initialReelQty * 0.95);
+                    const isSpliced = (slotSpliceReelQty[slot.slot_no] !== undefined);
+                    const activeCapacity = isSpliced
+                        ? slotSpliceReelQty[slot.slot_no]
+                        : (bomProvideQty > 0 ? bomProvideQty : (points > 10 ? 5000 : 4000));
+
+                    const drainQty = Math.floor(activeCapacity * 0.95);
                     const consumedSteps = Math.floor(drainQty / points);
                     slotSpliceOffset[slot.slot_no] = simulatedProducedQty - consumedSteps;
                 }
