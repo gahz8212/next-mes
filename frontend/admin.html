@@ -10391,9 +10391,6 @@ function renderOrderMasterList(list) {
 
     container.innerHTML = list.map(o => {
         const isSelected = o.id === selectedOrderId;
-        const items = o.items || [];
-        const totalWon = o.total_price ? '₩ ' + Math.round(o.total_price).toLocaleString() : '₩ 0';
-        const totalQty = o.total_qty ? parseInt(o.total_qty).toLocaleString() : '0';
 
         return `
         <div data-order-id="${o.id}" onclick="selectOrder(${o.id})" style="padding:10px 12px; border-radius:6px; cursor:pointer; transition:all 0.15s ease; ${isSelected ? 'background:rgba(56,189,248,0.15); border:1px solid #38bdf8;' : 'background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.06);'}">
@@ -10401,13 +10398,8 @@ function renderOrderMasterList(list) {
                 <span style="font-size:11px; font-weight:700; color:#93c5fd; background:rgba(59,130,246,0.2); padding:1px 6px; border-radius:3px;">${escHtml(o.company_name || '미지정')}</span>
                 ${statusBadgeMap[o.status] || ''}
             </div>
-            <div style="font-size:13.5px; font-weight:700; color:#ffffff; margin-bottom:3px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-size:13.5px; font-weight:700; color:#ffffff;">
                 <code style="color:#f8fafc; font-family:'JetBrains Mono',monospace;">${escHtml(o.order_no)}</code>
-                <span style="font-size:12px; color:#38bdf8; font-weight:700;">${items.length}종 (${totalQty} EA)</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11.5px; color:#94a3b8;">
-                <span>납기: <strong style="color:#e2e8f0;">${o.due_date || '—'}</strong></span>
-                <span style="color:#34d399; font-weight:700; font-family:'JetBrains Mono',monospace;">${totalWon}</span>
             </div>
         </div>`;
     }).join('');
