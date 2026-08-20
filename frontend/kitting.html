@@ -324,14 +324,14 @@
                 // 제공수량 텍스트
                 const provideQtyText = provideQty.toLocaleString();
 
-                // 2행 우측 텍스트: 평상시(>10%)는 제공수량 표시, 10% 이하 시에는 잔여 수량 및 1-클릭 리필 안내 표시!
+                // 2행 우측 텍스트: 제공수량과 실시간 잔여수량/비율을 명확히 병기
                 let liveInfoHtml = `<span style="color:#64748b; font-size:10.5px;">스캔 후 실시간 잔량 연동</span>`;
                 if (isVerified) {
-                    if (isCriticalLow) {
-                        liveInfoHtml = `<span class="live-qty-info alert-state">잔여: <b>${remainingQty.toLocaleString()}ea</b> (${remainPct}%)</span>`;
-                    } else {
-                        liveInfoHtml = `<span class="live-qty-info normal-state">제공: <b>${provideQtyText}</b>ea (${remainPct}%)</span>`;
-                    }
+                    liveInfoHtml = `
+                        <span class="live-qty-info ${isCriticalLow ? 'alert-state' : 'normal-state'}">
+                            제공: <b>${provideQtyText}</b>ea · 잔여: <b>${remainingQty.toLocaleString()}</b>ea (${remainPct}%)
+                        </span>
+                    `;
                 }
 
                 const card = document.createElement('div');
@@ -455,11 +455,22 @@
         async function autoVerifyAll() {
             if (!currentWoId) return;
             try {
+                simulatedProducedQty = 0;
+                slotSpliceOffset = {};
                 const res = await fetch('/backend/api/reset_feeder_setup.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ wo_id: currentWoId, action: 'auto_verify' })
                 });
+                const json = await res.json();
+                if (json.status === 'success') {
+                    const banner = document.getElementById('feedbackBanner');
+                    const text = document.getElementById('feedbackText');
+                    if (banner && text) {
+                        banner.className = 'feedback-banner success';
+                        text.innerText = `[100% 일괄 셋업 완료] 모든 피더 슬롯의 검증이 완료되고 잔량이 100% 충전되었습니다.`;
+                    }
+                }
                 await loadKittingData(currentWoId);
             } catch (e) {
                 alert("일괄 셋업 실패: " + e.message);

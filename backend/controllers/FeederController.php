@@ -405,6 +405,7 @@ class FeederController {
                     $up = $pdo->prepare("UPDATE feeder_setup SET reel_barcode = ?, status = 'VERIFIED', scanned_at = NOW(), scanned_by = 'AutoSetup' WHERE id = ?");
                     $up->execute([$barcode, $s['id']]);
                 }
+                Response::json(["status" => "success", "message" => "전체 피더 슬롯이 100% 일괄 셋업되었습니다."]);
 
             } else if ($action === 'set_slot_nc') {
                 $slot_id = (int)($input['slot_id'] ?? 0);
