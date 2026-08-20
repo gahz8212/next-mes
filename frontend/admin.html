@@ -5768,24 +5768,19 @@ async function deleteCompany(id, name) {
         const prefix = fspState.machineType === 'TRAY' ? 'TR-' : (fspState.machineType === 'ODD' ? 'O-' : 'C-');
         const slotKey = `${prefix}${String(slotNum).padStart(2, '0')}`;
         
-        // 1. If this slot is already selected by the current material -> ALWAYS UNSELECT / UNLOCK FIRST!
+        // 1. If this slot is already selected by the current material -> Deselect / Unlock
         const selIdx = fspState.selectedSlots.indexOf(slotNum);
         if (selIdx >= 0) {
             fspState.selectedSlots.splice(selIdx, 1);
-            // If duplicate was tracked in occupied map, remove it so it is completely released
             delete fspState.occupiedSlots[slotKey];
             renderFeederSlotPickerUI();
             return;
         }
 
-        // 2. If locked by another material -> Prompt to unlock/reassign
+        // 2. If locked by another material -> Do nothing (no alerts/popups)
         const occupied = fspState.occupiedSlots[slotKey];
         if (occupied) {
-            const ok = confirm(`🔓 [${slotKey}] 슬롯은 다른 자재 [${occupied.partNo}]에 이미 배정되어 있습니다.\n\n해당 자재의 배정을 해제(잠금 해제)하고, 현재 자재 [${fspState.partNo}]에 새로 배정하시겠습니까?`);
-            if (!ok) return;
-
-            // Remove from occupied map so it is now assigned to this material
-            delete fspState.occupiedSlots[slotKey];
+            return;
         }
 
         // 3. Add to current selection
@@ -5868,6 +5863,7 @@ async function deleteCompany(id, name) {
             let color = '#cbd5e1';
             let opacity = '1';
             let cursor = 'pointer';
+            let disabledAttr = '';
             let subText = `<span style="font-size:9.5px; color:#64748b; font-family:'JetBrains Mono',monospace;">${slotKey}</span>`;
 
             if (isSelected) {
@@ -5891,6 +5887,7 @@ async function deleteCompany(id, name) {
                 color = '#ef4444';
                 opacity = '0.45';
                 cursor = 'not-allowed';
+                disabledAttr = 'disabled';
                 subText = `<span style="font-size:9.5px; color:#ef4444; font-weight:700;">🔒 잠김</span>`;
             }
 
@@ -5901,7 +5898,7 @@ async function deleteCompany(id, name) {
                     : `클릭하여 ${slotKey} 배정`);
 
             html += `
-                <button type="button" class="fsp-tile-btn" onclick="onFspSlotTileClick(${i})" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px 2px; border-radius:6px; background:${bg}; border:${border}; color:${color}; opacity:${opacity}; cursor:${cursor}; min-height:46px; transition:all 0.12s ease;" title="${titleAttr}">
+                <button type="button" class="fsp-tile-btn" ${disabledAttr} onclick="onFspSlotTileClick(${i})" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px 2px; border-radius:6px; background:${bg}; border:${border}; color:${color}; opacity:${opacity}; cursor:${cursor}; min-height:46px; transition:all 0.12s ease;" title="${titleAttr}">
                     <span style="font-size:13px; font-weight:800; font-family:'JetBrains Mono',monospace; line-height:1.1;">#${String(i).padStart(2, '0')}</span>
                     ${subText}
                 </button>
