@@ -54,20 +54,38 @@ class DashboardController {
     public static function getKpi(): void {
         try {
             $pdo = Database::getConnection();
-            $stmt = $pdo->query("
-                SELECT
-                    wo.wo_id,
-                    wo.target_qty,
-                    wo.status,
-                    COALESCE(SUM(CASE WHEN bm.status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING', 'DONE') THEN 1 ELSE 0 END), 0) as good_qty,
-                    COALESCE(SUM(CASE WHEN bm.status IN ('DEFECT', 'FAIL') THEN 1 ELSE 0 END), 0) as fail_qty
-                FROM work_order wo
-                LEFT JOIN barcode_master bm ON wo.wo_id = bm.wo_id
-                WHERE wo.status IN ('IN_PROGRESS', 'SMT_DONE', 'DIP_IN_PROGRESS')
-                GROUP BY wo.wo_id, wo.target_qty, wo.status
-                ORDER BY wo.due_date ASC
-                LIMIT 1
-            ");
+            $targetWoId = trim($_GET['wo_id'] ?? '');
+
+            if ($targetWoId) {
+                $stmt = $pdo->prepare("
+                    SELECT
+                        wo.wo_id,
+                        wo.target_qty,
+                        wo.status,
+                        COALESCE(SUM(CASE WHEN bm.status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING', 'DONE') THEN 1 ELSE 0 END), 0) as good_qty,
+                        COALESCE(SUM(CASE WHEN bm.status IN ('DEFECT', 'FAIL') THEN 1 ELSE 0 END), 0) as fail_qty
+                    FROM work_order wo
+                    LEFT JOIN barcode_master bm ON wo.wo_id = bm.wo_id
+                    WHERE wo.wo_id = ?
+                    GROUP BY wo.wo_id, wo.target_qty, wo.status
+                ");
+                $stmt->execute([$targetWoId]);
+            } else {
+                $stmt = $pdo->query("
+                    SELECT
+                        wo.wo_id,
+                        wo.target_qty,
+                        wo.status,
+                        COALESCE(SUM(CASE WHEN bm.status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING', 'DONE') THEN 1 ELSE 0 END), 0) as good_qty,
+                        COALESCE(SUM(CASE WHEN bm.status IN ('DEFECT', 'FAIL') THEN 1 ELSE 0 END), 0) as fail_qty
+                    FROM work_order wo
+                    LEFT JOIN barcode_master bm ON wo.wo_id = bm.wo_id
+                    WHERE wo.status IN ('IN_PROGRESS', 'SMT_DONE', 'DIP_IN_PROGRESS')
+                    GROUP BY wo.wo_id, wo.target_qty, wo.status
+                    ORDER BY wo.due_date ASC
+                    LIMIT 1
+                ");
+            }
             $data = $stmt->fetch();
 
             if ($data) {
