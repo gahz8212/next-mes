@@ -423,20 +423,43 @@ class OrderController {
                 Response::error("유효하지 않은 ID입니다.");
             }
 
-            $stmtCheck = $pdo->prepare("SELECT wo_id FROM sales_order_item WHERE order_id = ? AND wo_id IS NOT NULL AND wo_id != ''");
+            $stmtCheck = $pdo->prepare("
+                SELECT soi.wo_id, wo.status as wo_status 
+                FROM sales_order_item soi 
+                LEFT JOIN work_order wo ON soi.wo_id = wo.wo_id 
+                WHERE soi.order_id = ? AND soi.wo_id IS NOT NULL AND soi.wo_id != ''
+            ");
             $stmtCheck->execute([$orderId]);
-            $activeWo = $stmtCheck->fetch();
+            $activeWos = $stmtCheck->fetchAll();
 
-            if ($activeWo) {
-                Response::error("이미 작업지시({$activeWo['wo_id']})가 발행되어 생산 연계된 품목이 포함되어 있어 수주를 삭제할 수 없습니다.");
+            $inProgressWos = [];
+            $pendingWoIds = [];
+            foreach ($activeWos as $w) {
+                if (in_array($w['wo_status'] ?? '', ['IN_PRODUCTION', 'COMPLETED', 'PRODUCING'])) {
+                    $inProgressWos[] = $w['wo_id'];
+                } else if (!empty($w['wo_id'])) {
+                    $pendingWoIds[] = $w['wo_id'];
+                }
+            }
+
+            if (!empty($inProgressWos)) {
+                Response::error("이미 생산 진행 또는 완료된 작업지시(" . implode(', ', $inProgressWos) . ")가 포함되어 있어 수주를 삭제할 수 없습니다.");
             }
 
             $pdo->beginTransaction();
+
+            // Clean up unstarted pending WOs linked to this order
+            if (!empty($pendingWoIds)) {
+                $inClause = implode(',', array_fill(0, count($pendingWoIds), '?'));
+                $pdo->prepare("DELETE FROM feeder_setup WHERE wo_id IN ($inClause)")->execute($pendingWoIds);
+                $pdo->prepare("DELETE FROM work_order WHERE wo_id IN ($inClause) AND (status = 'PENDING' OR status IS NULL)")->execute($pendingWoIds);
+            }
+
             $pdo->prepare("DELETE FROM sales_order_item WHERE order_id = ?")->execute([$orderId]);
             $pdo->prepare("DELETE FROM sales_order WHERE id = ?")->execute([$orderId]);
             $pdo->commit();
 
-            Response::json(["status" => "success", "message" => "수주 및 하위 품목이 삭제되었습니다."]);
+            Response::json(["status" => "success", "message" => "수주 및 하위 품목이 성공적으로 삭제되었습니다."]);
 
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
