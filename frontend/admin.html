@@ -3530,6 +3530,26 @@
 </div>
 
 <script>
+// ════════════════════════════════════════════════
+//  Global Page Navigation Titles & Keys
+// ════════════════════════════════════════════════
+const ALL_PAGE_TITLES = {
+    wo: '작업지시 (WO) 관리',
+    order: '수주 (PO) 관리',
+    plan: '생산 계획',
+    kpi: 'KPI 종합 분석 대시보드',
+    defect: '불량 현황 분석',
+    company: '거래처 마스터 관리',
+    item: '품목 및 BOM 관리',
+    'part-alias': '부품 교차 참조 (대체품 / AVL 관리)',
+    'consigned-material': '사급 자재 및 반납',
+    material: '자사 보유 자재 관리',
+    shipment: '출하 관리',
+    users: '사용자 / 권한 관리',
+    'quality-std': '품질 검사 기준',
+    log: '시스템 로그 이력'
+};
+
     // ── Auth guard ──
     if (localStorage.getItem('role') !== 'admin') {
         window.location.href = 'login.html';
@@ -3595,17 +3615,20 @@
         }
     }
 
+    // ── 직전 활성 탭 및 상태 복원 함수 ──
+    function getSavedAdminTab() {
+        const hash = (window.location.hash || '').replace('#', '').trim();
+        if (hash && ALL_PAGE_TITLES[hash]) return hash;
+
+        const saved = localStorage.getItem('mes_admin_active_tab') || sessionStorage.getItem('mes_admin_active_tab');
+        if (saved && ALL_PAGE_TITLES[saved]) return saved;
+
+        return 'order';
+    }
+
     // ── Init (직전 탭 즉시 복원 & SWR 병렬 로딩) ──
     async function init() {
-        let initialTab = 'order';
-        if (window.location.hash) {
-            const hashTab = window.location.hash.replace('#', '');
-            if (typeof ALL_PAGE_TITLES !== 'undefined' && ALL_PAGE_TITLES[hashTab]) initialTab = hashTab;
-        } else {
-            const saved = localStorage.getItem('mes_admin_active_tab') || sessionStorage.getItem('mes_admin_active_tab');
-            if (saved && typeof ALL_PAGE_TITLES !== 'undefined' && ALL_PAGE_TITLES[saved]) initialTab = saved;
-        }
-
+        const initialTab = getSavedAdminTab();
         showPage(initialTab);
         const dueEl = document.getElementById('due_date');
         if (dueEl) dueEl.valueAsDate = new Date();
@@ -3648,6 +3671,7 @@
 
     function setWOTab(tab) {
         currentWoTab = tab;
+        try { localStorage.setItem('mes_admin_wo_tab', tab); } catch(e) {}
         document.querySelectorAll('.consigned-tab-btn[id^="btn-wo-tab-"]').forEach(btn => btn.classList.remove('active'));
         const btn = document.getElementById(`btn-wo-tab-${tab}`);
         if (btn) btn.classList.add('active');
@@ -10864,25 +10888,7 @@ function renderLogTable(logs) {
     `).join('');
 }
 
-// ════════════════════════════════════════════════
-//  Global Page Navigation Router (Phase 1 + 2 + 3)
-// ════════════════════════════════════════════════
-const ALL_PAGE_TITLES = {
-    wo: '작업지시 (WO) 관리',
-    order: '수주 (PO) 관리',
-    plan: '생산 계획',
-    kpi: 'KPI 종합 분석 대시보드',
-    defect: '불량 현황 분석',
-    company: '거래처 마스터 관리',
-    item: '품목 및 BOM 관리',
-    'part-alias': '부품 교차 참조 (대체품 / AVL 관리)',
-    'consigned-material': '사급 자재 및 반납',
-    material: '자사 보유 자재 관리',
-    shipment: '출하 관리',
-    users: '사용자 / 권한 관리',
-    'quality-std': '품질 검사 기준',
-    log: '시스템 로그 이력'
-};
+// Global Page Navigation Router
 
 function showPage(pageId, navBtn) {
     if (!pageId) pageId = 'order';
