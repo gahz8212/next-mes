@@ -5576,7 +5576,7 @@ async function deleteCompany(id, name) {
                                     <td style="text-align:center;">
                                         ${isNc 
                                             ? '<span style="color:#f97316; font-size:11.5px; font-weight:700;">미실장</span>' 
-                                            : `<button type="button" class="card-btn" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:2px 8px; font-size:12px; font-weight:800; font-family:'JetBrains Mono',monospace; cursor:pointer;" title="클릭하여 피더 슬롯 번호 변경" onclick="event.stopPropagation(); editBomFeederSlot(${r.detail_id || 0}, ${bomId}, ${r.feeder_slot || 'null'}, '${escHtml(r.part_no)}')">${r.feeder_slot ? `#${escHtml(r.feeder_slot)}` : '슬롯 지정'}</button>`
+                                            : `<button type="button" class="card-btn" style="background:${r.feeder_slot ? (String(r.feeder_slot).startsWith('TR') ? 'rgba(168,85,247,0.18)' : (String(r.feeder_slot).startsWith('O') ? 'rgba(245,158,11,0.18)' : 'rgba(56,189,248,0.18)')) : 'rgba(255,255,255,0.06)'}; color:${r.feeder_slot ? (String(r.feeder_slot).startsWith('TR') ? '#c084fc' : (String(r.feeder_slot).startsWith('O') ? '#fbbf24' : '#38bdf8')) : '#94a3b8'}; border:1px solid ${r.feeder_slot ? (String(r.feeder_slot).startsWith('TR') ? 'rgba(168,85,247,0.45)' : (String(r.feeder_slot).startsWith('O') ? 'rgba(245,158,11,0.45)' : 'rgba(56,189,248,0.45)')) : 'rgba(255,255,255,0.15)'}; padding:2px 8px; font-size:12px; font-weight:800; font-family:'JetBrains Mono',monospace; cursor:pointer;" title="클릭하여 피더 슬롯 지정/수정 (예: C-01, O-05~06, TR-01, C-01, C-02)" onclick="event.stopPropagation(); editBomFeederSlot(${r.detail_id || 0}, ${bomId}, '${escHtml(r.feeder_slot || '')}', '${escHtml(r.part_no)}', '${escHtml(r.location || '')}', '${escHtml(r.part_name || '')}')">${r.feeder_slot ? escHtml(r.feeder_slot) : '슬롯 지정'}</button>`
                                         }
                                     </td>
                                     <td style="text-align:center; white-space:nowrap;">
@@ -5588,7 +5588,7 @@ async function deleteCompany(id, name) {
                                                 ? `<button type="button" class="card-btn" style="background:#059669; color:#fff; border:none; padding:3px 6px; font-size:11.5px;" title="정상 실장으로 복원" onclick="event.stopPropagation(); toggleBomComponentNc(${r.detail_id || 0}, ${bomId})">↩️</button>`
                                                 : `<button type="button" class="card-btn" style="background:rgba(249,115,22,0.2); color:#fb923c; border:1px solid rgba(249,115,22,0.4); padding:3px 6px; font-size:11.5px;" title="NC(미실장) 처리" onclick="event.stopPropagation(); toggleBomComponentNc(${r.detail_id || 0}, ${bomId})">🚫</button>`
                                             }
-                                            <button type="button" class="card-btn card-btn-edit" style="padding:3px 6px; font-size:11.5px;" title="부품 수정" onclick="event.stopPropagation(); editSingleBomComponent(${r.detail_id || 0}, ${bomId}, '${escHtml(r.part_no)}', '${escHtml(r.part_name || r.part_no)}', ${r.req_qty}, '${escHtml(r.location || '')}', ${r.feeder_slot || 'null'})">✏️</button>
+                                            <button type="button" class="card-btn card-btn-edit" style="padding:3px 6px; font-size:11.5px;" title="부품 수정" onclick="event.stopPropagation(); editSingleBomComponent(${r.detail_id || 0}, ${bomId}, '${escHtml(r.part_no)}', '${escHtml(r.part_name || r.part_no)}', ${r.req_qty}, '${escHtml(r.location || '')}', '${escHtml(r.feeder_slot || '')}')">✏️</button>
                                             <button type="button" class="card-btn card-btn-del" style="padding:3px 6px; font-size:11.5px;" title="부품 삭제" onclick="event.stopPropagation(); deleteSingleBomComponent(${r.detail_id || 0}, ${bomId}, '${escHtml(r.part_no)}')">🗑️</button>
                                         </div>
                                     </td>
@@ -5631,16 +5631,30 @@ async function deleteCompany(id, name) {
         }
     }
 
-    async function editBomFeederSlot(detailId, bomId, currentSlot, partNo) {
+    async function editBomFeederSlot(detailId, bomId, currentSlot, partNo, location = '', partName = '') {
         const currentVal = (currentSlot !== null && currentSlot !== undefined && currentSlot !== 'null') ? currentSlot : '';
-        const input = prompt(`[${partNo}] 부품의 피더 슬롯 번호를 입력하세요 (예: 1, 2, 10 / 비우려면 빈칸):`, currentVal);
-        if (input === null) return;
-        const trimmed = input.trim();
-        const newSlot = trimmed === '' ? null : parseInt(trimmed);
-        if (trimmed !== '' && (isNaN(newSlot) || newSlot <= 0)) {
-            alert('피더 슬롯은 1 이상의 정수 번호여야 합니다.');
-            return;
+        
+        let guide = '예: 칩(C-01), 이형릴(O-01), 트레이(TR-01), 2개이상(C-01, C-02 또는 O-05~06)';
+        const loc = (location || '').toUpperCase();
+        const pName = (partName || '').toUpperCase();
+        if (loc.startsWith('U') || loc.startsWith('IC') || pName.includes('IC') || pName.includes('MCU') || pName.includes('BGA')) {
+            guide = '💡 권장: 트레이 슬롯 [TR-01] 또는 이형 슬롯 [O-01] (2칸 점유 시: O-05~06)';
+        } else if (loc.startsWith('CN') || loc.startsWith('J') || pName.includes('CONN') || pName.includes('CONNECTOR')) {
+            guide = '💡 권장: 이형 슬롯 [O-01] (광폭 점유 시: O-05~06 / 트레이 시: TR-01)';
+        } else if (loc.startsWith('R') || loc.startsWith('C') || loc.startsWith('L') || loc.startsWith('D') || loc.startsWith('Q')) {
+            guide = '💡 권장: 칩 마운터 슬롯 [C-01] (복수 슬롯 분산 시: C-01, C-02)';
         }
+
+        const input = prompt(
+            `[${partNo}] 피더 슬롯을 지정/수정하세요.\n\n` +
+            `• 칩 마운터 : C-01, C-02, ... (복수 슬롯 분산: C-01, C-02)\n` +
+            `• 이형 마운터 : O-01, O-02, ... (광폭 2칸 점유: O-05~06)\n` +
+            `• 이형 트레이 : TR-01, TR-02, ... (2단 점유: TR-01~02)\n\n` +
+            `${guide}\n\n(비우려면 빈칸 후 확인)`,
+            currentVal
+        );
+        if (input === null) return;
+        const newSlot = input.trim() === '' ? null : input.trim();
 
         try {
             const res = await fetch('../backend/api/update_bom_component.php', {
