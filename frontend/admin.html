@@ -2642,10 +2642,10 @@
 
                     <!-- 4 Navigation Sub-Tabs -->
                     <div style="padding:0 32px 12px; display:flex; gap:8px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:12px; flex-wrap:wrap;">
-                        <button id="btn-consigned-tab-stock" class="consigned-tab-btn active" onclick="setConsignedSubTab('stock')">📋 사급 재고 수불</button>
-                        <button id="btn-consigned-tab-receive" class="consigned-tab-btn" onclick="setConsignedSubTab('receive')">📥 수주 BOM 입고</button>
+                        <button id="btn-consigned-tab-receive" class="consigned-tab-btn active" onclick="setConsignedSubTab('receive')">📥 수주 BOM 입고</button>
                         <button id="btn-consigned-tab-reconcile" class="consigned-tab-btn" onclick="setConsignedSubTab('reconcile')">⚖️ 사급 반납 정산</button>
                         <button id="btn-consigned-tab-returns" class="consigned-tab-btn" onclick="setConsignedSubTab('returns')">📜 반납 명세서 이력</button>
+                        <button id="btn-consigned-tab-stock" class="consigned-tab-btn" onclick="setConsignedSubTab('stock')">📋 사급 재고 수불</button>
                     </div>
                 </div>
 
@@ -7707,7 +7707,7 @@ async function applyProcuredExcelBatch() {
 // ════════════════════════════════════════════════
 //  고객 사급 자재 및 반납 정산 모듈 (Consigned Material & Reconciliation)
 // ════════════════════════════════════════════════
-let consignedActiveTab = 'stock';
+let consignedActiveTab = 'receive';
 let currentConsignedReturnData = null;
 let consignedOrdersCache = [];
 let consignedStockGroups = {};
