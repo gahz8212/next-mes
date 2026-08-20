@@ -10452,8 +10452,7 @@ function renderSelectedOrderDetail() {
             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                 <span style="font-size:12px; font-weight:700; color:#93c5fd; background:rgba(59,130,246,0.2); padding:2px 8px; border-radius:4px;">${escHtml(order.company_name || '고객사 미지정')}</span>
                 <span style="font-size:15px; font-weight:800; color:#ffffff; font-family:'JetBrains Mono',monospace;">${escHtml(order.order_no)}</span>
-                ${statusBadgeMap[order.status] || ''}
-                <span style="font-size:12px; color:#94a3b8; margin-left:6px;">발주일: <strong style="color:#e2e8f0;">${order.order_date || '—'}</strong> / 납기일: <strong style="color:#f87171;">${order.due_date || '—'}</strong></span>
+                <span style="font-size:12px; color:#94a3b8; margin-left:4px;">발주일: <strong style="color:#e2e8f0;">${order.order_date || '—'}</strong> / 납기일: <strong style="color:#f87171;">${order.due_date || '—'}</strong></span>
             </div>
 
             <!-- 우측 액션 버튼 그룹: [⚡ 작업지시(WO) 일괄 발행], [✏️ 수주 수정], [🗑️ 수주 삭제] -->
