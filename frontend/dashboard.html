@@ -1084,6 +1084,10 @@
                 if (data.status === 'success') {
                     addLog('DIP_LINE', 'PASS', `작업지시 [${wo_id}] 수삽(DIP) 공정 시작`);
                     loadWOList();
+                    const dipPanel = document.getElementById('linePanel-DIP');
+                    if (dipPanel) {
+                        dipPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
                 } else {
                     alert(data.message || "수삽 시작 실패");
                 }
