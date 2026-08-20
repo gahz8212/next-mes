@@ -10392,16 +10392,22 @@ function renderOrderMasterList(list) {
     container.innerHTML = list.map(o => {
         const isSelected = o.id === selectedOrderId;
         const items = o.items || [];
-        const itemNames = items.length > 0 ? items.map(it => it.item_name).filter(Boolean).join(', ') : (o.item_name || '품목명 없음');
+        const totalWon = o.total_price ? '₩ ' + Math.round(o.total_price).toLocaleString() : '₩ 0';
+        const totalQty = o.total_qty ? parseInt(o.total_qty).toLocaleString() : '0';
 
         return `
-        <div data-order-id="${o.id}" onclick="selectOrder(${o.id})" style="padding:12px 14px; border-radius:6px; cursor:pointer; transition:all 0.15s ease; ${isSelected ? 'background:rgba(56,189,248,0.15); border:1px solid #38bdf8;' : 'background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.06);'}">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <span style="font-size:11.5px; font-weight:700; color:#93c5fd; background:rgba(59,130,246,0.2); padding:2px 7px; border-radius:4px;">${escHtml(o.company_name || '미지정')}</span>
+        <div data-order-id="${o.id}" onclick="selectOrder(${o.id})" style="padding:10px 12px; border-radius:6px; cursor:pointer; transition:all 0.15s ease; ${isSelected ? 'background:rgba(56,189,248,0.15); border:1px solid #38bdf8;' : 'background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.06);'}">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span style="font-size:11px; font-weight:700; color:#93c5fd; background:rgba(59,130,246,0.2); padding:1px 6px; border-radius:3px;">${escHtml(o.company_name || '미지정')}</span>
                 ${statusBadgeMap[o.status] || ''}
             </div>
-            <div style="font-size:14px; font-weight:800; color:#ffffff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(itemNames)}">
-                ${escHtml(itemNames)}
+            <div style="font-size:13.5px; font-weight:700; color:#ffffff; margin-bottom:3px; display:flex; justify-content:space-between; align-items:center;">
+                <code style="color:#f8fafc; font-family:'JetBrains Mono',monospace;">${escHtml(o.order_no)}</code>
+                <span style="font-size:12px; color:#38bdf8; font-weight:700;">${items.length}종 (${totalQty} EA)</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11.5px; color:#94a3b8;">
+                <span>납기: <strong style="color:#e2e8f0;">${o.due_date || '—'}</strong></span>
+                <span style="color:#34d399; font-weight:700; font-family:'JetBrains Mono',monospace;">${totalWon}</span>
             </div>
         </div>`;
     }).join('');
@@ -10437,6 +10443,8 @@ function renderSelectedOrderDetail() {
 
     const items = order.items || [];
     const hasUnassigned = items.some(it => !it.wo_id);
+    const hasAnyAssigned = items.some(it => !!it.wo_id);
+    const totalWon = order.total_price ? '₩ ' + Math.round(order.total_price).toLocaleString() : '₩ 0';
     const totalQty = order.total_qty ? parseInt(order.total_qty).toLocaleString() : '0';
 
     const statusBadgeMap = {
@@ -10447,22 +10455,23 @@ function renderSelectedOrderDetail() {
     };
 
     panel.innerHTML = `
-        <!-- 우측 상단 단일 툴바 (수주번호 표시) -->
+        <!-- 우측 상단 단일 툴바 -->
         <div style="padding:10px 16px; background:rgba(15,23,42,0.85); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                 <span style="font-size:12px; font-weight:700; color:#93c5fd; background:rgba(59,130,246,0.2); padding:2px 8px; border-radius:4px;">${escHtml(order.company_name || '고객사 미지정')}</span>
                 <span style="font-size:15px; font-weight:800; color:#ffffff; font-family:'JetBrains Mono',monospace;">${escHtml(order.order_no)}</span>
                 ${statusBadgeMap[order.status] || ''}
+                <span style="font-size:12px; color:#94a3b8; margin-left:6px;">발주일: <strong style="color:#e2e8f0;">${order.order_date || '—'}</strong> / 납기일: <strong style="color:#f87171;">${order.due_date || '—'}</strong></span>
             </div>
 
-            <!-- 우측 액션 버튼 그룹: [⚡ 작업지시(WO) 발행], [✏️ 수주 수정], [🗑️ 수주 삭제] -->
+            <!-- 우측 액션 버튼 그룹: [⚡ 작업지시(WO) 일괄 발행], [✏️ 수주 수정], [🗑️ 수주 삭제] -->
             <div style="display:flex; gap:6px; align-items:center;">
                 ${hasUnassigned ? `
                     <button type="button" class="card-btn" style="background:#2563eb; color:#fff; font-weight:700; border:none; padding:5px 12px; font-size:12px; display:inline-flex; align-items:center; gap:4px; cursor:pointer;" onclick="convertOrderToWO(${order.id}, '${escHtml(order.order_no)}')">
-                        ⚡ WO 발행
+                        ⚡ 작업지시(WO) 일괄 발행
                     </button>
                 ` : `
-                    <span style="font-size:11.5px; color:#34d399; font-weight:700; background:rgba(16,185,129,0.15); padding:4px 8px; border-radius:4px; margin-right:4px;">✓ WO 발행완료</span>
+                    <span style="font-size:11.5px; color:#34d399; font-weight:700; background:rgba(16,185,129,0.15); padding:4px 8px; border-radius:4px; margin-right:4px;">✓ WO 전건 발행완료</span>
                 `}
                 <button type="button" class="card-btn card-btn-edit" style="padding:5px 10px; font-size:12px; font-weight:700; cursor:pointer;" onclick="openEditOrderModal(${order.id})">
                     ✏️ 수주 수정
@@ -10486,32 +10495,43 @@ function renderSelectedOrderDetail() {
                 <table class="detail-balanced-table" style="width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed;">
                     <thead>
                         <tr>
-                            <th style="width:50px; text-align:center;">NO</th>
-                            <th style="width:320px; text-align:left;">품목명</th>
-                            <th style="width:160px; text-align:center;">작업지시(WO)</th>
-                            <th style="width:180px; text-align:right; padding-right:24px;">수주수량</th>
-                            <th style="text-align:left; padding-right:12px;">비고 / 메모</th>
+                            <th style="width:45px; text-align:center;">NO</th>
+                            <th style="width:210px; text-align:left;">품목명</th>
+                            <th style="width:130px; text-align:center;">작업지시(WO)</th>
+                            <th style="width:140px; text-align:right; padding-right:20px;">수주수량</th>
+                            <th style="width:110px; text-align:right;">단가</th>
+                            <th style="width:125px; text-align:right;">공급가액</th>
+                            <th style="width:105px; text-align:center;">납기일</th>
+                            <th style="text-align:left; padding-right:10px;">비고 / 메모</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${items.length === 0 ? `
                             <tr>
-                                <td colspan="5" style="text-align:center; padding:50px; color:#94a3b8; font-size:13px;">등록된 품목이 없습니다.</td>
+                                <td colspan="8" style="text-align:center; padding:50px; color:#94a3b8; font-size:13px;">등록된 품목이 없습니다.</td>
                             </tr>
                         ` : items.map((it, idx) => {
+                            const itDueDate = it.due_date || order.due_date || '—';
+                            const itPrice = it.unit_price ? '₩ ' + Math.round(it.unit_price).toLocaleString() : '—';
+                            const itTotal = it.total_price ? '₩ ' + Math.round(it.total_price).toLocaleString() : '—';
                             const woText = it.wo_id 
-                                ? `<code style="font-family:'JetBrains Mono',monospace; color:#93c5fd; font-weight:700; font-size:13px;">${escHtml(it.wo_id)}</code>`
-                                : `<span style="color:#64748b; font-size:12px;">미발행</span>`;
+                                ? `<code style="font-family:'JetBrains Mono',monospace; color:#93c5fd; font-weight:700; font-size:12.5px;">${escHtml(it.wo_id)}</code>`
+                                : `<button type="button" class="card-btn" style="background:#0284c7; color:#fff; border:none; padding:2px 8px; font-size:11px; font-weight:700; cursor:pointer;" onclick="convertOrderItemToWO(${it.id}, '${escHtml(order.order_no)}', '${escHtml(it.item_name)}')">⚡ WO 발행</button>`;
 
                             return `
                             <tr>
                                 <td style="text-align:center; color:#64748b; font-family:'JetBrains Mono',monospace;">${idx + 1}</td>
                                 <td>
-                                    <div style="font-weight:800; color:#ffffff; font-size:14px;">${escHtml(it.item_name || '—')}</div>
+                                    <div style="font-weight:800; color:#ffffff; font-size:13.5px;">${escHtml(it.item_name || '—')}</div>
                                 </td>
                                 <td style="text-align:center;">${woText}</td>
-                                <td style="text-align:right; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace; font-size:14px; padding-right:24px;">
+                                <td style="text-align:right; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace; padding-right:20px;">
                                     ${parseInt(it.order_qty||0).toLocaleString()} <span style="font-size:11px; color:#94a3b8; font-weight:400;">EA</span>
+                                </td>
+                                <td style="text-align:right; color:#cbd5e1; font-family:'JetBrains Mono',monospace;">${itPrice}</td>
+                                <td style="text-align:right; color:#34d399; font-weight:800; font-family:'JetBrains Mono',monospace;">${itTotal}</td>
+                                <td style="text-align:center; font-family:'JetBrains Mono',monospace; color:#cbd5e1; font-size:12.5px;">
+                                    ${escHtml(itDueDate)}
                                 </td>
                                 <td style="color:#94a3b8; font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(it.memo || '—')}</td>
                             </tr>
@@ -10522,18 +10542,23 @@ function renderSelectedOrderDetail() {
             </div>
         </div>
 
-        <!-- 화면 맨 하단(Bottom) 고정 합계 영역 -->
+        <!-- 화면 맨 하단(Bottom) 고정 합계 영역 (상단 컬럼 너비/자릿수 1:1 완벽 일치) -->
         <div style="padding:0 36px 20px; flex-shrink:0;">
             <div style="border:1px solid rgba(255,255,255,0.12); border-radius:0 0 8px 8px; background:rgba(15,23,42,0.96); overflow:hidden;">
                 <table class="detail-balanced-table" style="width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; margin:0;">
                     <tbody>
                         <tr style="font-weight:800; height:44px;">
-                            <td style="width:50px; text-align:center; color:#64748b; padding:10px;">—</td>
-                            <td style="width:320px; text-align:left; color:#f8fafc; font-size:13.5px; padding:10px;">합 계 (${items.length}종)</td>
-                            <td style="width:160px; text-align:center; color:#64748b; padding:10px;">—</td>
-                            <td style="width:180px; text-align:right; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace; font-size:14.5px; padding:10px 24px 10px 10px;">
+                            <td style="width:45px; text-align:center; color:#64748b; padding:10px;">—</td>
+                            <td style="width:210px; text-align:left; color:#f8fafc; font-size:13.5px; padding:10px;">합 계 (${items.length}종)</td>
+                            <td style="width:125px; text-align:center; color:#64748b; padding:10px;">—</td>
+                            <td style="width:150px; text-align:right; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace; font-size:14px; padding:10px 20px 10px 10px;">
                                 ${totalQty} <span style="font-size:11px; font-weight:400; color:#94a3b8;">EA</span>
                             </td>
+                            <td style="width:110px; text-align:center; color:#64748b; padding:10px;">—</td>
+                            <td style="width:125px; text-align:right; font-weight:800; color:#34d399; font-family:'JetBrains Mono',monospace; font-size:14.5px; padding:10px;">
+                                ${totalWon}
+                            </td>
+                            <td style="width:105px; text-align:center; color:#64748b; padding:10px;">—</td>
                             <td style="padding:10px;"></td>
                         </tr>
                     </tbody>
