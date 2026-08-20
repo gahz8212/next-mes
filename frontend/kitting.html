@@ -549,14 +549,27 @@
                 alert("먼저 [100% 일괄 셋업]을 완료해 주세요.");
                 return;
             }
-            // 잔량이 약 5% 수준이 되도록 생산량을 강제 설정
-            simulatedProducedQty = 480;
+
+            // 모든 검증 슬롯의 잔량이 정확히 5%(소진 임박)가 되도록 오프셋 계산
+            currentFeederData.slots.forEach(slot => {
+                if (slot.status === 'VERIFIED') {
+                    const points = Math.round(parseFloat(slot.points !== undefined && slot.points !== null ? slot.points : slot.req_qty)) || 1;
+                    const provideQty = (slot.provide_qty && parseFloat(slot.provide_qty) > 0)
+                        ? Math.round(parseFloat(slot.provide_qty))
+                        : Math.round(points * (currentFeederData.target_qty || 100));
+                    const initialReelQty = provideQty > 0 ? provideQty : (points > 10 ? 5000 : 3000);
+                    const drainQty = Math.floor(initialReelQty * 0.95);
+                    const consumedSteps = Math.floor(drainQty / points);
+                    slotSpliceOffset[slot.slot_no] = simulatedProducedQty - consumedSteps;
+                }
+            });
+
             renderKittingUI(currentFeederData);
             const banner = document.getElementById('feedbackBanner');
             const text = document.getElementById('feedbackText');
             if (banner && text) {
                 banner.className = 'feedback-banner';
-                text.innerText = '🚨 릴 잔량이 10% 이하(소진 임박)로 감축되었습니다. 붉은색 자재 카드를 클릭하면 즉시 스플라이싱되어 100%로 리필됩니다!';
+                text.innerText = '🚨 모든 슬롯의 릴 잔량이 5%(소진 임박)로 감축되었습니다. 충전할 자재 카드를 클릭하면 즉시 100%로 리필됩니다!';
             }
         }
 
@@ -578,7 +591,8 @@
                 const json = await res.json();
                 if (json.status === 'success' && json.data && json.data.wo_id === currentWoId) {
                     const serverActual = parseInt(json.data.actual_qty) || 0;
-                    if (serverActual !== simulatedProducedQty) {
+                    // 실제 설비에서 생산이 진행되어 실적이 증가했을 때만 동기화
+                    if (serverActual > 0 && serverActual > simulatedProducedQty) {
                         simulatedProducedQty = serverActual;
                         if (currentFeederData) {
                             renderKittingUI(currentFeederData);
