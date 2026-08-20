@@ -6644,8 +6644,10 @@ function initMaterialDates() {
     const now = new Date();
     const start = new Date(); start.setDate(now.getDate() - 30);
     const fmt = d => d.toISOString().slice(0,10);
-    document.getElementById('mat-start').value = fmt(start);
-    document.getElementById('mat-end').value   = fmt(now);
+    const sEl = document.getElementById('mat-start');
+    const eEl = document.getElementById('mat-end');
+    if (sEl && !sEl.value) sEl.value = fmt(start);
+    if (eEl && !eEl.value) eEl.value = fmt(now);
 }
 
 let materialData = { summary: {}, records: [], grouped: [] };
@@ -10881,21 +10883,30 @@ setInterval(() => {
 
 // ── App Startup Initializers (즉시 실행 + DOMContentLoaded 이중 보강) ──
 function bootApp() {
-    initDefectDates();
-    initPlanDate();
-    initMaterialDates();
-    initShipmentDates();
-    init();
-    loadNotifications();
-
-    // 사이드바 접힘 상태 복원
-    if (localStorage.getItem('mes_sidebar_collapsed') === '1') {
-        const sidebar = document.getElementById('sidebar');
-        const tab = document.getElementById('floatingTabLeft');
-        if (sidebar) sidebar.classList.add('collapsed');
-        document.body.classList.add('sidebar-collapsed');
-        if (tab) tab.classList.add('visible');
+    // 1. 직전 활성 탭 및 화면 복원 (최우선 실행)
+    try {
+        init();
+    } catch(e) {
+        console.error('init error:', e);
     }
+
+    // 2. 각 보조 컨트롤러 날짜 및 알림 초기화 (오류 격리)
+    try { initDefectDates(); } catch(e) {}
+    try { initPlanDate(); } catch(e) {}
+    try { initMaterialDates(); } catch(e) {}
+    try { initShipmentDates(); } catch(e) {}
+    try { loadNotifications(); } catch(e) {}
+
+    // 3. 사이드바 접힘 상태 복원
+    try {
+        if (localStorage.getItem('mes_sidebar_collapsed') === '1') {
+            const sidebar = document.getElementById('sidebar');
+            const tab = document.getElementById('floatingTabLeft');
+            if (sidebar) sidebar.classList.add('collapsed');
+            document.body.classList.add('sidebar-collapsed');
+            if (tab) tab.classList.add('visible');
+        }
+    } catch(e) {}
 }
 
 if (document.readyState === 'loading') {
