@@ -4003,16 +4003,15 @@ const ALL_PAGE_TITLES = {
                     </div>
                 </div>
 
-                <!-- 2. SMT(50%) + DIP(50%) 2단계 독립 공정 진행 단계 플로우 -->
+                <!-- 2. 전체 공정 진척도 (막대그래프 & 종합진행률) -->
                 <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:16px;">
-                    <!-- 상단 전체 2분할 종합 진행 바 (SMT 50% + DIP 50%) -->
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                         <span style="font-size:12.5px; font-weight:800; color:#e2e8f0; display:flex; align-items:center; gap:6px;">
                             <span>🔄 전체 공정 진척도 (SMT 50% + DIP 50%)</span>
                         </span>
-                        <span style="font-size:12px; color:#cbd5e1; font-weight:700;">종합 진행률: <strong style="color:${totalPct>=100?'#34d399':totalPct>=50?'#a78bfa':'#38bdf8'}; font-size:14px;">${totalPct}%</strong></span>
+                        <span style="font-size:12.5px; color:#cbd5e1; font-weight:700;">종합 진행률: <strong style="color:${totalPct>=100?'#34d399':totalPct>=50?'#a78bfa':'#38bdf8'}; font-size:15px; font-weight:800; font-family:'JetBrains Mono',monospace;">${totalPct}%</strong></span>
                     </div>
-                    <div style="display:flex; gap:6px; height:12px; background:rgba(0,0,0,0.3); border-radius:6px; padding:2px; border:1px solid rgba(255,255,255,0.08); margin-bottom:16px;">
+                    <div style="display:flex; gap:6px; height:14px; background:rgba(0,0,0,0.3); border-radius:6px; padding:2px; border:1px solid rgba(255,255,255,0.08);">
                         <!-- SMT 50% 구간 -->
                         <div style="flex:1; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; position:relative;" title="SMT 공정: ${smtPct}% (전체 50% 중 ${Math.round(smtPct*0.5)}%)">
                             <div style="width:${smtPct}%; height:100%; background:linear-gradient(90deg, #0284c7, #38bdf8); transition:width 0.3s ease;"></div>
@@ -4020,50 +4019,6 @@ const ALL_PAGE_TITLES = {
                         <!-- DIP 50% 구간 -->
                         <div style="flex:1; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; position:relative;" title="DIP 공정: ${dipPct}% (전체 50% 중 ${Math.round(dipPct*0.5)}%)">
                             <div style="width:${dipPct}%; height:100%; background:linear-gradient(90deg, #7c3aed, #34d399); transition:width 0.3s ease;"></div>
-                        </div>
-                    </div>
-
-                    <!-- Step 1: SMT 라인 (자체 100% / 전체의 50% 비중) -->
-                    <div style="background:rgba(30,41,59,0.4); border:1px solid rgba(56,189,248,0.25); border-radius:6px; padding:10px 12px; margin-bottom:10px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                            <span style="font-size:12px; font-weight:800; color:#38bdf8; display:flex; align-items:center; gap:6px;">
-                                <span style="background:#0284c7; color:#fff; font-size:10px; padding:1px 5px; border-radius:3px;">SMT 50%</span>
-                                SMT 표면실장 공정 (각인 ➔ 리플로우 100%)
-                            </span>
-                            <span style="font-size:11.5px; font-weight:700; color:#38bdf8; font-family:'JetBrains Mono',monospace;">진행률: ${smtPct}% (${smtQty}/${targetQty} EA)</span>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:4px; overflow-x:auto;">
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>0?'rgba(56,189,248,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>0?'#38bdf8':'#64748b'}; border:1px solid ${smtPct>0?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.08)'};">1. 각인 (Laser)</span>
-                            <span style="color:#64748b; font-size:10px;">➔</span>
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>15?'rgba(56,189,248,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>15?'#38bdf8':'#64748b'}; border:1px solid ${smtPct>15?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.08)'};">2. 납도포 (SPI)</span>
-                            <span style="color:#64748b; font-size:10px;">➔</span>
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>40?'rgba(56,189,248,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>40?'#38bdf8':'#64748b'}; border:1px solid ${smtPct>40?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.08)'};">3. #1 고속 마운터</span>
-                            <span style="color:#64748b; font-size:10px;">➔</span>
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>70?'rgba(56,189,248,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>70?'#38bdf8':'#64748b'}; border:1px solid ${smtPct>70?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.08)'};">4. #2 이형 마운터</span>
-                            <span style="color:#64748b; font-size:10px;">➔</span>
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>=100?'rgba(52,211,153,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>=100?'#34d399':'#64748b'}; border:1px solid ${smtPct>=100?'rgba(52,211,153,0.5)':'rgba(255,255,255,0.08)'};">5. 리플로우 (SMT완료)</span>
-                        </div>
-                    </div>
-
-                    <!-- Step 2: DIP 라인 (자체 100% / 전체의 50% 비중) -->
-                    <div style="background:rgba(30,41,59,0.4); border:1px solid rgba(167,139,250,0.25); border-radius:6px; padding:10px 12px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                            <span style="font-size:12px; font-weight:800; color:#a78bfa; display:flex; align-items:center; gap:6px;">
-                                <span style="background:#7c3aed; color:#fff; font-size:10px; padding:1px 5px; border-radius:3px;">DIP 50%</span>
-                                DIP 수삽 & 후공정 검사 (수삽 ➔ 최종완료 100%)
-                            </span>
-                            <span style="font-size:11.5px; font-weight:700; color:#a78bfa; font-family:'JetBrains Mono',monospace;">진행률: ${dipPct}% (${dipQty}/${targetQty} EA)</span>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:4px; overflow-x:auto;">
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>0?'rgba(167,139,250,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>0?'#a78bfa':'#64748b'}; border:1px solid ${dipPct>0?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.08)'};">6. 수삽 AOI 검사</span>
-                            <span style="color:#64748b; font-size:10px;">➔</span>
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>20?'rgba(167,139,250,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>20?'#a78bfa':'#64748b'}; border:1px solid ${dipPct>20?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.08)'};">7. 웨이브 솔더링</span>
-                            <span style="color:#64748b; font-size:10px;">➔</span>
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>50?'rgba(167,139,250,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>50?'#a78bfa':'#64748b'}; border:1px solid ${dipPct>50?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.08)'};">8. ICT 회로 검사</span>
-                            <span style="color:#64748b; font-size:10px;">➔</span>
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>80?'rgba(167,139,250,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>80?'#a78bfa':'#64748b'}; border:1px solid ${dipPct>80?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.08)'};">9. 방습 코팅</span>
-                            <span style="color:#64748b; font-size:10px;">➔</span>
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>=100?'rgba(52,211,153,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>=100?'#34d399':'#64748b'}; border:1px solid ${dipPct>=100?'rgba(52,211,153,0.5)':'rgba(255,255,255,0.08)'};">10. 기능검사 (완료)</span>
                         </div>
                     </div>
                 </div>
@@ -6624,16 +6579,15 @@ async function deleteCompany(id, name) {
                     </div>
                 </div>
 
-                <!-- 2. SMT(50%) + DIP(50%) 2단계 독립 공정 진행 단계 플로우 -->
+                <!-- 2. 전체 공정 진척도 (막대그래프 & 종합진행률) -->
                 <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:16px;">
-                    <!-- 상단 전체 2분할 종합 진행 바 (SMT 50% + DIP 50%) -->
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                         <span style="font-size:12.5px; font-weight:800; color:#e2e8f0; display:flex; align-items:center; gap:6px;">
                             <span>🔄 전체 공정 진척도 (SMT 50% + DIP 50%)</span>
                         </span>
-                        <span style="font-size:12px; color:#cbd5e1; font-weight:700;">종합 진행률: <strong style="color:${totalPct>=100?'#34d399':totalPct>=50?'#a78bfa':'#38bdf8'}; font-size:14px;">${totalPct}%</strong></span>
+                        <span style="font-size:12.5px; color:#cbd5e1; font-weight:700;">종합 진행률: <strong style="color:${totalPct>=100?'#34d399':totalPct>=50?'#a78bfa':'#38bdf8'}; font-size:15px; font-weight:800; font-family:'JetBrains Mono',monospace;">${totalPct}%</strong></span>
                     </div>
-                    <div style="display:flex; gap:6px; height:12px; background:rgba(0,0,0,0.3); border-radius:6px; padding:2px; border:1px solid rgba(255,255,255,0.08); margin-bottom:16px;">
+                    <div style="display:flex; gap:6px; height:14px; background:rgba(0,0,0,0.3); border-radius:6px; padding:2px; border:1px solid rgba(255,255,255,0.08);">
                         <!-- SMT 50% 구간 -->
                         <div style="flex:1; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; position:relative;" title="SMT 공정: ${smtPct}% (전체 50% 중 ${Math.round(smtPct*0.5)}%)">
                             <div style="width:${smtPct}%; height:100%; background:linear-gradient(90deg, #0284c7, #38bdf8); transition:width 0.3s ease;"></div>
@@ -6641,50 +6595,6 @@ async function deleteCompany(id, name) {
                         <!-- DIP 50% 구간 -->
                         <div style="flex:1; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; position:relative;" title="DIP 공정: ${dipPct}% (전체 50% 중 ${Math.round(dipPct*0.5)}%)">
                             <div style="width:${dipPct}%; height:100%; background:linear-gradient(90deg, #7c3aed, #34d399); transition:width 0.3s ease;"></div>
-                        </div>
-                    </div>
-
-                    <!-- Step 1: SMT 라인 (자체 100% / 전체의 50% 비중) -->
-                    <div style="background:rgba(30,41,59,0.4); border:1px solid rgba(56,189,248,0.25); border-radius:6px; padding:10px 12px; margin-bottom:10px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                            <span style="font-size:12px; font-weight:800; color:#38bdf8; display:flex; align-items:center; gap:6px;">
-                                <span style="background:#0284c7; color:#fff; font-size:10px; padding:1px 5px; border-radius:3px;">SMT 50%</span>
-                                SMT 표면실장 공정 (각인 ➔ 리플로우 100%)
-                            </span>
-                            <span style="font-size:11.5px; font-weight:700; color:#38bdf8; font-family:'JetBrains Mono',monospace;">진행률: ${smtPct}% (${smtQty}/${targetQty} EA)</span>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:4px; overflow-x:auto;">
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>0?'rgba(56,189,248,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>0?'#38bdf8':'#64748b'}; border:1px solid ${smtPct>0?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.08)'};">1. 각인 (Laser)</span>
-                            <span style="color:#64748b; font-size:10px;">➔</span>
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>15?'rgba(56,189,248,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>15?'#38bdf8':'#64748b'}; border:1px solid ${smtPct>15?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.08)'};">2. 납도포 (SPI)</span>
-                            <span style="color:#64748b; font-size:10px;">➔</span>
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>40?'rgba(56,189,248,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>40?'#38bdf8':'#64748b'}; border:1px solid ${smtPct>40?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.08)'};">3. #1 고속 마운터</span>
-                            <span style="color:#64748b; font-size:10px;">➔</span>
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>70?'rgba(56,189,248,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>70?'#38bdf8':'#64748b'}; border:1px solid ${smtPct>70?'rgba(56,189,248,0.4)':'rgba(255,255,255,0.08)'};">4. #2 이형 마운터</span>
-                            <span style="color:#64748b; font-size:10px;">➔</span>
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${smtPct>=100?'rgba(52,211,153,0.25)':'rgba(255,255,255,0.05)'}; color:${smtPct>=100?'#34d399':'#64748b'}; border:1px solid ${smtPct>=100?'rgba(52,211,153,0.5)':'rgba(255,255,255,0.08)'};">5. 리플로우 (SMT완료)</span>
-                        </div>
-                    </div>
-
-                    <!-- Step 2: DIP 라인 (자체 100% / 전체의 50% 비중) -->
-                    <div style="background:rgba(30,41,59,0.4); border:1px solid rgba(167,139,250,0.25); border-radius:6px; padding:10px 12px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                            <span style="font-size:12px; font-weight:800; color:#a78bfa; display:flex; align-items:center; gap:6px;">
-                                <span style="background:#7c3aed; color:#fff; font-size:10px; padding:1px 5px; border-radius:3px;">DIP 50%</span>
-                                DIP 수삽 & 후공정 검사 (수삽 ➔ 최종완료 100%)
-                            </span>
-                            <span style="font-size:11.5px; font-weight:700; color:#a78bfa; font-family:'JetBrains Mono',monospace;">진행률: ${dipPct}% (${dipQty}/${targetQty} EA)</span>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:4px; overflow-x:auto;">
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>0?'rgba(167,139,250,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>0?'#a78bfa':'#64748b'}; border:1px solid ${dipPct>0?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.08)'};">6. 수삽 AOI 검사</span>
-                            <span style="color:#64748b; font-size:10px;">➔</span>
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>20?'rgba(167,139,250,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>20?'#a78bfa':'#64748b'}; border:1px solid ${dipPct>20?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.08)'};">7. 웨이브 솔더링</span>
-                            <span style="color:#64748b; font-size:10px;">➔</span>
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>50?'rgba(167,139,250,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>50?'#a78bfa':'#64748b'}; border:1px solid ${dipPct>50?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.08)'};">8. ICT 회로 검사</span>
-                            <span style="color:#64748b; font-size:10px;">➔</span>
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>80?'rgba(167,139,250,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>80?'#a78bfa':'#64748b'}; border:1px solid ${dipPct>80?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.08)'};">9. 방습 코팅</span>
-                            <span style="color:#64748b; font-size:10px;">➔</span>
-                            <span style="font-size:11px; font-weight:700; padding:3px 7px; border-radius:4px; flex:1; text-align:center; min-width:70px; background:${dipPct>=100?'rgba(52,211,153,0.25)':'rgba(255,255,255,0.05)'}; color:${dipPct>=100?'#34d399':'#64748b'}; border:1px solid ${dipPct>=100?'rgba(52,211,153,0.5)':'rgba(255,255,255,0.08)'};">10. 기능검사 (완료)</span>
                         </div>
                     </div>
                 </div>
