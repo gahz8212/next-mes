@@ -5875,7 +5875,7 @@ async function deleteCompany(id, name) {
                     border = '1.5px solid #38bdf8';
                     color = '#ffffff';
                 }
-                subText = `<span style="font-size:10px; color:#a7f3d0; font-weight:800;">✓ 선택</span>`;
+                subText = `<span style="font-size:10px; color:#a7f3d0; font-weight:800;">✓ 배정 (해제)</span>`;
             } else if (occupiedBy) {
                 bg = 'rgba(15,23,42,0.95)';
                 border = '1px solid rgba(239,68,68,0.35)';
@@ -5885,9 +5885,11 @@ async function deleteCompany(id, name) {
                 subText = `<span style="font-size:9.5px; color:#ef4444; font-weight:700;">🔒 잠김</span>`;
             }
 
-            const titleAttr = occupiedBy 
-                ? `🔒 이미 배정됨: ${escHtml(occupiedBy.partNo)} (${escHtml(occupiedBy.partName)})` 
-                : `클릭하여 ${slotKey} 선택/해제`;
+            const titleAttr = isSelected
+                ? `클릭하여 [${slotKey}] 슬롯 잠금 해제 (배정 취소)`
+                : (occupiedBy 
+                    ? `🔒 이미 배정됨: ${escHtml(occupiedBy.partNo)} (${escHtml(occupiedBy.partName)})` 
+                    : `클릭하여 ${slotKey} 배정`);
 
             html += `
                 <button type="button" class="fsp-tile-btn" onclick="onFspSlotTileClick(${i})" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px 2px; border-radius:6px; background:${bg}; border:${border}; color:${color}; opacity:${opacity}; cursor:${cursor}; min-height:46px; transition:all 0.12s ease;" title="${titleAttr}">
