@@ -2845,9 +2845,6 @@
                             <div class="page-title-text">🚚 제품 출하 관리</div>
                             <div class="page-desc">완료된 생산 작업지시(WO)의 최종 출하를 등록하고 거래명세서 및 납품 이력을 관리합니다.</div>
                         </div>
-                        <div style="display:flex; gap:8px; align-items:center;">
-                            <button type="button" class="btn-submit" style="background:#2563eb; border:1px solid #3b82f6; padding:7px 16px; font-size:13px; font-weight:800; display:inline-flex; align-items:center; gap:6px; margin:0;" onclick="openShipmentModal()">➕ 신규 출하 등록</button>
-                        </div>
                     </div>
 
                     <!-- KPI Strip -->
@@ -2867,6 +2864,22 @@
                         <div class="kpi-card">
                             <div class="kpi-label">📦 총 출하 수량</div>
                             <div class="kpi-val" style="color:#6ee7b7;" id="ship-kpi-qty">—</div>
+                        </div>
+                    </div>
+
+                    <!-- 생산 완료 완제품 섹션 (최상단 배치) -->
+                    <div style="padding:0 32px 14px;">
+                        <div style="background:rgba(15,23,42,0.75); border:1px solid rgba(52,211,153,0.35); border-radius:8px; padding:12px 16px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:14px; font-weight:800; color:#34d399;">✨ 출하 대기 완제품 (생산 완료 품목)</span>
+                                    <span id="ship-ready-count" class="status-badge" style="background:rgba(52,211,153,0.2); color:#34d399; font-weight:800; font-size:11.5px;">0건</span>
+                                </div>
+                                <span style="font-size:11.5px; color:#94a3b8;">생산 완료된 작업지시를 확인하고 [출하 등록]을 누르면 즉시 거래명세서가 발행됩니다.</span>
+                            </div>
+                            <div id="ship-ready-list" style="display:flex; gap:12px; overflow-x:auto; padding-bottom:6px;">
+                                <div style="color:#64748b; font-size:12px; padding:8px 4px;">조회 중...</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -8958,17 +8971,19 @@ let selectedShipmentId = null;
 let completedWorkOrdersList = [];
 
 function initShipmentDates() {
-    const now = new Date();
-    const start = new Date(); start.setDate(now.getDate() - 60);
+    const today = new Date().toISOString().slice(0,10);
+    const start = new Date(); start.setDate(start.getDate() - 30);
     const fmt = d => d.toISOString().slice(0,10);
     const sEl = document.getElementById('ship-start');
     const eEl = document.getElementById('ship-end');
     if (sEl && !sEl.value) sEl.value = fmt(start);
-    if (eEl && !eEl.value) eEl.value = fmt(now);
+    if (eEl && !eEl.value) eEl.value = today;
 }
 
 async function loadShipments() {
     initShipmentDates();
+    loadCompletedWorkOrders();
+
     const start  = document.getElementById('ship-start')?.value || '';
     const end    = document.getElementById('ship-end')?.value || '';
     const status = document.getElementById('ship-status-filter')?.value || '';
@@ -8985,6 +9000,69 @@ async function loadShipments() {
 
     shipmentRecords = records || [];
     filterShipments();
+}
+
+async function loadCompletedWorkOrders() {
+    const container = document.getElementById('ship-ready-list');
+    const countBadge = document.getElementById('ship-ready-count');
+    if (!container) return;
+
+    try {
+        const res = await fetch('../backend/api/get_work_orders.php?limit=100');
+        const data = await res.json();
+        if (data.status === 'success') {
+            const allWo = data.data || [];
+            completedWorkOrdersList = allWo.filter(w => w.status === 'DONE' || (parseInt(w.shipped) !== 1 && (w.status === 'DONE' || w.status === 'SMT_DONE')));
+            
+            if (countBadge) countBadge.textContent = `${completedWorkOrdersList.length}건`;
+
+            if (!completedWorkOrdersList.length) {
+                container.innerHTML = `<div style="color:#64748b; font-size:12px; padding:8px 4px;">현재 출하 대기 중인 생산 완료 완제품이 없습니다.</div>`;
+                return;
+            }
+
+            container.innerHTML = completedWorkOrdersList.map(wo => {
+                const compName = wo.company_name || '일반 거래처';
+                const itemName = wo.item_name || wo.product_name || '완제품 PBA';
+                const qty = parseInt(wo.target_qty || 0).toLocaleString();
+                const dueDate = wo.due_date || '-';
+
+                return `
+                    <div style="flex:0 0 auto; min-width:270px; max-width:320px; background:rgba(30,41,59,0.9); border:1px solid rgba(52,211,153,0.4); border-radius:6px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; box-shadow:0 4px 12px rgba(0,0,0,0.25);">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span class="status-badge" style="background:rgba(52,211,153,0.25); color:#34d399; font-weight:800; font-size:11px;">✅ 생산 완료 (출하대기)</span>
+                            <span style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono',monospace;">납기: ${dueDate}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top:2px;">
+                            <div>
+                                <div style="font-weight:800; font-size:13px; color:#f8fafc;">🏢 ${escHtml(compName)}</div>
+                                <code style="font-size:11.5px; color:#60a5fa; font-weight:700;">${escHtml(wo.wo_id)}</code>
+                            </div>
+                            <strong style="color:#6ee7b7; font-size:14px; font-family:'JetBrains Mono',monospace;">${qty} EA</strong>
+                        </div>
+                        <div style="font-size:11.5px; color:#cbd5e1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                            📦 ${escHtml(itemName)}
+                        </div>
+                        <button type="button" class="btn-submit" style="margin:2px 0 0 0; padding:6px 12px; font-size:12px; font-weight:800; background:#059669; border:1px solid #10b981; display:flex; align-items:center; justify-content:center; gap:4px;" onclick="openShipmentModalForWO('${escHtml(wo.wo_id)}')">
+                            🚀 출하 등록 (거래명세서 발행)
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+    } catch (e) {
+        console.error('완료 WO 로드 실패:', e);
+        if (container) container.innerHTML = `<div style="color:#f87171; font-size:12px;">완료 제품 조회 실패</div>`;
+    }
+}
+
+async function openShipmentModalForWO(wo_id) {
+    await openShipmentModal();
+    const woSel = document.getElementById('sh-sel-wo');
+    if (woSel && wo_id) {
+        woSel.value = wo_id;
+        onShipmentWOSelectChange();
+    }
 }
 
 function filterShipments() {
@@ -9020,7 +9098,7 @@ function renderShipmentList(items) {
             detailPanel.innerHTML = `
                 <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#94a3b8; font-size:13px;">
                     <div style="font-size:36px; margin-bottom:10px;">🚚</div>
-                    출하 데이터가 없습니다. 상단의 <strong>[➕ 신규 출하 등록]</strong>을 진행하세요.
+                    출하 데이터가 없습니다. 상단 <strong>[출하 대기 완제품]</strong>에서 [출하 등록]을 진행하세요.
                 </div>
             `;
         }
@@ -9166,8 +9244,8 @@ function renderShipmentDetail() {
                     </div>
                     <div style="border:1px solid #cbd5e1; border-radius:4px; padding:10px 12px; background:#f8fafc;">
                         <div style="font-weight:800; color:#1e293b; margin-bottom:6px; border-bottom:1px solid #e2e8f0; padding-bottom:4px;">[ 공급자 (제조공장) ]</div>
-                        <div>상호(법인명): <strong>(주)해인전자</strong></div>
-                        <div>사업장 소재지: 인천광역시 서구 가좌로 12번길 23</div>
+                        <div>상호(법인명): <strong>○ ○ 전자</strong></div>
+                        <div>사업장 소재지: 인천광역시 서구</div>
                     </div>
                 </div>
 
@@ -9214,17 +9292,13 @@ function renderShipmentDetail() {
             </div>
         </div>
 
-        <!-- 하단 고정 Summary 스트립 (호버 효과 없음, 항상 하단 안정적 표시) -->
-        <div class="detail-summary-strip">
-            <div style="display:flex; gap:16px; align-items:center;">
-                <span>🏢 거래처: <strong style="color:#ffffff; font-size:13.5px;">${escHtml(r.company_name || '거래처 미지정')}</strong></span>
-                <span>연계 WO: <code style="color:#60a5fa; font-weight:700; font-family:'JetBrains Mono',monospace;">${escHtml(r.wo_id)}</code></span>
-                <span>출하일: <strong style="color:#cbd5e1; font-family:'JetBrains Mono',monospace;">${r.ship_date}</strong></span>
-            </div>
-            <div style="display:flex; gap:16px; align-items:center;">
-                <span>총 출하수량: <strong style="color:#34d399; font-size:15px; font-weight:800; font-family:'JetBrains Mono',monospace;">${parseInt(r.ship_qty).toLocaleString()} EA</strong></span>
-                <span>송장: <strong style="color:#38bdf8; font-family:'JetBrains Mono',monospace;">${escHtml(r.invoice_no || '미발행')}</strong></span>
-            </div>
+        <!-- 하단 고정 Summary 스트립 (좌측 정렬) -->
+        <div class="detail-summary-strip left-align" style="justify-content: flex-start; text-align: left; display: flex; gap: 24px; align-items: center; padding: 10px 20px;">
+            <span>🏢 거래처: <strong style="color:#ffffff; font-size:13.5px;">${escHtml(r.company_name || '거래처 미지정')}</strong></span>
+            <span>연계 WO: <code style="color:#60a5fa; font-weight:700; font-family:'JetBrains Mono',monospace;">${escHtml(r.wo_id)}</code></span>
+            <span>출하일: <strong style="color:#cbd5e1; font-family:'JetBrains Mono',monospace;">${r.ship_date}</strong></span>
+            <span>총 출하수량: <strong style="color:#34d399; font-size:15px; font-weight:800; font-family:'JetBrains Mono',monospace;">${parseInt(r.ship_qty).toLocaleString()} EA</strong></span>
+            <span>송장: <strong style="color:#38bdf8; font-family:'JetBrains Mono',monospace;">${escHtml(r.invoice_no || '미발행')}</strong></span>
         </div>
     `;
 }
@@ -9259,7 +9333,10 @@ async function openShipmentModal() {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
-    document.getElementById('sh-inp-date').value = new Date().toISOString().slice(0,10);
+    // 출하일자는 항상 오늘 날짜
+    const today = new Date().toISOString().slice(0,10);
+    const dateEl = document.getElementById('sh-inp-date');
+    if (dateEl) dateEl.value = today;
     
     // Populate companies
     const compSel = document.getElementById('sh-inp-company');
@@ -9307,7 +9384,9 @@ function onShipmentWOSelectChange() {
         if (found.company_id) {
             document.getElementById('sh-inp-company').value = String(found.company_id);
         }
-        const todayStr = new Date().toISOString().slice(0,10).replace(/-/g,'');
+        const today = new Date().toISOString().slice(0,10);
+        document.getElementById('sh-inp-date').value = today;
+        const todayStr = today.replace(/-/g,'');
         document.getElementById('sh-inp-invoice').value = `INV-${todayStr}-${found.wo_id.slice(-4)}`;
         document.getElementById('sh-inp-note').value = `${found.item_name || ''} 생산 완료 납품 출하`;
     }
@@ -9316,7 +9395,7 @@ function onShipmentWOSelectChange() {
 async function saveShipment() {
     const wo_id      = document.getElementById('sh-inp-wo').value.trim();
     const ship_qty   = parseInt(document.getElementById('sh-inp-qty').value);
-    const ship_date  = document.getElementById('sh-inp-date').value;
+    const ship_date  = document.getElementById('sh-inp-date').value || new Date().toISOString().slice(0,10);
     const company_id = document.getElementById('sh-inp-company').value;
     const invoice_no = document.getElementById('sh-inp-invoice').value.trim();
     const note       = document.getElementById('sh-inp-note').value.trim();
