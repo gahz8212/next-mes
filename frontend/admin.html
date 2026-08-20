@@ -6466,11 +6466,16 @@ async function deleteCompany(id, name) {
     // ════════════════════════════════════════════════
     //  PHASE 1: 생산 계획 (기본 목록 뷰 & 달력 2분할 뷰)
     // ════════════════════════════════════════════════
+    // ════════════════════════════════════════════════
+    //  PHASE 1: 생산 계획 (기본 목록 뷰 & 달력 2분할 뷰)
+    // ════════════════════════════════════════════════
     let planYear, planMonth;
     let planOrdersData = [];
     let planViewMode = 'list'; // 'list' (기본) | 'calendar'
     let selectedPlanWoId = null;
     let selectedCalDateStr = null;
+    let activeDeliveryAssignWoId = null;
+    let activeDeliveryAssignInfo = null;
 
     function initPlanDate() {
         const now = new Date();
@@ -6519,6 +6524,70 @@ async function deleteCompany(id, name) {
             filterPlanList();
         }
     }
+
+    // ── Delivery Date Quick Calendar Assign Mode (2-클릭 달력 지정) ──
+    function startDeliveryDateAssign(woId, itemName, companyName) {
+        activeDeliveryAssignWoId = woId;
+        activeDeliveryAssignInfo = { woId, itemName, companyName };
+        if (planViewMode !== 'calendar') {
+            setPlanViewMode('calendar');
+        } else {
+            renderPlanCalendar();
+        }
+    }
+
+    function cancelDeliveryAssignMode() {
+        activeDeliveryAssignWoId = null;
+        activeDeliveryAssignInfo = null;
+        renderPlanCalendar();
+    }
+
+    async function handleCalendarCellClick(dateStr, day, dayOfWeek) {
+        if (activeDeliveryAssignWoId) {
+            const targetWoId = activeDeliveryAssignWoId;
+            const targetInfo = activeDeliveryAssignInfo;
+            const targetDate = dateStr;
+            cancelDeliveryAssignMode();
+            await submitQuickDeliveryDate(targetWoId, targetDate, targetInfo);
+        } else {
+            selectCalDate(dateStr, day, dayOfWeek);
+        }
+    }
+
+    async function submitQuickDeliveryDate(woId, deliveryDate, info) {
+        try {
+            const res = await fetch('../backend/api/update_delivery_date.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    wo_id: woId,
+                    delivery_date: deliveryDate,
+                    remark: ''
+                })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                selectedCalDateStr = deliveryDate;
+                selectedPlanWoId = woId;
+                await loadPlan();
+                if (typeof showToast === 'function') {
+                    showToast(`🚚 [${woId}] 납품 예정일이 ${deliveryDate}로 지정되었습니다!`, 'success');
+                } else {
+                    alert(`🚚 [${woId}] 납품 예정일이 ${deliveryDate}로 지정되었습니다!`);
+                }
+            } else {
+                alert(data.message || '납품 일정 저장 실패');
+            }
+        } catch (e) {
+            alert('서버 통신 오류: ' + e.message);
+        }
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && activeDeliveryAssignWoId) {
+            cancelDeliveryAssignMode();
+        }
+    });
 
     async function loadPlan() {
         if (!planYear) initPlanDate();
@@ -6586,7 +6655,28 @@ async function deleteCompany(id, name) {
 
         const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
-        let html = `
+        let html = '';
+
+        // ── Assign Mode Top Guide Banner ──
+        if (activeDeliveryAssignWoId) {
+            html += `
+                <div style="background:linear-gradient(135deg, #065f46 0%, #059669 100%); border:1px solid #10b981; border-radius:6px; padding:10px 14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 4px 12px rgba(5,150,105,0.35);">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:18px;">🚚</span>
+                        <div style="font-size:12.5px; color:#ffffff; font-weight:700;">
+                            <strong style="color:#a7f3d0; font-family:'JetBrains Mono',monospace;">[${escHtml(activeDeliveryAssignInfo?.woId || activeDeliveryAssignWoId)}]</strong>
+                            <span> (${escHtml(activeDeliveryAssignInfo?.companyName || '')} ${escHtml(activeDeliveryAssignInfo?.itemName || '')})</span>
+                            <div style="font-size:11.5px; color:#d1fae5; font-weight:normal; margin-top:2px;">
+                                👉 <strong>원하는 납품 날짜 칸을 달력에서 클릭</strong>하세요!
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" style="background:rgba(0,0,0,0.35); color:#fff; border:1px solid rgba(255,255,255,0.3); padding:4px 10px; border-radius:4px; font-size:11.5px; font-weight:700; cursor:pointer;" onclick="cancelDeliveryAssignMode()">✕ 취소 (ESC)</button>
+                </div>
+            `;
+        }
+
+        html += `
             <!-- Calendar Day of Week Header -->
             <div style="display:grid; grid-template-columns:repeat(7, 1fr); background:rgba(15,23,42,0.9); border-bottom:1px solid rgba(255,255,255,0.1); font-weight:800; font-size:12px; text-align:center;">
                 ${dayNames.map((d, idx) => `
@@ -6632,10 +6722,15 @@ async function deleteCompany(id, name) {
                 countBadge = `<div style="display:flex; gap:3px; justify-content:center; flex-wrap:wrap;">${badges.join('')}</div>`;
             }
 
+            const isAssignMode = !!activeDeliveryAssignWoId;
+            const cellBg = isAssignMode 
+                ? 'background:rgba(16,185,129,0.06); outline:1px dashed rgba(16,185,129,0.4); cursor:pointer;'
+                : (isSelected ? 'background:rgba(56,189,248,0.18) !important; outline:2px solid #38bdf8; z-index:2; cursor:pointer;' : (isToday ? 'background:rgba(56,189,248,0.08); cursor:pointer;' : 'background:transparent; cursor:pointer;'));
+
             html += `
-                <div class="plan-calendar-cell" data-cal-date="${curDateStr}" onclick="selectCalDate('${curDateStr}', ${day}, ${dayOfWeek})" 
-                     title="클릭하여 ${curDateStr} 상세 일정 확인"
-                     style="min-height:78px; border-right:1px solid rgba(255,255,255,0.06); border-bottom:1px solid rgba(255,255,255,0.06); padding:6px; display:flex; flex-direction:column; justify-content:space-between; cursor:pointer; ${isSelected ? 'background:rgba(56,189,248,0.18) !important; outline:2px solid #38bdf8; z-index:2;' : (isToday ? 'background:rgba(56,189,248,0.08);' : 'background:transparent;')}">
+                <div class="plan-calendar-cell" data-cal-date="${curDateStr}" onclick="handleCalendarCellClick('${curDateStr}', ${day}, ${dayOfWeek})" 
+                     title="${isAssignMode ? `클릭하여 [${activeDeliveryAssignWoId}]의 납품일을 ${curDateStr}로 지정` : `클릭하여 ${curDateStr} 상세 일정 확인`}"
+                     style="min-height:78px; border-right:1px solid rgba(255,255,255,0.06); border-bottom:1px solid rgba(255,255,255,0.06); padding:6px; display:flex; flex-direction:column; justify-content:space-between; transition:all 0.15s ease; ${cellBg}">
                     <!-- Day Number -->
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span style="font-size:12.5px; font-weight:800; font-family:'JetBrains Mono',monospace; ${isToday ? 'color:#38bdf8;' : (dayOfWeek===0 ? 'color:#f87171;' : dayOfWeek===6 ? 'color:#38bdf8;' : 'color:#cbd5e1;')}">
@@ -6773,7 +6868,7 @@ async function deleteCompany(id, name) {
                                         </div>
                                         <div style="display:flex; gap:6px; align-items:center;">
                                             ${isDone ? `
-                                                <button type="button" class="card-btn" style="padding:4px 8px; font-size:11.5px; background:#059669; color:#fff; border:1px solid #10b981;" onclick="openSetDeliveryDateModal('${o.wo_id}', '${o.delivery_date||''}', '${escHtml(o.company_name||'')}', '${escHtml(o.item_name||'')}')">🚚 납품일정</button>
+                                                <button type="button" class="card-btn" style="padding:4px 10px; font-size:11.5px; font-weight:700; background:#059669; color:#fff; border:1px solid #10b981; cursor:pointer;" onclick="startDeliveryDateAssign('${o.wo_id}', '${escHtml(o.item_name||'')}', '${escHtml(o.company_name||'')}')">🚚 달력에서 납품일 지정</button>
                                             ` : `
                                                 <button type="button" class="card-btn card-btn-edit" style="padding:4px 8px; font-size:11.5px;" onclick="openEditWOModal('${o.wo_id}', ${o.target_qty}, '${o.due_date||''}', ${o.company_id || 'null'})">✏️ 수정</button>
                                             `}
@@ -7014,8 +7109,11 @@ async function deleteCompany(id, name) {
 
                 <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                     ${isDone ? `
-                        <button type="button" class="card-btn" style="padding:5px 12px; font-size:12px; font-weight:700; background:#059669; color:#ffffff; border:1px solid #10b981; cursor:pointer;" onclick="openSetDeliveryDateModal('${o.wo_id}', '${o.delivery_date || ''}', '${escHtml(o.company_name||'')}', '${escHtml(o.item_name||'')}', '${escHtml(o.remark||'')}')">
-                            🚚 납품(출하) 일정 ${o.delivery_date ? '변경' : '지정'}
+                        <button type="button" class="card-btn" style="padding:5px 14px; font-size:12px; font-weight:700; background:#059669; color:#ffffff; border:1px solid #10b981; cursor:pointer; box-shadow:0 2px 6px rgba(5,150,105,0.4);" onclick="startDeliveryDateAssign('${o.wo_id}', '${escHtml(o.item_name||'')}', '${escHtml(o.company_name||'')}')">
+                            🚚 달력에서 납품일 지정
+                        </button>
+                        <button type="button" class="card-btn" style="padding:5px 9px; font-size:11.5px; background:rgba(255,255,255,0.06); color:#cbd5e1; border:1px solid rgba(255,255,255,0.15);" onclick="openSetDeliveryDateModal('${o.wo_id}', '${o.delivery_date || ''}', '${escHtml(o.company_name||'')}', '${escHtml(o.item_name||'')}', '${escHtml(o.remark||'')}')" title="직접 날짜 및 비고 입력">
+                            ⚙️ 상세설정
                         </button>
                     ` : `
                         <button type="button" class="card-btn card-btn-edit" style="padding:5px 10px; font-size:12px;" onclick="openEditWOModal('${o.wo_id}', ${o.target_qty}, '${o.due_date||''}', ${o.company_id || 'null'})">✏️ 생산 일정 수정</button>
@@ -7081,11 +7179,11 @@ async function deleteCompany(id, name) {
                             <div>
                                 <span style="color:#6ee7b7; font-weight:800; font-size:13px;">🚚 고객사 납품(출하) 예정일:</span>
                                 <strong style="color:#ffffff; font-size:14.5px; font-family:'JetBrains Mono',monospace; margin-left:8px;">
-                                    ${o.delivery_date ? o.delivery_date : '<span style="color:#fcd34d; font-size:12px; font-weight:normal;">미지정 (납품 일정을 지정하세요)</span>'}
+                                    ${o.delivery_date ? o.delivery_date : '<span style="color:#fcd34d; font-size:12px; font-weight:normal;">미지정 (달력 날짜를 클릭하여 지정하세요)</span>'}
                                 </strong>
                             </div>
-                            <button type="button" class="card-btn" style="background:#059669; color:#fff; font-size:12px; font-weight:700; padding:4px 12px; cursor:pointer;" onclick="openSetDeliveryDateModal('${o.wo_id}', '${o.delivery_date || ''}', '${escHtml(o.company_name||'')}', '${escHtml(o.item_name||'')}', '${escHtml(o.remark||'')}')">
-                                ${o.delivery_date ? '✏️ 납품 일정 변경' : '📅 납품 일정 지정하기'}
+                            <button type="button" class="card-btn" style="background:#059669; color:#fff; font-size:12px; font-weight:700; padding:4px 12px; cursor:pointer;" onclick="startDeliveryDateAssign('${o.wo_id}', '${escHtml(o.item_name||'')}', '${escHtml(o.company_name||'')}')">
+                                ${o.delivery_date ? '👉 달력에서 일정 변경' : '👉 달력에서 일정 지정하기'}
                             </button>
                         </div>
                     ` : ''}
