@@ -185,8 +185,7 @@
                         const opt = document.createElement('option');
                         opt.value = wo.wo_id;
                         const companyStr = wo.company_name ? `[${wo.company_name}] ` : '';
-                        const statusStr = (wo.status === 'READY') ? '피더 셋업 대기' : 'SMT 가동중 (잔량 모니터링)';
-                        opt.innerText = `${companyStr}${wo.wo_id} — ${statusStr}`;
+                        opt.innerText = `${companyStr}${wo.wo_id}`;
                         select.appendChild(opt);
                     });
 
