@@ -4040,18 +4040,14 @@ const ALL_PAGE_TITLES = {
                 </div>
             </div>
 
-            <!-- 하단 고정 Summary 스트립 (호버 효과 없음, 안정적 하단 요약) -->
-            <div class="detail-summary-strip">
-                <div style="display:flex; gap:16px; align-items:center;">
-                    <span>목표: <strong style="color:#ffffff; font-size:13px; font-family:'JetBrains Mono',monospace;">${targetQty.toLocaleString()} EA</strong></span>
-                    <span>SMT 실적: <strong style="color:#38bdf8; font-size:13px; font-family:'JetBrains Mono',monospace;">${smtQty.toLocaleString()} EA (${smtPct}%)</strong></span>
-                    <span>DIP 실적: <strong style="color:#a78bfa; font-size:13px; font-family:'JetBrains Mono',monospace;">${dipQty.toLocaleString()} EA (${dipPct}%)</strong></span>
-                </div>
-                <div style="display:flex; gap:16px; align-items:center;">
-                    <span>종합 진행률: <strong style="color:${totalPct>=100?'#34d399':totalPct>=50?'#a78bfa':'#38bdf8'}; font-size:14px; font-weight:800; font-family:'JetBrains Mono',monospace;">${totalPct}%</strong></span>
-                    <span>양품/불량: <strong style="color:#34d399; font-size:13px; font-family:'JetBrains Mono',monospace;">${goodQty.toLocaleString()}</strong> / <strong style="color:#f87171; font-size:13px; font-family:'JetBrains Mono',monospace;">${failQty.toLocaleString()}</strong></span>
-                    <span>종합 수율: <strong style="color:${parseFloat(yieldRate)>=95?'#34d399':parseFloat(yieldRate)>=80?'#fbbf24':'#f87171'}; font-size:14px; font-weight:800; font-family:'JetBrains Mono',monospace;">${yieldRate}%</strong></span>
-                </div>
+            <!-- 하단 고정 Summary 스트립 (좌측 정렬) -->
+            <div class="detail-summary-strip left-align" style="gap:24px; padding:12px 24px;">
+                <span>목표: <strong style="color:#ffffff; font-size:13px; font-family:'JetBrains Mono',monospace;">${targetQty.toLocaleString()} EA</strong></span>
+                <span>SMT 실적: <strong style="color:#38bdf8; font-size:13px; font-family:'JetBrains Mono',monospace;">${smtQty.toLocaleString()} EA (${smtPct}%)</strong></span>
+                <span>DIP 실적: <strong style="color:#a78bfa; font-size:13px; font-family:'JetBrains Mono',monospace;">${dipQty.toLocaleString()} EA (${dipPct}%)</strong></span>
+                <span>종합 진행률: <strong style="color:${totalPct>=100?'#34d399':totalPct>=50?'#a78bfa':'#38bdf8'}; font-size:14px; font-weight:800; font-family:'JetBrains Mono',monospace;">${totalPct}%</strong></span>
+                <span>양품/불량: <strong style="color:#34d399; font-size:13px; font-family:'JetBrains Mono',monospace;">${goodQty.toLocaleString()}</strong> / <strong style="color:#f87171; font-size:13px; font-family:'JetBrains Mono',monospace;">${failQty.toLocaleString()}</strong></span>
+                <span>종합 수율: <strong style="color:${parseFloat(yieldRate)>=95?'#34d399':parseFloat(yieldRate)>=80?'#fbbf24':'#f87171'}; font-size:14px; font-weight:800; font-family:'JetBrains Mono',monospace;">${yieldRate}%</strong></span>
             </div>
         `;
     }
