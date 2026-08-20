@@ -324,14 +324,10 @@
                 // 제공수량 텍스트
                 const provideQtyText = provideQty.toLocaleString();
 
-                // 2행 우측 텍스트: 제공수량과 실시간 잔여수량/비율을 명확히 병기
+                // 2행 우측 텍스트: 단일 자재 잔여 수량 및 % 표시
                 let liveInfoHtml = `<span style="color:#64748b; font-size:10.5px;">스캔 후 실시간 잔량 연동</span>`;
                 if (isVerified) {
-                    liveInfoHtml = `
-                        <span class="live-qty-info ${isCriticalLow ? 'alert-state' : 'normal-state'}">
-                            제공: <b>${provideQtyText}</b>ea · 잔여: <b>${remainingQty.toLocaleString()}</b>ea (${remainPct}%)
-                        </span>
-                    `;
+                    liveInfoHtml = `<span class="live-qty-info ${isCriticalLow ? 'alert-state' : 'normal-state'}">수량: <b>${remainingQty.toLocaleString()}</b> EA (${remainPct}%)</span>`;
                 }
 
                 const card = document.createElement('div');
