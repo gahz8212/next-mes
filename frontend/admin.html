@@ -5574,7 +5574,10 @@ async function deleteCompany(id, name) {
                                     <td style="text-align:right; padding-right:8px; font-weight:800; color:${isNc ? '#f87171' : '#34d399'}; font-family:'JetBrains Mono',monospace;">${isNc ? '0' : ptsVal.toLocaleString()}</td>
                                     <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><span style="color:#cbd5e1; font-family:'JetBrains Mono',monospace; font-size:12.5px;">${escHtml(r.location || '—')}</span></td>
                                     <td style="text-align:center;">
-                                        ${isNc ? '<span style="color:#f97316; font-size:11.5px; font-weight:700;">미실장</span>' : (r.feeder_slot ? `<code style="font-family:'JetBrains Mono',monospace; color:#38bdf8; font-weight:800; font-size:12.5px;">#${escHtml(r.feeder_slot)}</code>` : '<span style="color:#64748b; font-size:12px;">—</span>')}
+                                        ${isNc 
+                                            ? '<span style="color:#f97316; font-size:11.5px; font-weight:700;">미실장</span>' 
+                                            : `<button type="button" class="card-btn" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:2px 8px; font-size:12px; font-weight:800; font-family:'JetBrains Mono',monospace; cursor:pointer;" title="클릭하여 피더 슬롯 번호 변경" onclick="event.stopPropagation(); editBomFeederSlot(${r.detail_id || 0}, ${bomId}, ${r.feeder_slot || 'null'}, '${escHtml(r.part_no)}')">${r.feeder_slot ? `#${escHtml(r.feeder_slot)}` : '슬롯 지정'}</button>`
+                                        }
                                     </td>
                                     <td style="text-align:center; white-space:nowrap;">
                                         <button type="button" class="card-btn" style="background:#2563eb; color:#fff; border:none; padding:3px 8px; font-size:11.5px; font-weight:700;" onclick="event.stopPropagation(); openUnifiedPartAlternateModal(${bomId}, '${escHtml(r.part_no)}', '${escHtml(r.part_name || r.part_no)}', '${escHtml(r.location || '')}')">대치품</button>
@@ -5625,6 +5628,38 @@ async function deleteCompany(id, name) {
             }
         } catch(e) {
             alert('통신 오류: ' + e.message);
+        }
+    }
+
+    async function editBomFeederSlot(detailId, bomId, currentSlot, partNo) {
+        const currentVal = (currentSlot !== null && currentSlot !== undefined && currentSlot !== 'null') ? currentSlot : '';
+        const input = prompt(`[${partNo}] 부품의 피더 슬롯 번호를 입력하세요 (예: 1, 2, 10 / 비우려면 빈칸):`, currentVal);
+        if (input === null) return;
+        const trimmed = input.trim();
+        const newSlot = trimmed === '' ? null : parseInt(trimmed);
+        if (trimmed !== '' && (isNaN(newSlot) || newSlot <= 0)) {
+            alert('피더 슬롯은 1 이상의 정수 번호여야 합니다.');
+            return;
+        }
+
+        try {
+            const res = await fetch('../backend/api/update_bom_component.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'update_slot',
+                    detail_id: detailId,
+                    feeder_slot: newSlot
+                })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                loadBomVersionTable(bomId);
+            } else {
+                alert('슬롯 변경 실패: ' + data.message);
+            }
+        } catch (e) {
+            alert('슬롯 변경 중 오류: ' + e.message);
         }
     }
 
@@ -5679,6 +5714,15 @@ async function deleteCompany(id, name) {
         if (newQty === null) return;
         const newLoc = prompt('실장 위치를 입력하세요:', location);
         if (newLoc === null) return;
+        const currentSlotStr = (slot !== null && slot !== undefined && slot !== 'null') ? slot : '';
+        const newSlotInput = prompt('피더 슬롯 번호를 입력하세요 (예: 1, 2 / 비우려면 빈칸):', currentSlotStr);
+        if (newSlotInput === null) return;
+        const trimmedSlot = newSlotInput.trim();
+        const newSlot = trimmedSlot === '' ? null : parseInt(trimmedSlot);
+        if (trimmedSlot !== '' && (isNaN(newSlot) || newSlot <= 0)) {
+            alert('피더 슬롯은 1 이상의 정수 번호여야 합니다.');
+            return;
+        }
 
         try {
             const res = await fetch('../backend/api/update_bom_component.php', {
@@ -5691,7 +5735,7 @@ async function deleteCompany(id, name) {
                     part_name: newPartName.trim(),
                     req_qty: Math.round(parseFloat(newQty)) || 1,
                     location: newLoc.trim(),
-                    feeder_slot: slot ? parseInt(slot) : null
+                    feeder_slot: newSlot
                 })
             });
             const data = await res.json();
