@@ -4377,11 +4377,10 @@ const ALL_PAGE_TITLES = {
         const res = await fetch(`../backend/api/get_bom.php?wo_id=${wo_id}`);
         const data = await res.json();
         if (data.status === 'success' && data.data.length > 0) {
-            let tsv = '파트번호\t파트명\t포인트\t제공수량\t실장위치\n';
+            let tsv = '파트번호\t파트명\t포인트\t실장위치\n';
             data.data.forEach(row => { 
                 const pts = row.points !== undefined && row.points !== null ? Math.round(parseFloat(row.points)) : Math.round(parseFloat(row.req_qty) || 1);
-                const prov = (row.provide_qty !== undefined && row.provide_qty !== null && row.provide_qty !== '' && parseFloat(row.provide_qty) > 0) ? Math.round(parseFloat(row.provide_qty)) : '';
-                tsv += `${row.part_no}\t${row.part_name || row.part_no}\t${pts}\t${prov}\t${row.location || ''}\n`; 
+                tsv += `${row.part_no}\t${row.part_name || row.part_no}\t${pts}\t${row.location || ''}\n`; 
             });
             document.getElementById('bomPaste').value = tsv.trim();
             parseExcel(true);
@@ -4409,11 +4408,10 @@ const ALL_PAGE_TITLES = {
         const res = await fetch(`../backend/api/get_bom.php?item_id=${itemId}`);
         const data = await res.json();
         if (data.status === 'success' && data.data.length > 0) {
-            let tsv = '파트번호\t파트명\t포인트\t제공수량\t실장위치\n';
+            let tsv = '파트번호\t파트명\t포인트\t실장위치\n';
             data.data.forEach(row => { 
                 const pts = row.points !== undefined && row.points !== null ? Math.round(parseFloat(row.points)) : Math.round(parseFloat(row.req_qty) || 1);
-                const prov = (row.provide_qty !== undefined && row.provide_qty !== null && row.provide_qty !== '' && parseFloat(row.provide_qty) > 0) ? Math.round(parseFloat(row.provide_qty)) : '';
-                tsv += `${row.part_no}\t${row.part_name || row.part_no}\t${pts}\t${prov}\t${row.location || ''}\n`; 
+                tsv += `${row.part_no}\t${row.part_name || row.part_no}\t${pts}\t${row.location || ''}\n`; 
             });
             document.getElementById('bomPaste').value = tsv.trim();
             parseExcel(true);
@@ -4441,11 +4439,10 @@ const ALL_PAGE_TITLES = {
         const res = await fetch(`../backend/api/get_bom_version_details.php?bom_id=${bomId}`);
         const data = await res.json();
         if (data.status === 'success' && data.data && data.data.details && data.data.details.length > 0) {
-            let tsv = '파트번호\t파트명\t포인트\t제공수량\t실장위치\n';
+            let tsv = '파트번호\t파트명\t포인트\t실장위치\n';
             data.data.details.forEach(row => { 
                 const pts = row.points !== undefined && row.points !== null ? Math.round(parseFloat(row.points)) : Math.round(parseFloat(row.req_qty) || 1);
-                const prov = (row.provide_qty !== undefined && row.provide_qty !== null && row.provide_qty !== '' && parseFloat(row.provide_qty) > 0) ? Math.round(parseFloat(row.provide_qty)) : '';
-                tsv += `${row.part_no}\t${row.part_name || row.part_no}\t${pts}\t${prov}\t${row.location || ''}\n`; 
+                tsv += `${row.part_no}\t${row.part_name || row.part_no}\t${pts}\t${row.location || ''}\n`; 
             });
             document.getElementById('bomPaste').value = tsv.trim();
             parseExcel(true);
@@ -5545,8 +5542,6 @@ async function deleteCompany(id, name) {
                     const pts = parseFloat(r.points !== undefined && r.points !== null ? r.points : (r.req_qty || 1)) || 0;
                     totalPoints += pts;
                 }
-                const prov = parseFloat(r.provide_qty) || 0;
-                totalProvideQty += prov;
             });
 
             container.innerHTML = `
@@ -5555,11 +5550,10 @@ async function deleteCompany(id, name) {
                         <thead>
                             <tr>
                                 <th style="width:45px; text-align:center;">NO</th>
-                                <th style="width:115px; text-align:left;">파트번호</th>
-                                <th style="width:145px; text-align:left;">파트명</th>
-                                <th style="width:55px; text-align:right; padding-right:6px;">포인트</th>
-                                <th style="width:75px; text-align:right; padding-right:8px;">제공수량</th>
-                                <th style="width:195px; text-align:left;">실장위치</th>
+                                <th style="width:125px; text-align:left;">파트번호</th>
+                                <th style="width:160px; text-align:left;">파트명</th>
+                                <th style="width:65px; text-align:right; padding-right:8px;">포인트</th>
+                                <th style="width:240px; text-align:left;">실장위치</th>
                                 <th style="width:85px; text-align:center;">피더 슬롯</th>
                                 <th style="width:70px; text-align:center;">대치품</th>
                                 <th style="width:95px; text-align:center;">관리</th>
@@ -5569,7 +5563,6 @@ async function deleteCompany(id, name) {
                             ${list.map((r, i) => {
                                 const isNc = (r.is_nc == 1 || parseFloat(r.points || r.req_qty || 0) <= 0);
                                 const ptsVal = parseFloat(r.points !== undefined && r.points !== null ? r.points : (r.req_qty || 1));
-                                const provVal = r.provide_qty !== undefined && r.provide_qty !== null && parseFloat(r.provide_qty) > 0 ? parseFloat(r.provide_qty).toLocaleString() + ' EA' : '<span style="color:#64748b;">—</span>';
                                 return `
                                 <tr style="${isNc ? 'background:rgba(249,115,22,0.06);' : ''}">
                                     <td style="text-align:center; color:#64748b; font-family:'JetBrains Mono',monospace;">${i + 1}</td>
@@ -5578,8 +5571,7 @@ async function deleteCompany(id, name) {
                                         ${isNc ? '<span style="background:#f97316; color:#fff; font-size:10.5px; font-weight:700; padding:1px 5px; border-radius:3px; margin-right:4px;">NC</span>' : ''}
                                         ${escHtml(r.part_name || r.part_no)}
                                     </td>
-                                    <td style="text-align:right; padding-right:6px; font-weight:800; color:${isNc ? '#f87171' : '#34d399'}; font-family:'JetBrains Mono',monospace;">${isNc ? '0' : ptsVal.toLocaleString()}</td>
-                                    <td style="text-align:right; padding-right:8px; font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace;">${provVal}</td>
+                                    <td style="text-align:right; padding-right:8px; font-weight:800; color:${isNc ? '#f87171' : '#34d399'}; font-family:'JetBrains Mono',monospace;">${isNc ? '0' : ptsVal.toLocaleString()}</td>
                                     <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><span style="color:#cbd5e1; font-family:'JetBrains Mono',monospace; font-size:12.5px;">${escHtml(r.location || '—')}</span></td>
                                     <td style="text-align:center;">
                                         ${isNc ? '<span style="color:#f97316; font-size:11.5px; font-weight:700;">미실장</span>' : (r.feeder_slot ? `<code style="font-family:'JetBrains Mono',monospace; color:#38bdf8; font-weight:800; font-size:12.5px;">#${escHtml(r.feeder_slot)}</code>` : '<span style="color:#64748b; font-size:12px;">—</span>')}
@@ -5589,7 +5581,7 @@ async function deleteCompany(id, name) {
                                     </td>
                                     <td style="text-align:center; white-space:nowrap;">
                                         <div style="display:flex; justify-content:center; gap:4px;">
-                                            ${isNc 
+                                             ${isNc 
                                                 ? `<button type="button" class="card-btn" style="background:#059669; color:#fff; border:none; padding:3px 6px; font-size:11.5px;" title="정상 실장으로 복원" onclick="event.stopPropagation(); toggleBomComponentNc(${r.detail_id || 0}, ${bomId})">↩️</button>`
                                                 : `<button type="button" class="card-btn" style="background:rgba(249,115,22,0.2); color:#fb923c; border:1px solid rgba(249,115,22,0.4); padding:3px 6px; font-size:11.5px;" title="NC(미실장) 처리" onclick="event.stopPropagation(); toggleBomComponentNc(${r.detail_id || 0}, ${bomId})">🚫</button>`
                                             }
@@ -5610,7 +5602,6 @@ async function deleteCompany(id, name) {
                     <span>실장부품: <strong style="color:#34d399; font-size:14px;">${list.length - ncCount}</strong>종</span>
                     ${ncCount > 0 ? `<span style="color:#fb923c;">NC(미실장): <strong>${ncCount}</strong>종</span>` : ''}
                     <span>총 실장 점수: <strong style="color:#38bdf8; font-size:15px; font-weight:800; font-family:'JetBrains Mono',monospace;">${totalPoints.toLocaleString()} Points</strong></span>
-                    ${totalProvideQty > 0 ? `<span>총 제공수량: <strong style="color:#a78bfa; font-size:14px; font-family:'JetBrains Mono',monospace;">${totalProvideQty.toLocaleString()} EA</strong></span>` : ''}
                 </div>
             `;
         } catch (e) {
