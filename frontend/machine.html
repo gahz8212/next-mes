@@ -59,6 +59,20 @@
         </nav>
     </div>
 
+    <!-- 상단 AI 예지보전 진단 알람 배너 (상태 변경 및 확인 시 화면 상단 표시) -->
+    <div class="ai-pdm-top-banner" id="aiPdmTopBanner">
+        <div class="ai-banner-left">
+            <span class="ai-banner-icon">🤖</span>
+            <div class="ai-banner-content">
+                <strong class="ai-banner-title">AI 예지보전 진단 알람:</strong>
+                <span class="ai-banner-text" id="aiGuideText">집진기 차압 및 레이저 튜브 온도가 관리 기준선 내에서 안정적으로 유지되고 있습니다.</span>
+            </div>
+        </div>
+        <div class="ai-banner-actions">
+            <button type="button" class="btn-banner-confirm" onclick="dismissAiPdmBanner()">확인 ✕</button>
+        </div>
+    </div>
+
     <!-- ═══════════════════════════════════════════════════════════════════
          2. MAIN HMI 2-COLUMN INDUSTRIAL WORKSPACE
          ═══════════════════════════════════════════════════════════════════ -->
@@ -98,7 +112,7 @@
 
                 <div class="health-gauge-center">
                     <div class="health-score-canvas-wrap">
-                        <canvas id="healthScoreCanvas" width="170" height="170"></canvas>
+                        <canvas id="healthScoreCanvas" width="140" height="140"></canvas>
                         <div class="health-center-text">
                             <div class="health-val-num" id="healthValNum">98</div>
                             <div class="health-unit-max">/ 100 PTS</div>
@@ -129,19 +143,18 @@
                     </div>
                 </div>
 
-                <!-- 작업자 정비완료 리셋 버튼 -->
-                <button class="btn-tpm-reset" id="btnTpmReset" onclick="handleTpmReset()">
-                    🛠️ 필터 교체 완료 (Reset)
-                </button>
+                <!-- 하단 버튼 그룹: Reset (80%) + AI 예지보전 알람 (20%) -->
+                <div class="tpm-actions-row">
+                    <!-- 작업자 정비완료 리셋 버튼 (80%) -->
+                    <button class="btn-tpm-reset" id="btnTpmReset" onclick="handleTpmReset()" title="소모품 교체 및 TPM 주기 리셋">
+                        🛠️ 필터 교체 완료 (Reset)
+                    </button>
 
-                <!-- AI 예지보전 가이드 -->
-                <div class="ai-pdm-guide-box" style="margin-top: 14px;">
-                    <div class="ai-guide-head">
-                        <span>🤖 AI 예지보전 진단 코멘트</span>
-                    </div>
-                    <div id="aiGuideText">
-                        집진기 차압 및 레이저 튜브 온도가 관리 기준선 내에서 안정적으로 유지되고 있습니다.
-                    </div>
+                    <!-- AI 예지보전 진단 알람 확인 트리거 버튼 (20%) -->
+                    <button type="button" class="btn-pdm-guide-trigger" id="btnPdmGuideTrigger" onclick="showAiPdmBanner(true)" title="AI 예지보전 진단 알람 확인">
+                        <span style="font-size: 14px;">🤖</span>
+                        <span class="pdm-guide-status-dot" id="pdmGuideDot"></span>
+                    </button>
                 </div>
             </div>
 

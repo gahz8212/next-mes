@@ -262,6 +262,14 @@ class DashboardController {
             ");
             $activeWo = $stmtWo->fetch();
 
+            $activeStatus = $activeWo['status'] ?? 'READY';
+            $processFilterSql = "";
+            if ($activeStatus === 'DIP_IN_PROGRESS') {
+                $processFilterSql = " AND h.process_name IN ('DIP_AOI', 'WAVE', 'ICT', 'COATING', 'FCT') ";
+            } else if ($activeStatus === 'IN_PROGRESS') {
+                $processFilterSql = " AND h.process_name IN ('LASER', 'SPI', 'MOUNTER', 'MOUNTER_1', 'MOUNTER_2', 'REFLOW') ";
+            }
+
             if ($last_id > 0) {
                 $stmt = $pdo->prepare("
                     SELECT h.history_id, h.barcode, h.process_name, h.result_status, h.process_data, h.created_at, 
@@ -272,6 +280,7 @@ class DashboardController {
                     FROM barcode_history h
                     LEFT JOIN barcode_master b ON h.barcode = b.barcode
                     WHERE h.history_id > :last_id
+                    {$processFilterSql}
                     ORDER BY h.history_id ASC
                     LIMIT 100
                 ");
@@ -279,7 +288,7 @@ class DashboardController {
                     ':last_id'      => $last_id,
                     ':active_wo_id' => $activeWo['wo_id'] ?? null,
                     ':target_qty'   => $activeWo['target_qty'] ?? 0,
-                    ':wo_status'    => $activeWo['status'] ?? 'READY'
+                    ':wo_status'    => $activeStatus
                 ]);
                 $logs = $stmt->fetchAll();
                 $max_id = !empty($logs) ? (int)end($logs)['history_id'] : $last_id;
@@ -287,7 +296,7 @@ class DashboardController {
                 $stmtMax = $pdo->query("SELECT COALESCE(MAX(history_id), 0) FROM barcode_history");
                 $currentMax = (int)$stmtMax->fetchColumn();
 
-                if ($activeWo && ($activeWo['status'] === 'IN_PROGRESS' || $activeWo['status'] === 'DIP_IN_PROGRESS')) {
+                if ($activeWo && ($activeStatus === 'IN_PROGRESS' || $activeStatus === 'DIP_IN_PROGRESS')) {
                     $stmt = $pdo->prepare("
                         SELECT h.history_id, h.barcode, h.process_name, h.result_status, h.process_data, h.created_at, 
                                COALESCE(b.status, 'ING') AS barcode_status, b.wo_id, 
@@ -295,13 +304,14 @@ class DashboardController {
                         FROM barcode_history h
                         LEFT JOIN barcode_master b ON h.barcode = b.barcode
                         WHERE b.wo_id = :wo_id
+                        {$processFilterSql}
                         ORDER BY h.history_id DESC
                         LIMIT 5
                     ");
                     $stmt->execute([
                         ':wo_id'      => $activeWo['wo_id'],
                         ':target_qty' => $activeWo['target_qty'] ?? 0,
-                        ':wo_status'  => $activeWo['status']
+                        ':wo_status'  => $activeStatus
                     ]);
                     $logs = array_reverse($stmt->fetchAll());
                 } else {

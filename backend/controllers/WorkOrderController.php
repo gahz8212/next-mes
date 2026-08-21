@@ -125,6 +125,14 @@ class WorkOrderController {
                         (SELECT so.order_no FROM sales_order so WHERE so.wo_id = w.parent_wo_id LIMIT 1),
                         ''
                     ) as order_no,
+                    COALESCE(
+                        (SELECT soi.created_at FROM sales_order_item soi WHERE soi.wo_id = w.wo_id LIMIT 1),
+                        (SELECT soi.created_at FROM sales_order_item soi WHERE soi.wo_id = w.parent_wo_id LIMIT 1),
+                        (SELECT so.created_at FROM sales_order so WHERE so.wo_id = w.wo_id LIMIT 1),
+                        (SELECT so.created_at FROM sales_order so WHERE so.wo_id = w.parent_wo_id LIMIT 1),
+                        w.completed_at,
+                        '2000-01-01 00:00:00'
+                    ) as order_created_at,
                     COALESCE(SUM(CASE WHEN b.status != 'WAIT' THEN 1 ELSE 0 END), 0) as processed_qty,
                     COALESCE(SUM(CASE WHEN b.status IN ('BOTTOM_DONE','TEST_PASS','SHIPPING') THEN 1 ELSE 0 END), 0) as good_qty,
                     COALESCE(SUM(CASE WHEN b.status = 'FAIL' THEN 1 ELSE 0 END), 0) as fail_qty,
@@ -134,7 +142,9 @@ class WorkOrderController {
                 LEFT JOIN barcode_master b ON w.wo_id = b.wo_id
                 GROUP BY w.wo_id, w.target_qty, w.due_date, w.status, w.bom_id, w.company_id,
                          w.completed_at, w.shipped, w.shipped_at, w.remark, w.parent_wo_id, c.name, c.bom_mapping
-                ORDER BY (CASE WHEN w.status = 'HOLD' THEN 1 ELSE 0 END) ASC, w.due_date ASC
+                ORDER BY (CASE WHEN w.status = 'HOLD' THEN 1 ELSE 0 END) ASC,
+                         order_created_at DESC,
+                         w.wo_id DESC
             ");
             $list = $stmt->fetchAll();
 
@@ -624,6 +634,7 @@ class WorkOrderController {
                 (YEAR(w.due_date) = :year1 AND MONTH(w.due_date) = :month1)
                 OR (w.delivery_date IS NOT NULL AND YEAR(w.delivery_date) = :year2 AND MONTH(w.delivery_date) = :month2)
                 OR (w.completed_at IS NOT NULL AND YEAR(w.completed_at) = :year3 AND MONTH(w.completed_at) = :month3)
+                OR (w.status IN ('IN_PROGRESS', 'SMT_DONE', 'DIP_IN_PROGRESS'))
                 OR (w.due_date IS NULL)
             )";
             $params = [
@@ -661,7 +672,11 @@ class WorkOrderController {
                 LEFT JOIN barcode_master b ON w.wo_id = b.wo_id
                 WHERE {$whereSql}
                 GROUP BY w.wo_id, w.target_qty, w.status, w.due_date, w.completed_at, w.delivery_date, w.shipped, w.shipped_at, w.remark, w.parent_wo_id, w.company_id, c.name, w.bom_id
-                ORDER BY COALESCE(w.delivery_date, w.due_date) ASC
+                ORDER BY (CASE WHEN w.completed_at IS NOT NULL THEN 0 ELSE 1 END) ASC,
+                         w.completed_at DESC,
+                         (CASE WHEN w.status IN ('IN_PROGRESS', 'SMT_DONE', 'DIP_IN_PROGRESS') THEN 0 ELSE 1 END) ASC,
+                         COALESCE(w.delivery_date, w.due_date) DESC,
+                         w.wo_id DESC
             ");
             $stmt->execute($params);
 

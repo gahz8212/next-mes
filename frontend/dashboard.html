@@ -1082,6 +1082,9 @@
                 });
                 const data = await res.json();
                 if (data.status === 'success') {
+                    if (typeof resetAllMachines === 'function') {
+                        resetAllMachines('SMT');
+                    }
                     addLog('DIP_LINE', 'PASS', `작업지시 [${wo_id}] 수삽(DIP) 공정 시작`);
                     loadWOList();
                     const dipPanel = document.getElementById('linePanel-DIP');

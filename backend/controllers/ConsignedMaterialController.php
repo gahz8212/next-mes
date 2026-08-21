@@ -160,8 +160,10 @@ class ConsignedMaterialController {
             $companyId = (int)Request::query('company_id', 0);
             $bomId     = (int)Request::query('bom_id', 0);
 
-            // If order_no provided, lookup product & company & bom_id
+            // If order_no provided, lookup product & company & all item BOMs
             $orderInfo = null;
+            $parts = [];
+
             if (!empty($orderNo)) {
                 $stmt = $pdo->prepare("
                     SELECT soi.*, so.company_id, c.name as company_name,
@@ -176,45 +178,106 @@ class ConsignedMaterialController {
                     FROM sales_order_item soi
                     LEFT JOIN sales_order so ON soi.order_no = so.order_no
                     LEFT JOIN company c ON so.company_id = c.id
-                    WHERE soi.order_no = ? LIMIT 1
+                    WHERE soi.order_no = ?
+                    ORDER BY soi.id ASC
                 ");
                 $stmt->execute([$orderNo]);
-                $orderInfo = $stmt->fetch();
-                if ($orderInfo) {
-                    if (!$bomId && !empty($orderInfo['auto_bom_id'])) {
-                        $bomId = (int)$orderInfo['auto_bom_id'];
+                $orderItems = $stmt->fetchAll();
+
+                if (!empty($orderItems)) {
+                    $first = $orderItems[0];
+                    if (!$companyId && !empty($first['company_id'])) {
+                        $companyId = (int)$first['company_id'];
                     }
-                    if (!$companyId && !empty($orderInfo['company_id'])) {
-                        $companyId = (int)$orderInfo['company_id'];
+                    $itemNames = array_unique(array_filter(array_column($orderItems, 'item_name')));
+                    $totalOrderQty = array_sum(array_column($orderItems, 'order_qty'));
+
+                    $orderInfo = [
+                        'order_no'     => $orderNo,
+                        'company_id'   => $companyId,
+                        'company_name' => $first['company_name'] ?: '미지정',
+                        'item_name'    => implode(', ', $itemNames),
+                        'order_qty'    => $totalOrderQty,
+                        'items'        => $orderItems
+                    ];
+
+                    $partsMap = [];
+                    foreach ($orderItems as $it) {
+                        $itBomId = (int)($it['auto_bom_id'] ?? 0);
+                        $itQty = (float)($it['order_qty'] ?? 0);
+                        $itName = $it['item_name'] ?? '';
+
+                        if ($itBomId > 0) {
+                            $stmtParts = $pdo->prepare("
+                                SELECT
+                                    bd.detail_id, bd.part_no, bd.part_name, bd.req_qty, bd.location,
+                                    (SELECT COALESCE(SUM(CASE WHEN inout_type='IN' THEN qty ELSE -qty END), 0)
+                                     FROM material_inout m
+                                     WHERE m.part_no = bd.part_no AND m.supply_type = 'CONSIGNED'
+                                       AND m.order_no = " . $pdo->quote($orderNo) . "
+                                    ) as current_received_qty
+                                FROM bom_detail bd
+                                WHERE bd.bom_id = ?
+                                ORDER BY bd.detail_id ASC
+                            ");
+                            $stmtParts->execute([$itBomId]);
+                            $bomParts = $stmtParts->fetchAll();
+
+                            foreach ($bomParts as $bp) {
+                                $pNo = $bp['part_no'];
+                                $reqPerUnit = (float)$bp['req_qty'];
+                                $partReqTotal = $itQty > 0 ? ceil($reqPerUnit * $itQty) : 0;
+
+                                if (!isset($partsMap[$pNo])) {
+                                    $partsMap[$pNo] = [
+                                        'detail_id'            => $bp['detail_id'],
+                                        'part_no'              => $pNo,
+                                        'part_name'            => $bp['part_name'] ?: $pNo,
+                                        'req_qty'              => $reqPerUnit,
+                                        'calc_total_req'       => $partReqTotal,
+                                        'location'             => $bp['location'] ?: '',
+                                        'current_received_qty' => (float)$bp['current_received_qty'],
+                                        'items'                => [$itName]
+                                    ];
+                                } else {
+                                    $partsMap[$pNo]['calc_total_req'] += $partReqTotal;
+                                    $partsMap[$pNo]['req_qty'] += $reqPerUnit;
+                                    if (!in_array($itName, $partsMap[$pNo]['items'])) {
+                                        $partsMap[$pNo]['items'][] = $itName;
+                                    }
+                                }
+                            }
+                        }
                     }
+                    $parts = array_values($partsMap);
                 }
             }
 
-            // If still no bomId, try to find by product_id
-            $productId = trim(Request::query('product_id', ''));
-            if (!$bomId && !empty($productId)) {
-                $stmtBom = $pdo->prepare("SELECT bom_id FROM bom_master WHERE product_id = ? ORDER BY bom_id DESC LIMIT 1");
-                $stmtBom->execute([$productId]);
-                $bomId = (int)$stmtBom->fetchColumn();
-            }
+            // Fallback: If single bomId was given or product_id given directly
+            if (empty($parts)) {
+                $productId = trim(Request::query('product_id', ''));
+                if (!$bomId && !empty($productId)) {
+                    $stmtBom = $pdo->prepare("SELECT bom_id FROM bom_master WHERE product_id = ? ORDER BY bom_id DESC LIMIT 1");
+                    $stmtBom->execute([$productId]);
+                    $bomId = (int)$stmtBom->fetchColumn();
+                }
 
-            // Load BOM details
-            $parts = [];
-            if ($bomId > 0) {
-                $stmtParts = $pdo->prepare("
-                    SELECT
-                        bd.detail_id, bd.part_no, bd.part_name, bd.req_qty, bd.location,
-                        (SELECT COALESCE(SUM(CASE WHEN inout_type='IN' THEN qty ELSE -qty END), 0)
-                         FROM material_inout m
-                         WHERE m.part_no = bd.part_no AND m.supply_type = 'CONSIGNED'
-                           " . (!empty($orderNo) ? "AND m.order_no = " . $pdo->quote($orderNo) : (!empty($companyId) ? "AND m.company_id = {$companyId}" : "")) . "
-                        ) as current_received_qty
-                    FROM bom_detail bd
-                    WHERE bd.bom_id = ?
-                    ORDER BY bd.detail_id ASC
-                ");
-                $stmtParts->execute([$bomId]);
-                $parts = $stmtParts->fetchAll();
+                if ($bomId > 0) {
+                    $stmtParts = $pdo->prepare("
+                        SELECT
+                            bd.detail_id, bd.part_no, bd.part_name, bd.req_qty, bd.location,
+                            (SELECT COALESCE(SUM(CASE WHEN inout_type='IN' THEN qty ELSE -qty END), 0)
+                             FROM material_inout m
+                             WHERE m.part_no = bd.part_no AND m.supply_type = 'CONSIGNED'
+                               " . (!empty($orderNo) ? "AND m.order_no = " . $pdo->quote($orderNo) : (!empty($companyId) ? "AND m.company_id = {$companyId}" : "")) . "
+                            ) as current_received_qty
+                        FROM bom_detail bd
+                        WHERE bd.bom_id = ?
+                        ORDER BY bd.detail_id ASC
+                    ");
+                    $stmtParts->execute([$bomId]);
+                    $parts = $stmtParts->fetchAll();
+                }
             }
 
             Response::json([
@@ -346,10 +409,13 @@ class ConsignedMaterialController {
 
             // Get order / WO progress info
             $orderInfo = null;
+            $parts = [];
+            $totalProducedQty = 0;
+
             if (!empty($orderNo)) {
                 $stmt = $pdo->prepare("
                     SELECT 
-                        soi.order_no, soi.item_name, soi.order_qty, soi.due_date, soi.status,
+                        soi.id, soi.order_no, soi.item_name, soi.item_code, soi.order_qty, soi.due_date, soi.status, soi.wo_id,
                         so.company_id, c.name as company_name,
                         COALESCE(
                             (SELECT SUM(CASE WHEN bm.status != 'WAIT' THEN 1 ELSE 0 END)
@@ -374,69 +440,102 @@ class ConsignedMaterialController {
                     FROM sales_order_item soi
                     LEFT JOIN sales_order so ON soi.order_no = so.order_no
                     LEFT JOIN company c ON so.company_id = c.id
-                    WHERE soi.order_no = ? LIMIT 1
+                    WHERE soi.order_no = ?
+                    ORDER BY soi.id ASC
                 ");
                 $stmt->execute([$orderNo]);
-                $orderInfo = $stmt->fetch();
-            }
+                $orderItems = $stmt->fetchAll();
 
-            // Produced quantity base for calculation: if good_qty > 0 use good_qty, otherwise use order_qty
-            $producedQty = 0;
-            if ($orderInfo) {
-                $producedQty = (int)($orderInfo['good_qty'] > 0 ? $orderInfo['good_qty'] : $orderInfo['order_qty']);
-            }
+                if (!empty($orderItems)) {
+                    $first = $orderItems[0];
+                    $companyId = (int)($first['company_id'] ?: $companyId);
+                    $itemNames = array_unique(array_filter(array_column($orderItems, 'item_name')));
+                    $totalOrderQty = array_sum(array_column($orderItems, 'order_qty'));
 
-            // Get BOM parts and match with supplied quantities
-            $bomId = $orderInfo['bom_id'] ?? 0;
-            $parts = [];
+                    $partsMap = [];
+                    foreach ($orderItems as $it) {
+                        $itOrderQty = (float)($it['order_qty'] ?? 0);
+                        $itGoodQty  = (float)($it['good_qty'] ?? 0);
+                        $itProduced = (int)($itGoodQty > 0 ? $itGoodQty : $itOrderQty);
+                        $totalProducedQty += $itProduced;
+                        $itBomId = (int)($it['bom_id'] ?? 0);
+                        $itName = $it['item_name'] ?? '';
 
-            if ($bomId > 0) {
-                $stmtBom = $pdo->prepare("
-                    SELECT bd.part_no, bd.part_name, bd.req_qty, bd.location
-                    FROM bom_detail bd
-                    WHERE bd.bom_id = ?
-                    ORDER BY bd.detail_id ASC
-                ");
-                $stmtBom->execute([$bomId]);
-                $bomParts = $stmtBom->fetchAll();
+                        if ($itBomId > 0) {
+                            $stmtBom = $pdo->prepare("
+                                SELECT bd.part_no, bd.part_name, bd.req_qty, bd.location
+                                FROM bom_detail bd
+                                WHERE bd.bom_id = ?
+                                ORDER BY bd.detail_id ASC
+                            ");
+                            $stmtBom->execute([$itBomId]);
+                            $bomParts = $stmtBom->fetchAll();
 
-                foreach ($bomParts as $bp) {
-                    $pNo = $bp['part_no'];
-                    $reqPerUnit = (float)$bp['req_qty'];
-                    $usedQty = $reqPerUnit * $producedQty;
+                            foreach ($bomParts as $bp) {
+                                $pNo = $bp['part_no'];
+                                $reqPerUnit = (float)$bp['req_qty'];
+                                $usedQty = $reqPerUnit * $itProduced;
 
-                    // Calculate total supplied for this PO / Company
-                    $sumStmt = $pdo->prepare("
-                        SELECT 
-                            COALESCE(SUM(CASE WHEN inout_type='IN' THEN qty ELSE 0 END), 0) as supplied_qty,
-                            COALESCE(SUM(CASE WHEN inout_type='OUT' THEN qty ELSE 0 END), 0) as out_qty
-                        FROM material_inout
-                        WHERE part_no = ? AND supply_type = 'CONSIGNED'
-                          " . (!empty($orderNo) ? "AND (order_no = ? OR (order_no IS NULL AND company_id = ?))" : "AND company_id = ?") . "
-                    ");
-                    if (!empty($orderNo)) {
-                        $sumStmt->execute([$pNo, $orderNo, (int)$orderInfo['company_id']]);
-                    } else {
-                        $sumStmt->execute([$pNo, $companyId]);
+                                if (!isset($partsMap[$pNo])) {
+                                    $partsMap[$pNo] = [
+                                        'part_no'          => $pNo,
+                                        'part_name'        => $bp['part_name'] ?: $pNo,
+                                        'location'         => $bp['location'] ?: '',
+                                        'req_qty_per_unit' => $reqPerUnit,
+                                        'used_qty'         => $usedQty,
+                                        'items'            => [$itName]
+                                    ];
+                                } else {
+                                    $partsMap[$pNo]['used_qty'] += $usedQty;
+                                    $partsMap[$pNo]['req_qty_per_unit'] += $reqPerUnit;
+                                    if (!in_array($itName, $partsMap[$pNo]['items'])) {
+                                        $partsMap[$pNo]['items'][] = $itName;
+                                    }
+                                }
+                            }
+                        }
                     }
-                    $sRow = $sumStmt->fetch();
-                    $supplied = (float)$sRow['supplied_qty'];
-                    $out = (float)$sRow['out_qty'];
-                    $expectedReturn = max(0, $supplied - $usedQty);
 
-                    $parts[] = [
-                        'part_no'             => $pNo,
-                        'part_name'           => $bp['part_name'] ?: $pNo,
-                        'location'            => $bp['location'],
-                        'req_qty_per_unit'    => $reqPerUnit,
-                        'supplied_qty'        => $supplied,
-                        'used_qty'            => $usedQty,
-                        'expected_return_qty' => $expectedReturn,
-                        'actual_return_qty'   => $expectedReturn // default suggestion
+                    foreach ($partsMap as $pNo => $pData) {
+                        $sumStmt = $pdo->prepare("
+                            SELECT 
+                                COALESCE(SUM(CASE WHEN inout_type='IN' THEN qty ELSE 0 END), 0) as supplied_qty,
+                                COALESCE(SUM(CASE WHEN inout_type='OUT' THEN qty ELSE 0 END), 0) as out_qty
+                            FROM material_inout
+                            WHERE part_no = ? AND supply_type = 'CONSIGNED'
+                              AND (order_no = ? OR (order_no IS NULL AND company_id = ?))
+                        ");
+                        $sumStmt->execute([$pNo, $orderNo, $companyId]);
+                        $sRow = $sumStmt->fetch();
+                        $supplied = (float)$sRow['supplied_qty'];
+                        $out = (float)$sRow['out_qty'];
+                        $expectedReturn = max(0, $supplied - $pData['used_qty']);
+
+                        $parts[] = [
+                            'part_no'             => $pNo,
+                            'part_name'           => $pData['part_name'],
+                            'location'            => $pData['location'],
+                            'req_qty_per_unit'    => $pData['req_qty_per_unit'],
+                            'supplied_qty'        => $supplied,
+                            'used_qty'            => $pData['used_qty'],
+                            'expected_return_qty' => $expectedReturn,
+                            'actual_return_qty'   => $expectedReturn
+                        ];
+                    }
+
+                    $orderInfo = [
+                        'order_no'     => $orderNo,
+                        'company_id'   => $companyId,
+                        'company_name' => $first['company_name'] ?: '미지정',
+                        'item_name'    => implode(', ', $itemNames),
+                        'order_qty'    => $totalOrderQty,
+                        'good_qty'     => $totalProducedQty
                     ];
                 }
-            } else {
-                // If no BOM, list all supplied parts directly for this order
+            }
+
+            // Fallback: If no BOM parts found, list all supplied parts directly for this order
+            if (empty($parts)) {
                 $stmtSupplied = $pdo->prepare("
                     SELECT part_no, MAX(part_name) as part_name,
                            COALESCE(SUM(CASE WHEN inout_type='IN' THEN qty ELSE 0 END), 0) as supplied_qty,
@@ -462,12 +561,21 @@ class ConsignedMaterialController {
                 }
             }
 
+            // Check if return statement is already issued for this order
+            $existingReturn = null;
+            if (!empty($orderNo)) {
+                $stmtRetCheck = $pdo->prepare("SELECT id, return_no, return_date, memo, status FROM consigned_return_master WHERE order_no = ? AND status = 'COMPLETED' ORDER BY id DESC LIMIT 1");
+                $stmtRetCheck->execute([$orderNo]);
+                $existingReturn = $stmtRetCheck->fetch();
+            }
+
             Response::json([
                 "status" => "success",
                 "data"   => [
-                    "order_info"   => $orderInfo,
-                    "produced_qty" => $producedQty,
-                    "parts"        => $parts
+                    "order_info"       => $orderInfo,
+                    "produced_qty"     => $totalProducedQty,
+                    "parts"            => $parts,
+                    "existing_return"  => $existingReturn
                 ]
             ]);
 
@@ -494,6 +602,16 @@ class ConsignedMaterialController {
 
             if (empty($details) || !is_array($details)) {
                 Response::error("반납할 부품 정산 내역이 없습니다.");
+            }
+
+            // Prevent duplicate return statement issuance for the same order
+            if (!empty($orderNo)) {
+                $stmtCheck = $pdo->prepare("SELECT return_no FROM consigned_return_master WHERE order_no = ? AND status = 'COMPLETED' LIMIT 1");
+                $stmtCheck->execute([$orderNo]);
+                $existingReturnNo = $stmtCheck->fetchColumn();
+                if ($existingReturnNo) {
+                    Response::error("수주 [{$orderNo}]는 이미 반납 명세서 [{$existingReturnNo}]가 발행되어 정산 완료되었습니다.");
+                }
             }
 
             // Generate Return Doc No: RET-YYYYMMDD-XXX
@@ -618,7 +736,12 @@ class ConsignedMaterialController {
             $sql = "
                 SELECT 
                     rm.*, 
-                    COALESCE(c.name, '미지정') as company_name,
+                    COALESCE(c.name, (SELECT name FROM company WHERE id = (SELECT company_id FROM sales_order WHERE order_no = rm.order_no LIMIT 1)), '미지정') as company_name,
+                    COALESCE(
+                        NULLIF(rm.item_name, ''),
+                        (SELECT GROUP_CONCAT(DISTINCT item_name SEPARATOR ', ') FROM sales_order_item WHERE order_no = rm.order_no),
+                        '품목 미지정'
+                    ) as item_name,
                     (SELECT COUNT(*) FROM consigned_return_detail rd WHERE rd.return_id = rm.id) as part_count,
                     (SELECT COALESCE(SUM(actual_return_qty), 0) FROM consigned_return_detail rd WHERE rd.return_id = rm.id) as total_return_qty
                 FROM consigned_return_master rm
@@ -654,7 +777,14 @@ class ConsignedMaterialController {
             }
 
             $stmt = $pdo->prepare("
-                SELECT rm.*, COALESCE(c.name, '미지정') as company_name, c.code, c.email, c.tel
+                SELECT rm.*, 
+                       COALESCE(c.name, (SELECT name FROM company WHERE id = (SELECT company_id FROM sales_order WHERE order_no = rm.order_no LIMIT 1)), '미지정') as company_name,
+                       COALESCE(
+                           NULLIF(rm.item_name, ''),
+                           (SELECT GROUP_CONCAT(DISTINCT item_name SEPARATOR ', ') FROM sales_order_item WHERE order_no = rm.order_no),
+                           '품목 미지정'
+                       ) as item_name,
+                       c.code, c.email, c.tel
                 FROM consigned_return_master rm
                 LEFT JOIN company c ON rm.company_id = c.id
                 WHERE " . ($returnId > 0 ? "rm.id = ?" : "rm.return_no = ?") . "

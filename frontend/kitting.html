@@ -64,7 +64,7 @@
                 <!-- Big Circular Progress Gauge Card -->
                 <div class="circular-gauge-card">
                     <div class="gauge-header-row">
-                        <span class="gauge-title-label">피더 검증 진행률</span>
+                        <span class="gauge-title-label" id="gaugeTitleLabel">피더 검증 진행률</span>
                         <div id="kpiInterlockBadge" class="interlock-badge badge-locked">
                             인터록 잠김
                         </div>
@@ -79,7 +79,7 @@
                         <div class="gauge-center-content">
                             <span class="gauge-percent-text" id="gaugePercentText">0%</span>
                             <span class="gauge-count-text" id="gaugeCountText">0 / 0</span>
-                            <span class="gauge-sub-label">장착 완료</span>
+                            <span class="gauge-sub-label" id="gaugeSubLabel">장착 완료</span>
                         </div>
                     </div>
                 </div>
@@ -148,7 +148,17 @@
 
     <!-- 스크립트 로직 -->
     <script>
-                let currentWoId = null;
+        function escHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        let currentWoId = null;
         let currentFeederData = null;
         let simulatedProducedQty = 0; // 실시간 릴 잔량 시뮬레이션용 생산 수량
         let slotSpliceOffset = {}; // 슬롯별 스플라이싱 시점 오프셋
@@ -237,20 +247,64 @@
             // SVG 원형 도넛 게이지 및 텍스트 업데이트
             const circumference = 314.16;
             const percent = data.progress_percent || 0;
-            const offset = circumference * (1 - (percent / 100));
+            const isFullyVerified = data.interlock_released || (data.verified_slots > 0 && data.verified_slots >= data.total_slots);
 
             const gaugeFill = document.getElementById('gaugeCircleFill');
             const percentText = document.getElementById('gaugePercentText');
             const countText = document.getElementById('gaugeCountText');
+            const titleLabel = document.getElementById('gaugeTitleLabel');
+            const subLabel = document.getElementById('gaugeSubLabel');
 
-            if (percentText) percentText.innerText = `${percent}%`;
-            if (countText) countText.innerText = `${data.verified_slots} / ${data.total_slots}`;
+            if (isFullyVerified) {
+                // 100% 피더 검증 완료 시: 파란색의 자삽(SMT) 생산 진행률 게이지로 자동 전환
+                const targetQty = data.target_qty || 1;
+                const prodPct = targetQty > 0 ? Math.min(100, Math.round((simulatedProducedQty / targetQty) * 100)) : 0;
+                const prodOffset = circumference * (1 - (prodPct / 100));
 
-            if (gaugeFill) {
-                gaugeFill.style.strokeDashoffset = offset;
-                if (data.interlock_released) {
-                    gaugeFill.classList.add('done');
-                } else {
+                if (titleLabel) {
+                    titleLabel.innerText = '⚡ 자삽 생산 진행률';
+                    titleLabel.style.color = '#38bdf8';
+                }
+                if (percentText) {
+                    percentText.innerText = `${prodPct}%`;
+                    percentText.style.color = '#38bdf8';
+                }
+                if (countText) {
+                    countText.innerText = `${simulatedProducedQty.toLocaleString()} / ${targetQty.toLocaleString()} EA`;
+                    countText.style.color = '#7dd3fc';
+                }
+                if (subLabel) {
+                    subLabel.innerText = '자삽 생산 실적';
+                    subLabel.style.color = '#94a3b8';
+                }
+                if (gaugeFill) {
+                    gaugeFill.style.strokeDashoffset = prodOffset;
+                    gaugeFill.classList.remove('done');
+                    gaugeFill.classList.add('production');
+                }
+            } else {
+                // 피더 검증 진행 중 (<100%)
+                const offset = circumference * (1 - (percent / 100));
+
+                if (titleLabel) {
+                    titleLabel.innerText = '피더 검증 진행률';
+                    titleLabel.style.color = 'var(--text-muted)';
+                }
+                if (percentText) {
+                    percentText.innerText = `${percent}%`;
+                    percentText.style.color = '#ffffff';
+                }
+                if (countText) {
+                    countText.innerText = `${data.verified_slots} / ${data.total_slots}`;
+                    countText.style.color = '#93c5fd';
+                }
+                if (subLabel) {
+                    subLabel.innerText = '장착 완료';
+                    subLabel.style.color = 'var(--text-muted)';
+                }
+                if (gaugeFill) {
+                    gaugeFill.style.strokeDashoffset = offset;
+                    gaugeFill.classList.remove('production');
                     gaugeFill.classList.remove('done');
                 }
             }
@@ -328,21 +382,17 @@
                     cardClass += ' card-critical-clickable';
                 }
 
-                const reelText = slot.reel_barcode
-                    ? `<span class="reel-code-tag">${slot.reel_barcode}</span>`
-                    : `<span class="reel-code-none">미장착 (스캔 대기)</span>`;
-
-                // 2행 우측 텍스트: 단일 자재 잔여 수량 및 % 표시 + 소요량 충족 여부 배지
-                let liveInfoHtml = `<span style="color:#94a3b8; font-size:11px; font-family:'JetBrains Mono',monospace;">${inboundQty > 0 ? `기입고: <b style="color:#38bdf8;">${inboundQty.toLocaleString()}</b> EA` : `소요: <b style="color:#f8fafc;">${totalRequiredQty.toLocaleString()}</b> EA`}</span>`;
+                // 2행 텍스트: 단일 자재 잔여 수량 표시 (수량만 표시)
+                let liveInfoHtml = `<span style="color:#94a3b8; font-size:10.5px; font-family:'JetBrains Mono',monospace;">${inboundQty > 0 ? `기입고: <b style="color:#38bdf8;">${inboundQty.toLocaleString()}</b> EA` : `소요: <b style="color:#f8fafc;">${totalRequiredQty.toLocaleString()}</b> EA`}</span>`;
                 if (isVerified) {
                     if (isCriticalLow) {
                         if (isRequirementMet) {
-                            liveInfoHtml = `<span class="live-qty-info alert-state">수량: <b>${remainingQty.toLocaleString()}</b> EA (${remainPct}%) <span style="font-size:10px; padding:1px 5px; border-radius:3px; background:rgba(52,211,153,0.2); color:#34d399; font-weight:700; margin-left:4px;">소요량 충족</span></span>`;
+                            liveInfoHtml = `<span class="live-qty-info alert-state">수량: <b>${remainingQty.toLocaleString()}</b> EA <span style="font-size:9.5px; padding:1px 4px; border-radius:3px; background:rgba(52,211,153,0.2); color:#34d399; font-weight:700; margin-left:3px;">충족</span></span>`;
                         } else {
-                            liveInfoHtml = `<span class="live-qty-info alert-state">수량: <b>${remainingQty.toLocaleString()}</b> EA (${remainPct}%) <span style="font-size:10px; padding:1px 5px; border-radius:3px; background:rgba(239,68,68,0.25); color:#f87171; font-weight:700; margin-left:4px;">🚨 리필 필수</span></span>`;
+                            liveInfoHtml = `<span class="live-qty-info alert-state">수량: <b>${remainingQty.toLocaleString()}</b> EA <span style="font-size:9.5px; padding:1px 4px; border-radius:3px; background:rgba(239,68,68,0.25); color:#f87171; font-weight:700; margin-left:3px;">🚨 리필</span></span>`;
                         }
                     } else {
-                        liveInfoHtml = `<span class="live-qty-info normal-state">수량: <b>${remainingQty.toLocaleString()}</b> EA (${remainPct}%)</span>`;
+                        liveInfoHtml = `<span class="live-qty-info normal-state">수량: <b>${remainingQty.toLocaleString()}</b> EA</span>`;
                     }
                 }
 
@@ -353,7 +403,7 @@
                 if (isVerified) {
                     card.onclick = () => quickSpliceSlot(slot.slot_no, slot.part_no);
                     if (isCriticalLow) {
-                        card.title = `[Slot #${slot.slot_no}] 자재 소진 임박 (${remainPct}%) — 카드 클릭 시 신규 릴이 스캔/연결되어 잔량이 즉시 100%로 리필됩니다!`;
+                        card.title = `[Slot #${slot.slot_no}] 자재 소진 임박 — 카드 클릭 시 신규 릴이 스캔/연결되어 잔량이 즉시 100%로 리필됩니다!`;
                     } else {
                         card.title = `[Slot #${slot.slot_no}] 카드 클릭 시 신규 릴 스플라이싱 리필 (100% 충전)`;
                     }
@@ -363,24 +413,22 @@
                     <!-- Full-Card Background Gauge Layer (우측부터 줄어듦) -->
                     <div class="feeder-gauge-fill" style="width: ${isVerified ? remainPct : 0}%;"></div>
 
-                    <!-- 1st Line: Slot Pill, Total Points Pill, Part Number, Critical Alarm -->
-                    <div class="feeder-line-main">
-                        <div class="feeder-left-group">
+                    <!-- 1st Line: Slot Pill, Points Pill (좌측) & Live Remaining Qty (우측) -->
+                    <div class="feeder-line-main" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="feeder-left-group" style="display:flex; align-items:center; gap:5px;">
                             <span class="slot-pill">Slot #${slot.slot_no}</span>
-                            <span class="points-pill">${points}P (총 ${totalRequiredQty.toLocaleString()} EA)</span>
-                            <span class="part-number-text" title="${slot.part_no}">${slot.part_no}</span>
+                            <span class="points-pill">${points}P</span>
                         </div>
-
-                    </div>
-
-                    <!-- 2nd Line: Reel Barcode, 10% 이하 시 긴급 잔량 수량 표시 -->
-                    <div class="feeder-line-sub">
-                        <div class="reel-meta-info">
-                            ${reelText}
-                        </div>
-                        <div class="live-qty-wrap">
+                        <div class="live-qty-wrap" style="flex-shrink:0;">
                             ${liveInfoHtml}
                         </div>
+                    </div>
+
+                    <!-- 2nd Line: Part Number / Part Name Dedicated (가로 전체 단독 배치) -->
+                    <div class="feeder-line-sub" style="display:flex; align-items:center; width:100%; border-top:1px solid rgba(255,255,255,0.08); padding-top:4px; margin-top:2px;">
+                        <span class="part-number-text" title="${escHtml(slot.part_no)}${slot.part_name ? ` (${escHtml(slot.part_name)})` : ''}" style="width:100%; font-size:12.5px; font-weight:800; color:#ffffff; font-family:'JetBrains Mono',monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                            ${escHtml(slot.part_no)}${slot.part_name && slot.part_name !== slot.part_no ? ` <span style="font-size:11px; font-weight:500; color:#cbd5e1; font-family:sans-serif;">(${escHtml(slot.part_name)})</span>` : ''}
+                        </span>
                     </div>
                 `;
 

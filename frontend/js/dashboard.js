@@ -358,8 +358,9 @@ function drawRadialGauges(processId, healthVal, cycleVal, cycleText, cycleSub, p
     if (!canvas) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const cssW = Math.max(160, canvas.offsetWidth || 180);
-    const cssH = Math.max(36, canvas.offsetHeight || 46);
+    const rect = canvas.getBoundingClientRect();
+    const cssW = Math.max(140, Math.round(rect.width) || canvas.offsetWidth || 180);
+    const cssH = Math.max(34, Math.round(rect.height) || canvas.offsetHeight || 46);
 
     if (canvas.width !== Math.round(cssW * dpr) || canvas.height !== Math.round(cssH * dpr)) {
         canvas.width = Math.round(cssW * dpr);
@@ -385,11 +386,20 @@ function drawRadialGauges(processId, healthVal, cycleVal, cycleText, cycleSub, p
     }
 
     const cy = cssH / 2;
-    const strokeW = 5.4;  // 1.5x (기존 3.6)
-    const r = Math.max(14, (cssH / 2) - (strokeW / 2) - 1.5);
+    const midX = Math.round(cssW / 2);
+    const halfW = midX;
+
+    // 원형 게이지 반지름 및 선 굵기 (화면 크기 / 컨테이너 높이에 비례하여 동적 계산)
+    const strokeW = Math.max(3, Math.min(5.2, cssH * 0.095));
+    const r = Math.max(13, Math.min((cssH / 2) - (strokeW / 2) - 1.5, (halfW / 2) - 8));
+    const innerR = r - (strokeW / 2);
+
+    // 내부 텍스트 폰트 크기 및 간격 (내부 반지름 innerR에 완벽하게 비례하도록 동적 스케일링)
+    const numFontSize = Math.max(9, Math.min(13.5, Math.round(innerR * 0.62)));
+    const statusFontSize = Math.max(7.5, Math.min(10.5, Math.round(innerR * 0.44)));
+    const lineGap = Math.max(3.5, Math.round(innerR * 0.36));
 
     // ── 중앙 구분선 ──
-    const midX = Math.round(cssW / 2);
     ctx.save();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
     ctx.lineWidth = 1;
@@ -421,14 +431,13 @@ function drawRadialGauges(processId, healthVal, cycleVal, cycleText, cycleSub, p
     ctx.restore();
 
     // 도넛 내부: 퍼센트 (위) + 상태 (아래)
-    const lineGap = cssH * 0.18;
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = `bold ${Math.round(cssH * 0.28)}px "JetBrains Mono", monospace`;
+    ctx.font = `bold ${numFontSize}px "JetBrains Mono", monospace`;
     ctx.fillStyle = '#f8fafc';
-    ctx.fillText(`${safeHealth}%`, leftCX, cy - lineGap / 2);
-    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(`${safeHealth}%`, leftCX, cy - lineGap);
+    ctx.font = `bold ${statusFontSize}px sans-serif`;
     ctx.fillStyle = healthColor;
     ctx.fillText(statusText, leftCX, cy + lineGap);
     ctx.restore();
@@ -455,10 +464,10 @@ function drawRadialGauges(processId, healthVal, cycleVal, cycleText, cycleSub, p
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = `bold ${Math.round(cssH * 0.26)}px "JetBrains Mono", monospace`;
+    ctx.font = `bold ${numFontSize}px "JetBrains Mono", monospace`;
     ctx.fillStyle = '#f8fafc';
-    ctx.fillText(cycleText || `${safeCycle}%`, rightCX, cy - lineGap / 2);
-    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(cycleText || `${safeCycle}%`, rightCX, cy - lineGap);
+    ctx.font = `bold ${statusFontSize}px sans-serif`;
     ctx.fillStyle = cycleColor;
     ctx.fillText(cycleSub || '양호', rightCX, cy + lineGap);
     ctx.restore();
@@ -1257,10 +1266,19 @@ async function pollLiveStream() {
             const logs = json.data.logs || [];
             const activeWo = json.data.active_wo || null;
 
-            // 만약 현재 작업지시가 SMT_DONE 상태라면 자삽 라인(Line 1) 설비들은 항상 대기(READY) 보장
-            if (activeWo && activeWo.status === 'SMT_DONE') {
-                const smtIds = ['LASER', 'SPI', 'MOUNTER_1', 'MOUNTER_2', 'REFLOW'];
+            // 라인 상태 분리: SMT_DONE 또는 DIP_IN_PROGRESS 상태일 때 SMT 라인 설비는 항상 대기(READY/IDLE) 보장
+            const smtIds = ['LASER', 'SPI', 'MOUNTER_1', 'MOUNTER_2', 'REFLOW'];
+            const dipIds = ['DIP_AOI', 'WAVE', 'ICT', 'COATING', 'FCT'];
+
+            if (activeWo && (activeWo.status === 'SMT_DONE' || activeWo.status === 'DIP_IN_PROGRESS')) {
                 smtIds.forEach(id => {
+                    const mac = document.getElementById(`mac-${id}`);
+                    if (mac && !mac.classList.contains('wait')) {
+                        updateMachine(id, 'IDLE', '-', null);
+                    }
+                });
+            } else if (activeWo && activeWo.status === 'IN_PROGRESS') {
+                dipIds.forEach(id => {
                     const mac = document.getElementById(`mac-${id}`);
                     if (mac && !mac.classList.contains('wait')) {
                         updateMachine(id, 'IDLE', '-', null);
@@ -1284,9 +1302,13 @@ async function pollLiveStream() {
                         pDataObj = null;
                     }
                     
-                    // SMT 완료 상태인데 뒤늦게 도착한 SMT 이벤트는 머신 카드를 run으로 바꾸지 않도록 대기 처리
-                    const smtProcs = ['LASER', 'SPI', 'MOUNTER_1', 'MOUNTER_2', 'REFLOW'];
-                    if (activeWo && activeWo.status === 'SMT_DONE' && smtProcs.includes(proc)) {
+                    // 수삽 진행 중이거나 SMT 완료 상태일 때 들어오는 SMT 이벤트는 머신 카드를 run으로 바꾸지 않음
+                    if (activeWo && (activeWo.status === 'SMT_DONE' || activeWo.status === 'DIP_IN_PROGRESS') && smtIds.includes(proc)) {
+                        updateMachine(proc, 'IDLE', '-', null);
+                        return;
+                    }
+                    // 자삽 진행 중일 때 들어오는 DIP 이벤트는 머신 카드를 run으로 바꾸지 않음
+                    if (activeWo && activeWo.status === 'IN_PROGRESS' && dipIds.includes(proc)) {
                         updateMachine(proc, 'IDLE', '-', null);
                         return;
                     }

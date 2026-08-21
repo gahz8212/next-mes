@@ -500,6 +500,31 @@ class OrderController {
                 throw new Exception("이미 작업지시({$item['wo_id']})가 발행된 품목입니다.");
             }
 
+            // 사급자재 입고 수량 확인 (사급자재가 입력되어야 WO 발행 가능)
+            $orderNo = '';
+            if (!empty($item['order_id'])) {
+                $stmtOrdNo = $pdo->prepare("SELECT order_no FROM sales_order WHERE id = ?");
+                $stmtOrdNo->execute([(int)$item['order_id']]);
+                $orderNo = $stmtOrdNo->fetchColumn() ?: '';
+            }
+
+            if (!empty($orderNo)) {
+                $stmtMat = $pdo->prepare("SELECT COALESCE(SUM(qty), 0) as in_qty FROM material_inout WHERE order_no = ? AND supply_type = 'CONSIGNED' AND inout_type = 'IN'");
+                $stmtMat->execute([$orderNo]);
+                $inQty = (float)$stmtMat->fetchColumn();
+
+                if ($inQty <= 0) {
+                    $pdo->rollBack();
+                    Response::json([
+                        "status" => "error",
+                        "code" => "NO_CONSIGNED_MATERIAL",
+                        "order_no" => $orderNo,
+                        "message" => "수주 [{$orderNo}]의 사급자재 입고 수량이 확인되지 않았습니다.\n사급자재 입고 화면으로 이동하여 사급자재를 먼저 등록해주세요."
+                    ]);
+                    return;
+                }
+            }
+
             $cCode = !empty($item['company_code']) ? $item['company_code'] : 'WO';
             $today = date('Ymd');
             $rand  = strtoupper(substr(bin2hex(random_bytes(2)), 0, 3));
@@ -615,6 +640,27 @@ class OrderController {
 
             if (empty($itemRows)) {
                 Response::error("발행 가능한 대기 품목이 없습니다. (모든 품목에 이미 작업지시가 발행되었거나 품목이 없음)");
+            }
+
+            // 사급자재 입고 수량 확인 (사급자재가 입력되어야 WO 일괄 발행 가능)
+            $stmtOrd = $pdo->prepare("SELECT order_no FROM sales_order WHERE id = ?");
+            $stmtOrd->execute([$order_id]);
+            $orderNo = $stmtOrd->fetchColumn() ?: '';
+
+            if (!empty($orderNo)) {
+                $stmtMat = $pdo->prepare("SELECT COALESCE(SUM(qty), 0) as in_qty FROM material_inout WHERE order_no = ? AND supply_type = 'CONSIGNED' AND inout_type = 'IN'");
+                $stmtMat->execute([$orderNo]);
+                $inQty = (float)$stmtMat->fetchColumn();
+
+                if ($inQty <= 0) {
+                    Response::json([
+                        "status" => "error",
+                        "code" => "NO_CONSIGNED_MATERIAL",
+                        "order_no" => $orderNo,
+                        "message" => "수주 [{$orderNo}]의 사급자재 입고 수량이 확인되지 않았습니다.\n사급자재 입고 화면으로 이동하여 사급자재를 먼저 등록해주세요."
+                    ]);
+                    return;
+                }
             }
 
             $issuedWos = [];

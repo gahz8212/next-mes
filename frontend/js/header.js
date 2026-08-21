@@ -343,12 +343,63 @@ async function confirmTransactionReset() {
 }
 window.confirmTransactionReset = confirmTransactionReset;
 
+// ── 상단 오토 하이드 헤더 마우스 감지 제어 ──
+function setupAutoHideHeader() {
+    const headerEl = document.querySelector('.mes-unified-header');
+    if (!headerEl) return;
+
+    // 상단 마우스 감지 트리거 및 핸들 바 동적 생성 (없을 경우)
+    if (!document.getElementById('mesTopHoverTrigger')) {
+        const trigger = document.createElement('div');
+        trigger.id = 'mesTopHoverTrigger';
+        trigger.className = 'mes-top-hover-trigger';
+        document.body.prepend(trigger);
+
+        const handle = document.createElement('div');
+        handle.id = 'mesTopHoverHandle';
+        handle.className = 'mes-top-hover-handle';
+        handle.title = '마우스를 상단으로 가져가면 전체 메뉴 및 로그아웃이 나타납니다';
+        document.body.prepend(handle);
+    }
+
+    let hideTimer = null;
+
+    const showHeader = () => {
+        if (hideTimer) {
+            clearTimeout(hideTimer);
+            hideTimer = null;
+        }
+        headerEl.classList.add('header-revealed');
+    };
+
+    const scheduleHide = () => {
+        if (hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+            headerEl.classList.remove('header-revealed');
+        }, 300);
+    };
+
+    // 마우스 Y 좌표 감지
+    document.addEventListener('mousemove', (e) => {
+        if (e.clientY <= 14) {
+            showHeader();
+        } else if (e.clientY > 65 && !headerEl.matches(':hover') && !headerEl.contains(document.activeElement)) {
+            scheduleHide();
+        }
+    });
+
+    headerEl.addEventListener('mouseenter', showHeader);
+    headerEl.addEventListener('mouseleave', scheduleHide);
+}
+window.setupAutoHideHeader = setupAutoHideHeader;
+
 // 자동 실행 (DOMContentLoaded)
 document.addEventListener('DOMContentLoaded', () => {
     const headerEl = document.querySelector('.mes-unified-header');
     if (headerEl && headerEl.dataset.currentScreen) {
         initMesHeader(headerEl.dataset.currentScreen);
     }
+    setupAutoHideHeader();
     loadMesNotifications();
     setInterval(loadMesNotifications, 10000);
 });

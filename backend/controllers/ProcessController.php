@@ -262,7 +262,16 @@ class ProcessController {
             $sqlRecent = "
                 SELECT 
                   bh.barcode, bh.process_name, bh.created_at,
-                  w.wo_id, COALESCE(c.name, '미지정') as company_name
+                  w.wo_id, COALESCE(c.name, '미지정') as company_name,
+                  COALESCE(
+                      (SELECT soi.item_name FROM sales_order_item soi WHERE soi.wo_id = w.wo_id LIMIT 1),
+                      (SELECT soi.item_name FROM sales_order_item soi WHERE soi.wo_id = w.parent_wo_id LIMIT 1),
+                      (SELECT so.item_name FROM sales_order so WHERE so.wo_id = w.wo_id LIMIT 1),
+                      (SELECT so.item_name FROM sales_order so WHERE so.wo_id = w.parent_wo_id LIMIT 1),
+                      (SELECT i.item_name FROM bom_master bm JOIN item i ON bm.item_id = i.id WHERE bm.bom_id = w.bom_id LIMIT 1),
+                      (SELECT bm.product_id FROM bom_master bm WHERE bm.bom_id = w.bom_id LIMIT 1),
+                      '—'
+                  ) as item_name
                 FROM barcode_history bh
                 JOIN barcode_master bm ON bh.barcode = bm.barcode
                 JOIN work_order w ON bm.wo_id = w.wo_id
@@ -284,7 +293,8 @@ class ProcessController {
                     'process_name' => $row['process_name'],
                     'created_at'   => $row['created_at'],
                     'wo_id'        => $row['wo_id'],
-                    'company_name' => $row['company_name']
+                    'company_name' => $row['company_name'],
+                    'item_name'    => $row['item_name']
                 ];
             }
 

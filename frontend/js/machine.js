@@ -398,6 +398,9 @@ function loadMachineView(eqCode) {
     }
     if (aiGuideEl) aiGuideEl.innerText = def.tpm.aiGuide;
 
+    // 상단 AI 예지보전 진단 알람 배너 동기화
+    showAiPdmBanner(false);
+
     // 4. 4대 센서 그리드 렌더링
     renderSensorGrid(def.sensors);
 
@@ -459,10 +462,11 @@ function updateHealthUI(score, status) {
 
     if (!canvas) return;
     const dpr = window.devicePixelRatio || 1;
-    const cssSize = 170;
-    if (canvas.width !== cssSize * dpr || canvas.height !== cssSize * dpr) {
-        canvas.width = cssSize * dpr;
-        canvas.height = cssSize * dpr;
+    const rect = canvas.getBoundingClientRect();
+    const cssSize = Math.max(100, Math.round(rect.width) || canvas.offsetWidth || 140);
+    if (canvas.width !== Math.round(cssSize * dpr) || canvas.height !== Math.round(cssSize * dpr)) {
+        canvas.width = Math.round(cssSize * dpr);
+        canvas.height = Math.round(cssSize * dpr);
     }
 
     const ctx = canvas.getContext('2d');
@@ -471,8 +475,8 @@ function updateHealthUI(score, status) {
 
     const cx = cssSize / 2;
     const cy = cssSize / 2;
-    const r = 70;
-    const strokeW = 10;
+    const strokeW = Math.max(6, Math.min(9, cssSize * 0.06));
+    const r = Math.max(20, (cssSize / 2) - (strokeW / 2) - 4);
 
     // 1. 배경 트랙
     ctx.beginPath();
@@ -501,7 +505,7 @@ function updateHealthUI(score, status) {
 function initWaveformHistory(primarySensor) {
     waveformHistory = [];
     const base = primarySensor.base;
-    const span = (primarySensor.ucl - primarySensor.lcl) * 0.15;
+    const span = Math.abs(primarySensor.ucl - primarySensor.lcl) * 0.35;
 
     for (let i = 0; i < maxHistoryPoints; i++) {
         const val = base + (Math.random() - 0.5) * span;
@@ -517,65 +521,107 @@ function drawWaveformChart() {
     const sensor = def.sensors[0];
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
-    const w = Math.max(300, Math.round(rect.width) || 600);
-    const h = 160;
+    const w = Math.max(300, Math.round(rect.width) || canvas.offsetWidth || 700);
+    const h = Math.max(140, Math.round(rect.height) || canvas.offsetHeight || 165);
 
-    if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
-        canvas.width = w * dpr;
-        canvas.height = h * dpr;
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
     }
 
     const ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
-    const padL = 45;
+    const padL = 74; // UCL/LCL 수치 라벨 가시성 확보
     const padR = 20;
     const padT = 20;
-    const padB = 25;
+    const padB = 22;
     const plotW = w - padL - padR;
     const plotH = h - padT - padB;
 
-    const minV = sensor.min;
-    const maxV = sensor.max;
-    const getY = (val) => padT + plotH - ((val - minV) / (maxV - minV)) * plotH;
+    const ucl = sensor.ucl;
+    const lcl = sensor.lcl;
+    const limitSpan = Math.abs(ucl - lcl) || 1;
 
-    // 1. 그리드 라인 & LCL / UCL 점선
+    // 상한선(UCL)과 하한선(LCL)의 시각적 간격을 인위적으로 넓고 시원하게 확보
+    // 그래프 전체 높이의 약 60%를 UCL~LCL 영역으로 배정 (상하 여백 25%씩)
+    const extraMargin = limitSpan * 0.28;
+    let dispMax = Math.max(ucl, lcl) + extraMargin;
+    let dispMin = Math.min(ucl, lcl) - extraMargin;
+
+    // 파형 실측 데이터가 관리 한계를 벗어나는 경우 짤림 방지 동적 스케일링
+    if (waveformHistory.length > 0) {
+        const dataMax = Math.max(...waveformHistory);
+        const dataMin = Math.min(...waveformHistory);
+        dispMax = Math.max(dispMax, dataMax + limitSpan * 0.08);
+        dispMin = Math.min(dispMin, dataMin - limitSpan * 0.08);
+    }
+
+    const getY = (val) => padT + plotH - ((val - dispMin) / (dispMax - dispMin)) * plotH;
+
+    // 0. 배경 가이드 그리드 라인
     ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+    const gridSteps = 4;
+    for (let i = 0; i <= gridSteps; i++) {
+        const gy = padT + (plotH / gridSteps) * i;
+        ctx.beginPath();
+        ctx.moveTo(padL, gy);
+        ctx.lineTo(w - padR, gy);
+        ctx.stroke();
+    }
 
-    // UCL 라인 (빨강)
+    // 1. UCL 라인 (빨강 점선 & 굵은 텍스트)
     const uclY = getY(sensor.ucl);
-    ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 4]);
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
     ctx.beginPath();
     ctx.moveTo(padL, uclY);
     ctx.lineTo(w - padR, uclY);
     ctx.stroke();
 
-    ctx.font = '10px monospace';
+    ctx.font = 'bold 12px "JetBrains Mono", monospace';
     ctx.fillStyle = '#ef4444';
-    ctx.fillText(`UCL ${sensor.ucl}`, 4, uclY + 3);
+    ctx.textAlign = 'right';
+    ctx.fillText(`UCL ${sensor.ucl}`, padL - 8, uclY + 4);
 
-    // LCL 라인 (노랑)
+    // 2. LCL 라인 (노랑 점선 & 굵은 텍스트)
     const lclY = getY(sensor.lcl);
-    ctx.strokeStyle = 'rgba(245, 158, 11, 0.6)';
+    ctx.strokeStyle = 'rgba(245, 158, 11, 0.8)';
     ctx.beginPath();
     ctx.moveTo(padL, lclY);
     ctx.lineTo(w - padR, lclY);
     ctx.stroke();
 
     ctx.fillStyle = '#f59e0b';
-    ctx.fillText(`LCL ${sensor.lcl}`, 4, lclY + 3);
+    ctx.fillText(`LCL ${sensor.lcl}`, padL - 8, lclY + 4);
+
+    // 3. 중심선 (Center Line)
+    const centerVal = (sensor.ucl + sensor.lcl) / 2;
+    const clY = getY(centerVal);
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.3)';
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath();
+    ctx.moveTo(padL, clY);
+    ctx.lineTo(w - padR, clY);
+    ctx.stroke();
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(`CL ${centerVal.toFixed(1)}`, padL - 8, clY + 4);
 
     ctx.setLineDash([]); // 점선 해제
+    ctx.textAlign = 'left';
 
-    // 2. 파형 라인 & 그라데이션 영역 채우기
+    // 4. 파형 라인 & 그라데이션 영역 채우기
     if (waveformHistory.length > 1) {
         const stepX = plotW / (maxHistoryPoints - 1);
 
-        // 영역 그라데이션
+        // 영역 그라데이션 (영역을 가득 채우는 하이테크 네온 블루)
         const grad = ctx.createLinearGradient(0, padT, 0, padT + plotH);
-        grad.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
+        grad.addColorStop(0, 'rgba(56, 189, 248, 0.45)');
+        grad.addColorStop(0.7, 'rgba(56, 189, 248, 0.12)');
         grad.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
 
         ctx.beginPath();
@@ -591,7 +637,7 @@ function drawWaveformChart() {
         ctx.fillStyle = grad;
         ctx.fill();
 
-        // 파형 외곽선
+        // 파형 외곽선 (두께 2.5px로 뚜렷하게)
         ctx.beginPath();
         waveformHistory.forEach((v, i) => {
             const x = padL + i * stepX;
@@ -600,19 +646,48 @@ function drawWaveformChart() {
             else ctx.lineTo(x, y);
         });
         ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.5;
+        ctx.lineJoin = 'round';
         ctx.stroke();
 
-        // 최신 데이터 점 강조
+        // 최신 데이터 점 & 현재값 뱃지 표시
+        const lastVal = waveformHistory[waveformHistory.length - 1];
         const lastX = padL + (waveformHistory.length - 1) * stepX;
-        const lastY = getY(waveformHistory[waveformHistory.length - 1]);
+        const lastY = getY(lastVal);
+
         ctx.beginPath();
-        ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
-        ctx.fillStyle = '#fff';
+        ctx.arc(lastX, lastY, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#38bdf8';
         ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+
+        // 현재 실시간 측정치 텍스트 배너 렌더링
+        const valText = `${lastVal} ${sensor.unit}`;
+        ctx.font = 'bold 13px "JetBrains Mono", monospace';
+        const textWidth = ctx.measureText(valText).width;
+        const bubbleX = Math.min(w - padR - textWidth - 14, Math.max(padL + 10, lastX - textWidth / 2));
+        const bubbleY = Math.max(padT + 16, Math.min(h - padB - 8, lastY - 10));
+
+        // 뱃지 배경
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
         ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(bubbleX - 6, bubbleY - 14, textWidth + 12, 20, 4);
+        } else {
+            ctx.rect(bubbleX - 6, bubbleY - 14, textWidth + 12, 20);
+        }
+        ctx.fill();
         ctx.stroke();
+
+        // 뱃지 텍스트
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText(valText, bubbleX, bubbleY);
     }
 }
 
@@ -778,7 +853,7 @@ function simulateIdleFluctuation() {
     if (!def) return;
 
     def.sensors.forEach((s, idx) => {
-        const span = (s.max - s.min) * 0.01;
+        const span = Math.abs(s.ucl - s.lcl) * 0.15;
         const val = parseFloat((s.base + (Math.random() - 0.5) * span).toFixed(s.decimals));
         const valEl = document.getElementById(`sensorVal-${idx}`);
         if (valEl) valEl.innerText = val;
@@ -909,3 +984,40 @@ function showHmiToast(msg) {
         toast.classList.remove('show');
     }, 3000);
 }
+
+// ── 12. 상단 AI 예지보전 진단 알람 배너 제어 ──
+function showAiPdmBanner(isManual = false) {
+    const banner = document.getElementById('aiPdmTopBanner');
+    const textEl = document.getElementById('aiGuideText');
+    const dotEl = document.getElementById('pdmGuideDot');
+    if (!banner) return;
+
+    const def = MACHINE_DEFINITIONS[currentEqCode];
+    if (def && def.tpm) {
+        if (textEl) textEl.innerText = def.tpm.aiGuide;
+        const isWarn = (def.tpm.percent < 50) || (currentHealth < 85);
+        if (isWarn) {
+            banner.classList.add('banner-warning');
+            if (dotEl) dotEl.classList.add('warn');
+        } else {
+            banner.classList.remove('banner-warning');
+            if (dotEl) dotEl.classList.remove('warn');
+        }
+    }
+
+    banner.classList.remove('banner-hidden');
+    banner.style.display = 'flex';
+    if (isManual) {
+        showHmiToast('상단에 AI 예지보전 진단 알람을 표시했습니다.');
+    }
+}
+
+function dismissAiPdmBanner() {
+    const banner = document.getElementById('aiPdmTopBanner');
+    if (!banner) return;
+    banner.classList.add('banner-hidden');
+    banner.style.display = 'none';
+}
+
+window.showAiPdmBanner = showAiPdmBanner;
+window.dismissAiPdmBanner = dismissAiPdmBanner;
