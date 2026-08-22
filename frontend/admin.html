@@ -7265,18 +7265,13 @@ async function deleteCompany(id, name) {
 
         let html = '';
 
-        // ── Month Center Header with Month Navigator ──
+        // ── Clean Month Title Header (버튼 없는 순수 월 타이틀) ──
         html += `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background:rgba(15,23,42,0.9); border-bottom:1px solid rgba(255,255,255,0.08);">
-                <div style="display:flex; gap:6px; align-items:center;">
-                    <button type="button" class="topbar-action-btn" style="background:rgba(255,255,255,0.08); padding:5px 12px; font-size:12.5px; font-weight:600;" onclick="changePlanMonth(-1)" title="이전 달">◀ 이전달</button>
-                    <button type="button" class="topbar-action-btn" style="background:rgba(59,130,246,0.2); color:#93c5fd; border:1px solid rgba(59,130,246,0.35); padding:5px 12px; font-size:12px; font-weight:700;" onclick="goPlanToday()">오늘</button>
-                </div>
+            <div style="display:flex; justify-content:center; align-items:center; padding:12px 20px; background:rgba(15,23,42,0.9); border-bottom:1px solid rgba(255,255,255,0.08);">
                 <div style="display:flex; align-items:baseline; gap:8px;">
-                    <span style="font-size:26px; font-weight:900; color:#38bdf8; font-family:'JetBrains Mono',monospace; letter-spacing:-0.5px;">${planMonth}월</span>
-                    <span style="font-size:13.5px; color:#94a3b8; font-weight:700;">${planYear}년</span>
+                    <span style="font-size:24px; font-weight:900; color:#38bdf8; font-family:'JetBrains Mono',monospace; letter-spacing:-0.5px;">${planMonth}월</span>
+                    <span style="font-size:14px; color:#94a3b8; font-weight:700;">${planYear}년 생산 일정</span>
                 </div>
-                <button type="button" class="topbar-action-btn" style="background:rgba(255,255,255,0.08); padding:5px 12px; font-size:12.5px; font-weight:600;" onclick="changePlanMonth(1)" title="다음 달">다음달 ▶</button>
             </div>
         `;
 
