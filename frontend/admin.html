@@ -3063,10 +3063,19 @@
             <div class="page-panel" id="page-plan" style="overflow:hidden !important; flex-direction:column; height:100%;">
                 <!-- 상단 고정 영역 -->
                 <div class="page-fixed-top">
-                    <div class="page-header" style="margin-bottom:12px;">
+                    <div class="page-header" style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; padding-right:32px;">
                         <div>
                             <div class="page-title-text">📅 생산 계획</div>
                             <div class="page-desc">납기일 기준 월별/일자별 생산 일정 및 진행 상태를 관제합니다.</div>
+                        </div>
+                        <!-- 뷰 모드 전환 서브 탭 버튼 (타이틀 우측 통합) -->
+                        <div style="display:flex; gap:8px;">
+                            <button id="btn-plan-view-list" class="consigned-tab-btn active" onclick="setPlanViewMode('list')">
+                                📋 일정 상세 목록
+                            </button>
+                            <button id="btn-plan-view-calendar" class="consigned-tab-btn" onclick="setPlanViewMode('calendar')">
+                                📅 월간 달력 & 일자별 상세
+                            </button>
                         </div>
                     </div>
 
@@ -3088,16 +3097,6 @@
                             <div class="kpi-label">📊 달성률</div>
                             <div class="kpi-val" id="p-kpi-rate">—</div>
                         </div>
-                    </div>
-
-                    <!-- 뷰 모드 전환 서브 탭 버튼 (우측 끝 배치) -->
-                    <div style="padding:0 32px 12px; display:flex; justify-content:flex-end; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:12px; gap:8px;">
-                        <button id="btn-plan-view-list" class="consigned-tab-btn active" onclick="setPlanViewMode('list')">
-                            📋 일정 상세 목록
-                        </button>
-                        <button id="btn-plan-view-calendar" class="consigned-tab-btn" onclick="setPlanViewMode('calendar')">
-                            📅 월간 달력 & 일자별 상세
-                        </button>
                     </div>
                 </div>
 
@@ -3125,16 +3124,16 @@
                 </div>
 
                 <!-- 하단 본문: 2) 달력 2분할 뷰 (좌측 컴팩트 달력 / 우측 선택일 상세 폼) -->
-                <div id="plan-calendar-view" style="display:none; flex:1 1 auto; min-height:0; display:flex; gap:16px; padding:0 32px 24px; overflow:hidden;">
-                    <!-- 좌측: 컴팩트 월간 달력 (460px) -->
-                    <div style="width:460px; min-width:380px; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
-                        <div id="plan-calendar-container" style="flex:1; overflow-y:auto; display:flex; flex-direction:column;">
+                <div id="plan-calendar-view" style="display:none; flex:1 1 auto; min-height:0; display:flex; gap:16px; padding:0 32px 24px; overflow:hidden; height:calc(100% - 140px);">
+                    <!-- 좌측: 컴팩트 월간 달력 (480px) -->
+                    <div style="width:480px; min-width:400px; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden; height:100%;">
+                        <div id="plan-calendar-container" style="flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; height:100%;">
                             <!-- JS에서 렌더링: renderPlanCalendar() -->
                         </div>
                     </div>
 
                     <!-- 우측: 선택된 날짜의 생산/납기 상세 일정 폼 (독립 스크롤) -->
-                    <div id="plan-cal-day-detail-panel" style="flex:1; min-width:0; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
+                    <div id="plan-cal-day-detail-panel" style="flex:1; min-width:0; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden; height:100%;">
                         <!-- JS에서 렌더링: renderPlanCalDayDetail() -->
                     </div>
                 </div>
@@ -7283,23 +7282,25 @@ async function deleteCompany(id, name) {
             </div>
         `;
 
+        const numRows = Math.ceil((firstDay + totalDays) / 7);
+
         html += `
             <!-- Calendar Day of Week Header -->
-            <div style="display:grid; grid-template-columns:repeat(7, 1fr); background:rgba(15,23,42,0.9); border-bottom:1px solid rgba(255,255,255,0.1); font-weight:800; font-size:12px; text-align:center;">
+            <div style="display:grid; grid-template-columns:repeat(7, 1fr); background:rgba(15,23,42,0.9); border-bottom:1px solid rgba(255,255,255,0.1); font-weight:800; font-size:12px; text-align:center; flex-shrink:0;">
                 ${dayNames.map((d, idx) => `
-                    <div style="padding:8px 2px; color:${idx===0 ? '#f87171' : idx===6 ? '#38bdf8' : '#cbd5e1'};">
+                    <div style="padding:7px 2px; color:${idx===0 ? '#f87171' : idx===6 ? '#38bdf8' : '#cbd5e1'};">
                         ${d}
                     </div>
                 `).join('')}
             </div>
 
-            <!-- Calendar Days Grid -->
-            <div style="display:grid; grid-template-columns:repeat(7, 1fr); background:rgba(15,23,42,0.4);">
+            <!-- Calendar Days Grid (동적 1fr 균등 분할로 상하 스크롤 완전 제거) -->
+            <div style="flex:1; min-height:0; display:grid; grid-template-columns:repeat(7, 1fr); grid-template-rows:repeat(${numRows}, 1fr); background:rgba(15,23,42,0.4); overflow:hidden;">
         `;
 
         // Empty cells before 1st day
         for (let i = 0; i < firstDay; i++) {
-            html += `<div style="min-height:78px; border-right:1px solid rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(0,0,0,0.15);"></div>`;
+            html += `<div style="height:100%; min-height:0; border-right:1px solid rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(0,0,0,0.15); box-sizing:border-box;"></div>`;
         }
 
         // Days 1 ~ totalDays
@@ -7320,21 +7321,21 @@ async function deleteCompany(id, name) {
                 const doneCnt = orders.filter(o => ['DONE','COMPLETED'].includes(o.status)).length;
 
                 if (activeCnt > 0) {
-                    badges.push(`<span style="font-size:10px; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.25); padding:1px 5px; border-radius:6px;" title="현재 생산 진행 중 ${activeCnt}건">⚡${activeCnt}</span>`);
+                    badges.push(`<span style="font-size:9.5px; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.25); padding:1px 4px; border-radius:4px;" title="현재 생산 진행 중 ${activeCnt}건">⚡${activeCnt}</span>`);
                 }
                 if (isToday && doneCnt > 0) {
-                    badges.push(`<span style="font-size:10px; font-weight:800; color:#34d399; background:rgba(16,185,129,0.3); border:1px solid #10b981; padding:1px 5px; border-radius:6px;" title="오늘 완료 ${doneCnt}건">✅${doneCnt}</span>`);
+                    badges.push(`<span style="font-size:9.5px; font-weight:800; color:#34d399; background:rgba(16,185,129,0.3); border:1px solid #10b981; padding:1px 4px; border-radius:4px;" title="오늘 완료 ${doneCnt}건">✅${doneCnt}</span>`);
                 } else if (deliveryCnt > 0) {
-                    badges.push(`<span style="font-size:10px; font-weight:800; color:#34d399; background:rgba(16,185,129,0.25); padding:1px 5px; border-radius:6px;" title="고객사 납품 예정 ${deliveryCnt}건">🚚${deliveryCnt}</span>`);
+                    badges.push(`<span style="font-size:9.5px; font-weight:800; color:#34d399; background:rgba(16,185,129,0.25); padding:1px 4px; border-radius:4px;" title="고객사 납품 예정 ${deliveryCnt}건">🚚${deliveryCnt}</span>`);
                 } else if (doneCnt > 0 && activeCnt === 0) {
-                    badges.push(`<span style="font-size:10px; font-weight:800; color:#a78bfa; background:rgba(167,139,250,0.25); padding:1px 5px; border-radius:6px;" title="완료(납품일 미정) ${doneCnt}건">✅${doneCnt}</span>`);
+                    badges.push(`<span style="font-size:9.5px; font-weight:800; color:#a78bfa; background:rgba(167,139,250,0.25); padding:1px 4px; border-radius:4px;" title="완료(납품일 미정) ${doneCnt}건">✅${doneCnt}</span>`);
                 } else if (readyCnt > 0 && activeCnt === 0) {
-                    badges.push(`<span style="font-size:10px; font-weight:800; color:#94a3b8; background:rgba(100,116,139,0.2); padding:1px 5px; border-radius:6px;" title="생산 대기 ${readyCnt}건">⏳${readyCnt}</span>`);
+                    badges.push(`<span style="font-size:9.5px; font-weight:800; color:#94a3b8; background:rgba(100,116,139,0.2); padding:1px 4px; border-radius:4px;" title="생산 대기 ${readyCnt}건">⏳${readyCnt}</span>`);
                 }
             }
 
             if (badges.length > 0) {
-                countBadge = `<div style="display:flex; gap:3px; justify-content:center; flex-wrap:wrap;">${badges.join('')}</div>`;
+                countBadge = `<div style="display:flex; gap:2px; justify-content:center; flex-wrap:wrap; margin-top:2px;">${badges.join('')}</div>`;
             }
 
             const isAssignMode = !!activeDeliveryAssignWoId;
@@ -7345,13 +7346,13 @@ async function deleteCompany(id, name) {
             html += `
                 <div class="plan-calendar-cell" data-cal-date="${curDateStr}" onclick="handleCalendarCellClick('${curDateStr}', ${day}, ${dayOfWeek})" 
                      title="${isAssignMode ? `클릭하여 [${activeDeliveryAssignWoId}]의 납품일을 ${curDateStr}로 지정` : `클릭하여 ${curDateStr} 상세 일정 확인`}"
-                     style="min-height:78px; border-right:1px solid rgba(255,255,255,0.06); border-bottom:1px solid rgba(255,255,255,0.06); padding:6px; display:flex; flex-direction:column; justify-content:space-between; transition:all 0.15s ease; ${cellBg}">
+                     style="height:100%; min-height:0; border-right:1px solid rgba(255,255,255,0.06); border-bottom:1px solid rgba(255,255,255,0.06); padding:4px 6px; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box; transition:all 0.15s ease; ${cellBg}">
                     <!-- Day Number -->
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:12.5px; font-weight:800; font-family:'JetBrains Mono',monospace; ${isToday ? 'color:#38bdf8;' : (dayOfWeek===0 ? 'color:#f87171;' : dayOfWeek===6 ? 'color:#38bdf8;' : 'color:#cbd5e1;')}">
+                        <span style="font-size:12px; font-weight:800; font-family:'JetBrains Mono',monospace; ${isToday ? 'color:#38bdf8;' : (dayOfWeek===0 ? 'color:#f87171;' : dayOfWeek===6 ? 'color:#38bdf8;' : 'color:#cbd5e1;')}">
                             ${day}
                         </span>
-                        ${isToday ? `<span style="font-size:9.5px; color:#38bdf8; font-weight:800; background:rgba(56,189,248,0.2); padding:0 4px; border-radius:3px;">오늘</span>` : ''}
+                        ${isToday ? `<span style="font-size:9px; color:#38bdf8; font-weight:800; background:rgba(56,189,248,0.2); padding:0 3px; border-radius:3px;">오늘</span>` : ''}
                     </div>
 
                     <!-- Compact Count Badge -->
@@ -7366,7 +7367,7 @@ async function deleteCompany(id, name) {
         const totalCells = firstDay + totalDays;
         const trailing = (7 - (totalCells % 7)) % 7;
         for (let i = 0; i < trailing; i++) {
-            html += `<div style="min-height:78px; border-right:1px solid rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(0,0,0,0.15);"></div>`;
+            html += `<div style="height:100%; min-height:0; border-right:1px solid rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(0,0,0,0.15); box-sizing:border-box;"></div>`;
         }
 
         html += `</div>`;
