@@ -2,13 +2,16 @@
 
 ## 📌 시스템 개요
 SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
+- **Production URL**: `https://mes.memyself.shop` (Cloudflare CDN / DDoS 방어 / Let's Encrypt Full SSL)
 - **Frontend**: 
   - `frontend/admin.html` (관리자 12대 모듈 통합 대시보드)
   - `frontend/dashboard.html` (라인 종합 관제 콘솔 - 머신 실시간 3D 보더 빔 & 4-UP 어레이 셀 모니터링)
   - `frontend/kitting.html` (자재 피킹 및 피더 셋업 단말기 - 좌우 2분할 & 원형 도넛 게이지 & 3열 멀티 그리드)
+  - `frontend/machine.html` (설비 전용 1:1 HMI 진단 터미널 - 3색 타워램프 & 실시간 SPC 4-센서 파형도)
   - `frontend/login.html` (역할별 로그인 및 라우팅)
-- **Backend**: PHP 8.x + MySQL 8.0 (Docker `smt_mes_db`, host port 3307) + PHP 내장 웹서버 (`0.0.0.0:8080`)
-- **설비 시뮬레이터**: 로컬 Node-RED (`localhost:1880`) ➔ `/start-sim` (SMT) & `/start-dip-sim` (DIP)
+- **Backend & Web Server**: Nginx 1.24 (Let's Encrypt SSL) + PHP 8.3-FPM + AWS RDS (MySQL 8.0 `smt-mes-db`)
+- **설비 시뮬레이터**: AWS EC2 내 Node-RED (PM2 상시 데몬 관리, 포트 1881) ➔ `/start-sim` (SMT) & `/start-dip-sim` (DIP)
+- **CI/CD 파이프라인**: GitHub Actions (`deploy.yml`) ➔ `main` 푸시 시 EC2 자동 무중단 배포 및 서비스 핫-리로드
 - **인증**: Role 기반 권한 관리 (`admin` / `manager` / `worker`)
 - **공정**: 자삽(SMT: LASER ➔ SPI ➔ MOUNTER ➔ REFLOW) ➔ 수삽(DIP: DIP_AOI ➔ WAVE) 2단계 생산 및 실시간 바코드/셀 트래킹
 
@@ -19,8 +22,8 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
 | AI 모델 | 담당 개발 범위 및 주요 작업 내역 |
 |---|---|
 | **Claude 3.5 Sonnet** | • **초기 아키텍처 및 코어 엔진 구축**<br>  - SMT/DIP 상태 전이 머신, 개별 바코드 발행/스캐너 이력 추적<br>  - 거래처별 가변 엑셀 BOM 동적 매핑 및 자동 기억 기능<br>• **Phase 1 모듈 개발**<br>  - 거래처 마스터 관리 (CRUD, WO 통계)<br>  - 품목 마스터 관리 (CRUD, 카테고리 필터)<br>  - 불량 현황 분석 (공정별/업체별 통계 차트, 실시간 불량 이력)<br>  - 생산 계획 (월별 캘린더, D-Day, 실시간 진행률)<br>• **Phase 2 모듈 개발**<br>  - 자재 입출고 관리 (수불 이력, 파트 검색, 입출고 KPI)<br>  - 출하 관리 (출하 지시/등록, 상태 전이, 거래명세서)<br>  - 사용자 / 권한 관리 (Admin/Manager/Worker, SHA256 암호화)<br>  - 품질 검사 기준 (공정별 기준치/단위 마스터 관리) |
-| **Gemini 3.7 Flash** | • **Phase 3 모듈 개발**<br>  - 수주 (PO) 관리 (`sales_order` DB 마이그레이션, CRUD, 수주 ➔ WO 원클릭 연계 발행)<br>  - 종합 KPI 분석 대시보드 (종합 누적 수율, 납기 준수율, 일별 추이 바 차트, 라인 가동 카드)<br>  - 시스템 알림 센터 (D-3 납기 임박 자동 감지 경보, 실시간 뱃지, 10초 폴링)<br>  - 시스템 감사 로그 (`system_log` 변경 이력 추적)<br>• **자재 피킹 및 피더 셋업 단말기 (`kitting.html`) 전면 개편**<br>  - 좌우 2분할 레이아웃 (좌측 고정 스캐너 & 대형 SVG 원형 도넛 게이지 + 우측 3열 반응형 멀티 컬럼 피더 카드 그리드)<br>  - 2줄 컴팩트 카드 (슬롯/위치/품번/PASS 상태 + 소요량/릴 바코드/MSL 수명) 및 스캔 일치 카드 자동 스크롤/하이라이트<br>• **실시간 라인 관제 엔진 및 실시간성 복구 (`dashboard.html`, `dashboard.js`, `dashboard.css`)**<br>  - PHP 싱글스레드 블로킹 해소 (고속 논블로킹 SSE 및 0.8초 무결성 고속 실시간 폴링 엔진 구축)<br>  - 로컬 Node-RED (1880 포트) 연동 완비 (자삽/수삽 시작 트리거 ➔ Node-RED ➔ `update_process.php` 실시간 데이터 파이프라인)<br>  - 머신 카드 테두리 360도 회전 에메랄드 보더 빔 (Border Beam Sweep) 3초 주기 동기화 적용<br>  - **4-UP 어레이 패널 셀 인디케이터** (`#1 ~ #4` 셀 개별 판정 및 불량 셀 Bad Mark 스킵 시각화) 장착<br>  - 작업지시 롤백/중단 API (`stop_wo.php`) 구현 및 클린 리셋 로직 완성 |
-| **Antigravity (Google DeepMind)** | • **설비 예지보전(PdM) 듀얼 게이지 & 4대 물리량 막대 그래프 엔진 구축**<br>  - 설비별 상단 듀얼 원형 게이지(건전도 점수 + RUL 정비 주기) 및 하단 4대 물리량 막대 그래프 시각화<br>  - High-DPI Retina 무왜곡 렌더링 엔진 적용 (Canvas 해상도 보정으로 폰트 찌그러짐/흐림 완벽 제거)<br>  - 미가동 설비 대기(IDLE/WAIT) 잔잔한 숨결(Heartbeat) 시뮬레이션 루프 구축<br>• **실물 컨베이어 물리 슬롯 파이프라인 엔진 (Pipeline Conveyor Shift) 완성**<br>  - 4개 공정 슬롯 동시 가공 (`REFLOW: #1` ➔ `MOUNTER: #2` ➔ `SPI: #3` ➔ `LASER: #4`)<br>  - 기판 배출 시 설비별 즉시 대기(READY) 자동 복귀 엔진<br>• **원자적 일괄 트랜잭션 (Single Atomic Batch Flow) & 동시성 레이스 컨디션 원천 해결**<br>  - 4개 개별 요청 분기 ➔ 1개의 일괄 HTTP POST(`events: [...]`)로 개편하여 역전/중복 바코드 완벽 차단<br>• **물리적 공정 완료 시점 동기화 (Line Exit Trigger)**<br>  - 20번 기판이 리플로우 오븐을 완전히 통과한 시점에 `SMT_DONE` 전환 및 `[▶ 수삽 시작]` 버튼 활성화<br>• **불량 기판 전 공정 연속 이송 & 설비카드 하단 불량 PCB/셀 번호 실시간 시각화**<br>  - 불량 PCB도 라인 끝(NG 언로더 버퍼)까지 이송 및 하류 설비 Bad Mark 스킵 연동<br>  - 설비카드 하단 `[⚠️ PCB #6 불량(셀 #2)]` 경고 뱃지 실시간 표시 |
+| **Gemini 3.7 Flash** | • **Phase 3 모듈 개발**<br>  - 수주 (PO) 관리 (`sales_order` DB 마이그레이션, CRUD, 수주 ➔ WO 원클릭 연계 발행)<br>  - 종합 KPI 분석 대시보드 (종합 누적 수율, 납기 준수율, 일별 추이 바 차트, 라인 가동 카드)<br>  - 시스템 알림 센터 (D-3 납기 임박 자동 감지 경보, 실시간 뱃지, 10초 폴링)<br>  - 시스템 감사 로그 (`system_log` 변경 이력 추적)<br>• **자재 피킹 및 피더 셋업 단말기 (`kitting.html`) 전면 개편**<br>  - 좌우 2분할 레이아웃 (좌측 고정 스캐너 & 대형 SVG 원형 도넛 게이지 + 우측 3열 반응형 멀티 컬럼 피더 카드 그리드)<br>  - 2줄 컴팩트 카드 및 스캔 일치 카드 자동 스크롤/하이라이트<br>• **실시간 라인 관제 엔진 및 실시간성 복구 (`dashboard.html`)**<br>  - PHP 싱글스레드 블로킹 해소 (고속 논블로킹 SSE 및 0.8초 무결성 고속 실시간 폴링 엔진 구축)<br>  - 머신 카드 테두리 360도 회전 에메랄드 보더 빔 및 4-UP 어레이 패널 셀 인디케이터 장착<br>• **AWS 클라우드 인프라 프로비저닝 & 무중단 CI/CD 구축 (2026-08-22)**<br>  - AWS EC2 (Ubuntu 24.04) + Nginx 1.24 + PHP 8.3-FPM 고성능 프로덕션 환경 구축<br>  - AWS RDS (MySQL 8.0) 프로비저닝 및 12개 모듈 전체 스키마 마이그레이션<br>  - GitHub Actions 기반 무중단 자동 배포 파이프라인(`deploy.yml`) 구축<br>  - Cloudflare 커스텀 도메인(`mes.memyself.shop`) 연동 & Let's Encrypt 정식 SSL(HTTPS) 인증서 발급<br>  - Node-RED 시뮬레이터 PM2 상시 데몬 등록 및 누락 HMI 라우팅 심볼릭 링크 정상화 |
+| **Antigravity (Google DeepMind)** | • **설비 예지보전(PdM) 듀얼 게이지 & 4대 물리량 막대 그래프 엔진 구축**<br>  - 설비별 상단 듀얼 원형 게이지(건전도 점수 + RUL 정비 주기) 및 하단 4대 물리량 막대 그래프 시각화<br>  - High-DPI Retina 무왜곡 렌더링 엔진 적용 (Canvas 해상도 보정으로 폰트 찌그러짐/흐림 완벽 제거)<br>  - 미가동 설비 대기(IDLE/WAIT) 잔잔한 숨결(Heartbeat) 시뮬레이션 루프 구축<br>• **실물 컨베이어 물리 슬롯 파이프라인 엔진 (Pipeline Conveyor Shift) 완성**<br>  - 4개 공정 슬롯 동시 가공 (`REFLOW: #1` ➔ `MOUNTER: #2` ➔ `SPI: #3` ➔ `LASER: #4`) 및 원자적 일괄 트랜잭션 구축<br>• **15인치/태블릿 맞춤 100% 한눈에 보기(No-Scroll Full Viewport) & UI/UX 대혁신**<br>  - 최상단 공통 헤더 **오토 하이드 (Hover-to-Reveal)** 적용으로 50px 수직 공간 확보 및 하단 짤림 완전 해소<br>  - 설비 HMI 건전도 게이지 완벽 중앙 정렬, 예지보전 상단 fixed 플로팅 알람, (Reset) 80% : AI 알람 20% 한 줄 배치<br>  - 실시간 SPC 파형 차트 영역 확장 및 UCL~LCL 시각적 간격 대폭 확장(60% 뷰포트 배정)<br>  - 자재 피킹 단말기 2행 구조 재편 및 15인치 반응형 다단 그리드(`minmax(200px, 1fr)`) 최적화<br>  - 출하 관리 대한민국 표준 거래명세서 단독 전면화 및 라인 대시보드 원형 게이지 반응형 스케일링<br>• **Docker 컨테이너 헬스체크 및 환경변수 보안 아키텍처 고도화 (2026-08-22)**<br>  - Docker Compose MySQL & Node-RED 실시간 Healthcheck 엔진 구축<br>  - 하드코딩 패스워드 전면 제거 및 `.env` 파일 기반 환경변수 주입 보안 리팩토링 |
 
 ---
 
@@ -84,6 +87,45 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
   - 불량 판정된 기판(예: PCB #6)도 라인에서 드롭되지 않고 마지막 공정(NG 언로더 버퍼)까지 컨베이어를 타고 연속 이송.
   - 하류 설비(마운터 등)에서 `Bad Mark 스킵 (부품 실장 건너뜀)` 및 `불량 통과` 상태로 인계.
   - 설비카드 하단에 `[⚠️ PCB #6 불량(셀 #2)]` 고시인성 경고 뱃지 및 4-UP 패널 `#2 ✖` 시각화 연동.
+
+---
+
+### 5. 대시보드 설비카드 UI 전면 개선 (작업자: Antigravity / 2026-08-19)
+- **듀얼 원형 게이지 (건전도 & 정비주기) 대폭 개선**:
+  - 원 게이지를 더 크게 렌더링 (아크 반지름 최대화), 수직 막대 그래프는 약 1/4 길이 단축.
+  - `건전도` / `정비주기` 라벨 완전 삭제 → 상태값(정상/주의/경고, 양호 등)과 퍼센트를 도넛 내부에 2줄로 배치.
+  - 아크 두께 1.5배 (`strokeW: 3.6 → 5.4`), 도넛 내부 텍스트 1.3배 확대 (`13px`), 상태 색상 유지 (`healthColor` / `cycleColor`).
+  - 도넛 2개를 각 절반 영역의 정중앙에 배치하여 균형 개선.
+- **수직 막대 그래프 개선**:
+  - 막대 두께 1.5배 (`trackW: 8 → 12`), 수치/라벨 텍스트 1.3배 (`11px`).
+  - 위아래 빈 공간 최소화 (`labelH/footH: 22% → 16%`, 갭 `4px → 2px`).
+  - 막대 영역 높이를 도넛 영역의 80%로 축소 (`flex: 0.8`).
+- **Canvas 완전 밀착 렌더링 (Full-Bleed) 구현**:
+  - `.gauge-canvas`, `.bars-canvas`: `position: absolute; top:0; left:0; width:100%; height:100%` 적용.
+  - JS에서 `getBoundingClientRect()` → `canvas.offsetWidth/Height`로 전환하여 정확한 픽셀 크기 기반 렌더링.
+  - `.mac-spark-box`: `position: relative; overflow: hidden` 구조로 캔버스가 박스를 100% 꽉 채움.
+- **두 그래프 영역 flex 확장 (카드 하단까지 채움)**:
+  - `.mac-dual-spark-container`: `flex: 1; min-height: 0` → 카드 여백 공간을 꽉 채움.
+  - `.spark-gauge-box / .spark-bars-box`: `flex: 1` → 양쪽 그래프 영역이 컨테이너를 균등 분할.
+  - `.array-panel-strip`: `margin-top: auto` → 4-UP 셀 패널이 항상 카드 최하단 고정.
+  - `.machine-card`: `justify-content: space-between → flex-start` 변경으로 `flex:1` 정상 동작.
+- **좌측 색상 띠 제거**: `.spark-gauge-box` 초록 띠 / `.spark-bars-box` 파란 띠 모두 제거.
+- **카드 전체 레이아웃 컴팩트화**:
+  - `min-height`: `240px → 143px` 대폭 축소 (15인치 소형 모니터 대응).
+  - `padding`: `6px 8px → 5px 7px`.
+  - `BARCODE` 라벨 숨김 (`.mac-data-label { display: none }`), 바코드 값은 그대로 표시.
+- **4-UP 셀 가시성 대폭 향상**:
+  - `.cell-chip`: `8.5px → 10px`, `padding: 1px 4px → 2px 6px`.
+  - `wait` 상태 색상: 거의 보이지 않는 투명 흰색 → `#94a3b8` 슬레이트 (명확한 회색).
+  - `.array-strip-label`: `8px → 9.5px`, 색상 명시 (`#94a3b8`).
+  - 구분선: `dashed` → `solid`, `opacity: 8% → 12%`.
+- **카드 타이틀 & 상태 뱃지 확대**:
+  - `.mac-title`: `11.5px → 13.5px`.
+  - `.mac-status-indicator`: `9.5px → 11px`, `padding: 1px 5px → 2px 7px`.
+- **흐름 화살표 (▶) 개선**:
+  - 위치: 카드 상단 → **세로 중앙** (`align-self: center`).
+  - 색상: 흐린 회색 (`opacity: 0.4`) → `#94a3b8 opacity: 0.85` (밝고 선명하게).
+  - 크기: `11px → 13px`.
 
 ---
 
@@ -273,6 +315,330 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
   - `item` 테이블에 `company_id` 컬럼 추가 및 `get_items.php`에서 `company` 테이블 JOIN(`company_name`, `company_code`) 제공.
   - `admin.html` 품목 관리 리스트 첫 번째 컬럼에 **`거래처명`** 배치 (`<th>거래처명</th><th>품목 코드</th>...`).
   - 품목 등록/수정 모달(`#itemModal`)에 **`거래처 (발주 고객사)`** 선택 드롭다운 탑재 및 `create_item.php`, `update_item.php` 연동 완료.
+
+---
+
+## 📝 2026-08-18 작업 이력 (작업자: Antigravity)
+
+### 1. 작업지시 (WO) 관리 UI/UX 구조 정밀 리파인 (`frontend/admin.html`)
+- **부모 수주(PO) 헤더 컴팩트 재구성**:
+  - 부모 영역에 `🏢 [거래처명]` `[수주번호 (PO)]` `[D-Day 뱃지]` `📅 납기일: YYYY-MM-DD` 깔끔 배치.
+  - 부모 영역의 중복되던 총 진행률 텍스트 및 품목 카운트 텍스트 정리.
+- **자식 품목 카드 레이아웃 조정**:
+  - 자식 품목 카드는 전체 폭을 유지하되, 내부 뱃지·텍스트·버튼 콘텐츠를 원 그래프 방향으로 `100px` 안쪽 여백(`padding-left: 100px`) 적용.
+  - **SVG 원형 도넛 게이지(68px)**: 우측 끝에서 좌측으로 `100px` 이동(`margin-right: 100px`)하여 시각적 정렬 및 조화 확보.
+
+### 2. 분할 작업지시 (Lot Split) 삭제 시 부모 WO 수량 자동 복원 및 분할 취소 엔진
+- **DB 스키마 확장**: `work_order` 테이블에 `parent_wo_id` 컬럼 추가.
+- **자동 병합 복구 (`backend/controllers/WorkOrderController.php::deleteWo`)**:
+  - 분할된 WO(`parent_wo_id` 존재 또는 `-B` / `-S2` 접미사)를 삭제할 경우, 분할되었던 수량을 원본 부모 WO의 `target_qty`로 자동 가산 합산 복원.
+  - 부모 WO의 분할 비고(Remark)를 정상 상태로 자동 정리.
+  - 프론트엔드 삭제 확인창에서 분할 취소 및 부모 WO 수량 복원 내용을 사용자에게 명확히 안내.
+
+3. **고객 사급 자재 수불 및 반납 정산 시스템 (Consigned Material Return & Reconciliation System)**:
+- **1) 데이터베이스 테이블 구축 & 확장**:
+  - `material_inout`: `order_no`, `bom_id`, `supply_type = 'CONSIGNED'` 확장.
+  - `consigned_return_master`: 반납 관리번호(`RET-YYYYMMDD-XXX`), 수주번호, 거래처, 완제품 출하수량, 반납일자, 인수자, 비고.
+  - `consigned_return_detail`: 반납 상세 부품별 BOM 단위 소요량, 사급 제공량(A), 생산 사용량(B), 계산상 잔여량(A-B), 실제 반납 수량(C), 특이사항.
+- **2) 전용 백엔드 컨트롤러 & API 구축 (`ConsignedMaterialController.php`, `backend/routes/api.php`)**:
+  - `/get_consigned_summary.php`: 사급 총 입고량, 보유 거래처/수주수, 미반납 수주 건수 KPI 집계.
+  - `/get_consigned_stocks.php`: 거래처 & 수주(PO/공용 Pool)별 사급 자재 재고 대장 조회.
+  - `/get_bom_parts_for_order.php`: 수주(PO) 또는 제품 선택 시 연결된 BOM 부품 목록 및 위치 자동 로드.
+  - `/receive_consigned_materials.php`: BOM 기반 또는 엑셀 붙여넣기 사급 자재 일괄 원클릭 입고 트랜잭션.
+  - `/get_consigned_reconciliation.php`: 완제품 양품 생산 실적 연동 및 부품별 이론 소요량 vs 잔여 반납량 자동 계산.
+  - `/create_consigned_return.php`: 실사 반납 수량 기반 반납 명세서 발행 및 사급 출고(OUT) 자동 전표 마감.
+  - `/get_consigned_returns.php` & `/get_consigned_return_detail.php`: 발행 명세서 이력 및 A4 인쇄/엑셀 데이터 제공.
+- **3) 프론트엔드 전용 독립 관리 화면 구축 (`#page-consigned-material`)**:
+  - **사이드바 메뉴 분리**: `📦 사급 자재 및 반납`과 `🏭 자사 보유 자재 관리`로 명확히 분리.
+  - **4대 서브 탭 워크플로우**:
+    1. **📋 사급 재고 / 수불 대장**: 고객사 & 수주별 그룹화 카드, 총입고/출고/현재고 실시간 집계.
+    2. **📥 수주 BOM 원클릭 입고**: 수주 선택 시 BOM 부품 자동 로드, 발주소요량 기반 추천 수량 자동 채우기, 엑셀 일괄 붙여넣기(`[품번 \t 수량]`), 수동 행 추가 지원.
+    3. **⚖️ 수주별 사급 수불 & 반납 정산**: 양품 생산 실적 기반 `[제공량(A) - 사용량(B) = 잔여량]` 계산 및 로스 분쟁 방지를 위한 실사 반납 수량(C) 유연 수정, 원클릭 정산서 발행.
+    4. **📜 반납 완료 명세서 이력 & A4 인쇄 서식**: 완제품 납품 시 동봉 가능한 대한민국 표준 **[사급 자재 반납 명세서]** A4 인쇄 전용 CSS(`@media print`) 및 엑셀(UTF-8 BOM CSV) 다운로드 완비.
+
+---
+
+## 📝 2026-08-19 작업 이력 (작업자: Antigravity)
+
+### 1. 수주 (PO) 관리 우측 상세 화면 디자인 전면 표준화 (`#page-order`)
+- **상단 메타 바 제거 & 헤더 일체화**: 상단에 중복되던 거래처/수주번호/금액 메타 바를 없애고, `[✏️ 수주 수정]` 버튼을 테이블 thead 우측(`비고/메모` 컬럼 헤더)으로 이동.
+- **컬럼 순서 및 폰트 표준화**: `NO` ➔ `품목명` ➔ `WO` ➔ `수주수량` ➔ `단가` ➔ `공급가액` ➔ `납기일` ➔ `비고/메모`.
+- **WO 코드 텍스트화**: 기존 부피가 큰 알약 뱃지를 슬림한 JetBrains Mono 텍스트 코드로 전환.
+- **WO와 수주수량 사이 50px 여유 공간 확보** 및 테이블 좌우 외곽 폭 확장.
+- **화면 맨 하단(Bottom) 고정 Summary 스트립 적용**:
+  - 화면 최하단 바닥에 묵직하게 고정(`flex-shrink: 0`).
+  - 상단 데이터 컬럼과 **1:1 칼같은 수직 자릿수 일치** 적용.
+  - 호버 이벤트 제거로 안정적인 시각적 무게감 제공.
+
+### 2. 품질 검사 기준 화면 레이아웃 & 70% 3분할 밸런스 (`#page-quality-std`)
+- **상단 헤더 & 4대 KPI 스트립 통일**:
+  - 다른 모든 메뉴와 100% 동일한 규격(`page-header`, `kpi-strip`, `filter-controls-bar`)으로 표준화 복원.
+  - `📋 총 관리 기준`, `✅ 활성 기준`, `🏭 대상 공정수`, `📐 적용 표준 규격 (IPC-A-610 Class 3)`.
+- **중앙 집중형 테이블 가로 너비 확장 (`max-width: 1240px`)**:
+  - 좌우 여백을 균형 있게 부여하여 화면 중앙에 집중된 안정적 레이아웃 구축.
+- **3대 핵심 텍스트 컬럼 70% 균등 3분할 (`1:1:1`)**:
+  - **`대상 공정 (23.33%)`**, **`검사 항목 (23.33%)`**, **`판정 기준값 (23.34%)`**이 70% 너비를 균등하게 분할 차지.
+  - 긴 규격 명칭도 2단 꺾임 없이 시원하게 한 줄(`white-space: nowrap`)로 표시.
+- **테이블 헤더 고정 & 바디 독립 상하 스크롤**:
+  - `<thead>`를 상단에 고정(`position: sticky; top: 0;`)하고, 내부 데이터 바디(`<tbody>`) 행들만 부드럽게 상하 스크롤되도록 구현.
+
+### 3. 품목 및 BOM 관리 우측 부품 명세 테이블 개편 (`#page-bom`)
+- **컬럼 순서 및 라벨 재정립**:
+  - `NO` ➔ `파트번호` ➔ `파트명` ➔ `포인트`('소요포인트'에서 라벨 변경) ➔ `제공수량` ➔ `실장위치` ➔ `피더 슬롯` ➔ `대치품` ➔ `관리` (3개 버튼: `[NC/복원]`, `[✏️ 수정]`, `[🗑️ 삭제]`).
+- **피더 슬롯 실시간 연동 지원**:
+  - SMT 마운터 셋업 시 `feeder_slot` 데이터와 자동 매핑되어 `#12` 등의 코드로 즉시 표시.
+- **컬럼 간격 및 너비 최적화**:
+  - `포인트(55px)`와 `제공수량(75px)`을 좌측으로 밀착시키고, `실장위치(195px, 1.5배)` 너비를 여유롭게 확보.
+- **하단 메타정보 최하단 고정 & 좌측 정렬 (`left-align`)**:
+  - 화면 맨 아래 바닥에 고정 배치하고, `총 부품수`, `실장부품`, `NC(미실장)`, `총 실장 점수`, `총 제공수량`을 좌측부터 나란히 일렬 정렬.
+
+### 4. 사급 자재 및 반납 화면 UI/UX 정돈 (`#page-consigned-material`)
+- **메뉴명 및 타이틀 간결화**: `고객 사급 자재 및 반납` ➔ **`사급 자재 및 반납`**.
+- **'업체 공용 사급 풀' 제외 및 삭제**: 수주 번호가 없는 공용 풀 그룹을 제외하고, 실제 수주 기반 사급 자재 체계로 일원화.
+- **상단 툴바 및 불필요 버튼 정리**:
+  - 사급 재고 수불 우측 패널의 `[⚖️ 반납 정산하기]` 버튼 및 상단 업체명/수주번호 툴바 영역 삭제.
+- **수주 BOM 입고 뷰 최적화**:
+  - 입고 작업에 불필요한 `실장 위치` 컬럼 삭제.
+  - `입고 수량 *` 컬럼 인풋 너비 최적화 및 하단 서머리 좌측 정렬 적용.
+
+### 5. 작업지시관리 및 생산계획 공정 진행 단계 2분할 (SMT 50% + DIP 50%) 개편
+- **배경**: 기존 1~6단일 선형 진행 방식에서 실제 SMT 표면실장 라인과 DIP 수삽/검사 라인이 각각 독립된 완결 공정(자체 100%, 종합 50% 비중)으로 분리 관리되어야 하는 현장 프로세스 반영.
+- **진행률 계산 수식**:
+  - `SMT 실적 & 진행률 (smtPct)`: Laser 각인 ➔ SPI ➔ 고속 마운터 ➔ 이형 마운터 ➔ 리플로우 완료 시 자체 100% (전체의 50% 기여).
+  - `DIP 실적 & 진행률 (dipPct)`: 수삽 AOI ➔ 웨이브 솔더링 ➔ ICT 검사 ➔ 방습 코팅 ➔ 기능검사 완료 시 자체 100% (전체의 50% 기여).
+  - `종합 진행률 (totalPct)`: `Math.min(100, Math.round((smtPct * 0.5) + (dipPct * 0.5)))`.
+- **UI 시각화 개편**:
+  - 상단 2분할 종합 진행 바: SMT(50%, 하늘색/청색) + DIP(50%, 보라/에메랄드).
+  - Step 1: `[SMT 50%] SMT 표면실장 공정 (각인 ➔ 리플로우 100%)` 5단계 프로세스 플로우.
+  - Step 2: `[DIP 50%] DIP 수삽 & 후공정 검사 (수삽 ➔ 최종완료 100%)` 5단계 프로세스 플로우.
+  - KPI 4대 카드: `목표 생산량`, `SMT 실적 (50% 비중)`, `DIP 실적 (50% 비중)`, `전체 종합 진행률`.
+  - 작업지시관리(`admin.html#page-workorders`) 및 생산계획(`admin.html#page-plan`) 동시 적용 완료.
+
+### 6. 자삽 완료(SMT_DONE) 자동 판정 및 수삽(DIP) 가동 제어
+- **배경**: SMT 공정 완료 후 `[▶ 수삽(DIP) 시작]` 가동 제어 버튼의 위치 및 역할 분담 정립.
+- **화면별 역할 분담**:
+  - **현장 생산 대시보드 (`dashboard.html`)**: 실제 라인 가동 제어 화면으로, 자삽 완료(`SMT_DONE`) 시 **`[▶ 수삽(DIP) 시작]`** 버튼 노출 및 가동 제어 담당.
+  - **관리자 작업지시관리/생산계획 (`admin.html`)**: 계획/관리 화면이므로 가동 제어 버튼은 두지 않고, 공정 진행률(SMT 50% + DIP 50%) 및 상태 뱃지만 명확히 모니터링하도록 정리.
+- **백엔드 자동 동기화**:
+  - SMT 바코드 실적이 목표 수량에 도달하면 `status = 'SMT_DONE'`으로 자동 상태 동기화.
+
+### 9. 자재 스플라이싱(Material Splicing) 포카요케 검증 시스템 & 1-클릭 카드 리필
+- **개념**: SMT 라인 가동 중 특정 슬롯의 릴 잔량이 소진 임박(10% 이하 등)했을 때, 장비를 멈추지 않고 신규 릴을 테이프로 이어 붙여 연속 생산하는 작업.
+- **1-클릭 자재카드 스플라이싱 (UI/UX 간소화)**:
+  - 릴 잔량이 10% 이하(위험)로 떨어진 **붉은색 슬롯 카드를 클릭(터치)하기만 하면**, 신규 릴이 자동으로 스캔 및 포카요케 검증되어 **잔량이 즉시 100% 완충(리필)**되는 직관적인 인터랙션 구현.
+  - 슬롯별 스플라이싱 시점 기준 오프셋(`slotSpliceOffset`)을 적용하여, 스플라이싱된 슬롯의 잔량 게이지가 즉시 100% 안전(초록색)으로 전환.
+- **실제 바코드 스캐너 직독 연동 (Hands-free)**:
+  - 마우스 클릭 없이 무선 바코드 스캐너로 신규 릴을 찍어도 품번 자동 매칭 및 스플라이싱 완료.
+- **소요량 충족 여부 판정 (총 소요수량 vs 제공수량 비교)**:
+  - $\text{총 소요수량} = \text{포인트(개소수)} \times \text{목표 생산수량}$
+  - $\text{현재 릴 용량} \ge \text{총 소요수량}$ : 잔량이 5% 이하(빨간색 위험 게이지 유지)로 떨어지더라도, 이번 작업지시 수량을 모두 생산하기에 충분하므로 **`[소요량 충족]`** (리필 불필요) 뱃지 안내.
+  - $\text{현재 릴 용량} < \text{총 소요수량}$ : 생산 도중 자재가 바닥나 라인이 멈추므로 **`[🚨 리필 필수]`** 경고 표시.
+- **스플라이싱 시 표준 신품 릴 수량(Full Reel SPQ: 4,000 EA) 완충**:
+  - 스플라이싱 리필 시 최초의 소량 자투리 제공수량(예: 174개, 96개)으로 제한되지 않고, **신규 표준 정규 릴 규격 포장 수량(4,000 EA)**으로 완충되어 남은 생산을 여유 있게 마칠 수 있도록 현실화.
+- **테스트용 시뮬레이션 버튼**:
+  - `[🚨 릴 잔량 5%로 소진 (테스트)]` 버튼으로 소진 임박 상태를 즉시 재현 후 카드 클릭 리필 테스트 가능.
+
+---
+
+## 📝 2026-08-20 작업 이력 (작업자: Antigravity)
+
+### 1. 수주 (PO) 관리 우측 상세 헤더 UI 정돈 (`frontend/admin.html`)
+- **우측 상단 상태 뱃지 정리**: 수주 상세 패널 헤더 툴바에서 불필요한 상태 뱃지를 제거하여 시각적 노이즈를 줄이고 깔끔한 레이아웃 제공.
+
+### 2. 피더 슬롯 문자열 파싱 & 다중 슬롯 무결성 강화 (Integer Cast 버그 원천 해결)
+- **발생 원인**: 수주(PO)에서 `[⚡ WO 발행]` 시 피더 슬롯 번호(`feeder_slot`)를 `(int)`로 정수 변환하여 `C-01`, `TR-01`, `O-05` 등 영문 접두어가 붙은 슬롯명이 모두 `0`으로 처리됨 $\rightarrow$ MySQL `feeder_setup.uk_wo_slot` 중복 키 에러(Duplicate entry '...-0') 발생.
+- **조치 사항**:
+  - `backend/controllers/OrderController.php`, `BomController.php`: 문자열 슬롯명 원본(`C-01`, `C-02` 등)을 그대로 보존하여 등록하도록 수정.
+  - 콤마(`,`)로 구분된 복수 슬롯(예: `C-01, C-02`) 자동 분할 등록 지원.
+  - `ON DUPLICATE KEY UPDATE` 구문을 보강하여 동일 슬롯 재등록 시 안전하게 갱신되도록 처리.
+
+### 3. 사급 자재 입고 초고속 키보드 전용 워크플로우 (Auto-Select & Tab Loop)
+- **입고수량 인풋 자동 전체 선택 (`onfocus="this.select()"`)**:
+  - 입력창에 마우스 클릭 또는 탭으로 포커스 진입 시 기존 입력값이 전체 드래그 선택되어, 백스페이스로 지울 필요 없이 숫자 키를 누르면 즉시 덮어쓰기 수정 가능.
+- **전용 탭(Tab) 순환 루프 (`handleConsignedRcvKeyNav`)**:
+  - 다른 불필요한 요소로 포커스가 빠져나가지 않고 `[입고수량] ➔ [✕ 삭제] ➔ 바로 아래 행 [입고수량] ➔ [✕ 삭제] ➔ ...` 순서로만 정밀 이동.
+  - 테이블 맨 마지막 행의 `[✕ 삭제]` 버튼에서 탭을 누르면 다시 맨 첫 번째 행의 `[입고수량]` 입력창으로 텍스트 전체 선택 상태로 복귀하여 무한 순환.
+
+### 4. 사급 자재 및 반납 서브 탭 순서 최적화
+- **실무 순서에 맞춘 탭 재배치**:
+  - `[📥 수주 BOM 입고]`를 첫 번째 기본 탭(`active`)으로 전진 배치.
+  - `[📋 사급 재고 수불]`을 `[📜 반납 명세서 이력]` 뒤인 마지막 서브 탭으로 이동.
+  - 화면 진입 시 입고 업무를 즉시 처리할 수 있도록 동선 단축.
+
+### 5. 수삽(DIP) 시작 시 라인 2 자동 스크롤 연동 (`frontend/dashboard.html`)
+- **자동 포커싱**: SMT 공정 완료 후 `[▶ 수삽(DIP) 시작]` 버튼 클릭 시, 화면이 Line 2 (DIP) 패널(`#linePanel-DIP`)로 부드럽게 자동 스크롤(`scrollIntoView({ behavior: 'smooth' })`)되어 수삽 라인 설비(DIP_AOI ~ FCT)의 실시간 가동 모습을 작업자가 바로 확인할 수 있도록 편의성 강화.
+
+### 6. 생산 계획(Production Planning) 완료 작업 대상 [고객사 납품 일정 관리] 구축
+- **DB 스키마 확장**: `work_order` 테이블에 `delivery_date DATE NULL COMMENT '고객사 납품(출하) 예정일'` 컬럼 추가.
+- **화면 및 버튼 역할 분담**:
+  - 완료(`DONE`)된 작업지시를 선택하면 기존의 불필요한 `[✏️ 일정 수정]` 버튼을 숨기고 **`[🚚 납품(출하) 일정 지정 / 변경]`** 버튼 제공.
+  - 우측 상세 패널에 **`🚚 고객사 납품(출하) 예정일: YYYY-MM-DD`** 명세 배너 표시.
+- **생산 계획 달력(Calendar) 분리 시각화**:
+  - **생산 진행/대기 건**: `⚡ N건` (파란색 뱃지) $\rightarrow$ **생산 목표 납기일(`due_date`)** 기준 표시.
+  - **완료된 납품 예정 건**: `🚚 N건` (에메랄드 녹색 뱃지) $\rightarrow$ **고객사 납품 예정일(`delivery_date`)** 기준 표시.
+  - 일자별 상세 패널에서도 생산 목표 실적과 납품 일정이 명확히 분리되어 표시.
+- **백엔드 API 연동 (`update_delivery_date.php` / `WorkOrderController::updateDeliveryDate`)**:
+  - 작업지시의 `delivery_date` 등록/수정 시 `shipment` 출하 대기 테이블과 자동 연동 및 감사 로그 기록.
+
+### 7. 2-클릭 초고속 달력 납품 일정 지정 모드 (Quick Calendar Assign Mode)
+- **직관적 캘린더 인터랙션**:
+  1. 완료된 작업지시에서 **`[🚚 달력에서 납품일 지정]`** 버튼 클릭.
+  2. 달력 상단에 에메랄드 가이드 바 활성화: `👉 원하는 납품 날짜 칸을 달력에서 클릭하세요!`.
+  3. 달력에서 원하는 날짜(예: 8월 27일)를 마우스로 '콕' 클릭.
+  4. 별도의 팝업이나 저장 버튼 없이 **0.1초 만에 납품 예정일이 즉시 등록**되고 해당 날짜 칸에 `🚚 뱃지` 즉시 생성.
+- **안전 및 편의 장치**:
+  - 상단 `[✕ 취소]` 버튼 또는 키보드 `ESC` 키로 언제든지 지정 모드 해제 가능.
+  - 모달 팝업 형태의 `[⚙️ 상세설정]`을 통해 메모 입력 및 일정 해제(미정 처리)도 지원.
+
+### 8. 피더 슬롯 DB 컬럼 문자열(`VARCHAR`) 마이그레이션 및 타입 불일치 에러 완벽 해결
+- **문제 원인**: BOM 상세 부품에 비주얼 피더 슬롯(`C-01`, `O-01`, `TR-01` 등)을 배정할 때, MySQL `bom_detail.feeder_slot` 및 `feeder_setup.slot_no` 컬럼이 `INT`로 선언되어 있어 `SQLSTATE[22007]: Truncated incorrect INTEGER value: 'C-01'` 에러가 발생함.
+- **해결 조치**:
+  - DB 스키마 마이그레이션 적용:
+    - `bom_detail.feeder_slot`: `INT` $\rightarrow$ `VARCHAR(100)` (다중 슬롯 `C-01, C-02` 등 지원)
+    - `feeder_setup.slot_no`: `INT` $\rightarrow$ `VARCHAR(50)`
+  - `database/init/02_DB_Schema.sql` 최신 스키마 동기화.
+  - `backend/controllers/FeederController.php`: 슬롯 번호 파싱 시 `(int)` 강제 형변환 제거 및 BOM 피더 슬롯 자동 승계 로직 연동.
+
+### 9. 자재 피킹(Kitting) 단말기 [수주 BOM 사급 기입고량] 실시간 연동 및 카드 표기 최적화
+- **문제 현상**:
+  - `[📥 수주 BOM 입고]`에서 실제 입고 수량(예: 10,000 EA, 100 EA 등)을 등록했음에도, `kitting.html` 단말기 카드의 수량이 기판 1장당 소요 포인트(1~4 EA)로 작게 표시되어 소요량 충족 여부가 왜곡되는 현상 발생.
+- **개선 및 해결 조치**:
+  - **백엔드 사급 입고 연계 (`ConsignedMaterialController::receiveBatch`)**:
+    - 수주 BOM 입고 시 작업지시(`wo_id`) 및 `bom_id`를 자동 매핑하고 `bom_detail.provide_qty`를 실제 입고 수량으로 실시간 동기화.
+  - **피더 셋업 조회 API (`FeederController::getFeederSetup`)**:
+    - `material_inout` 테이블에서 해당 작업지시/수주번호/거래처의 실제 사급 기입고량 합계(`inbound_qty`, `provide_qty`)를 우선 조회하도록 쿼리 개편.
+  - **자재 피킹 UI (`frontend/kitting.html`)**:
+    - **상단 1행**: `Slot #1`, `4P (총 120 EA 소요)`, `부품번호` 명확히 표기.
+    - **스캔 대기 상태 (2행)**: `기입고: 10,000 EA` (또는 `소요: 120 EA`)를 사전 안내하여 피킹 편의 극대화.
+    - **스캔 검증 완료 (2행)**: 실제 기입고량(`10,000 EA`)을 기준 용량으로 삼아 실시간 생산 소진 잔량(EA) 및 잔량률(%) 계산, 총 소요량 이상일 경우 **`[소요량 충족]`** 뱃지 정상 부여.
+
+### 10. 라인 대시보드 [▶ 자삽 시작] 가동 트리거 및 Node-RED 시뮬레이터 연동 복구
+- **문제 현상**:
+  - 라인 대시보드(`dashboard.html`)에서 `[▶ 자삽 시작]` 버튼을 클릭했을 때 설비 라인 시뮬레이션 및 데이터 파이프라인이 구동되지 않는 현상 발생.
+- **원인 분석**:
+  - Docker 컨테이너 재부팅 후 Node-RED(`localhost:1881`)에 SMT/DIP 설비 시뮬레이션 플로우가 배포되지 않아 빈 플로우 상태로 대기 중이었으며, 이에 따라 백엔드의 `/start-sim` 트리거 호출이 `404 (Cannot POST /start-sim)`를 반환함.
+- **개선 및 해결 조치**:
+  - **시뮬레이션 플로우 즉시 배포**: `python3 deploy_nodered_docker.py` 실행으로 SMT/DIP 10대 설비 파이프라인 및 PdM 텔레메트리 연동 플로우를 Node-RED에 정상 배포 완료.
+  - **백엔드 자가 치유(Self-Healing) 엔진 탑재 (`WorkOrderController::triggerNodeRed`)**:
+    - Node-RED 트리거 요청 시 HTTP 상태 코드를 감지하여, 404 발생 시 자동으로 플로우 배포 스크립트를 즉시 실행하고 재시도하는 자가 복구 메커니즘 구축.
+    - `curl` 확장 대신 PHP 표준 내장 스트림(`stream_context_create`, `file_get_contents`) 통신으로 전환하여 무결성 보장.
+
+### 11. 생산계획 [완료된 품목 및 납품 일정] 조회/표시 복구 및 DB 컬럼 마이그레이션
+- **문제 현상**:
+  - 생산계획(`admin.html#page-plan`) 화면에서 완료된 작업지시/품목이 목록 및 달력에 나타나지 않는 현상 발생.
+- **원인 분석**:
+  - `work_order` 테이블에 `delivery_date` (납품 예정일) 컬럼이 누락되어 있어, `get_production_plan.php` 실행 시 MySQL 1054 (`Unknown column 'delivery_date'`) 에러가 발생하여 API가 실패함.
+- **개선 및 해결 조치**:
+  - **DB 컬럼 추가**: `ALTER TABLE work_order ADD COLUMN delivery_date DATE DEFAULT NULL AFTER due_date;` 적용 완료.
+  - **백엔드 조회 쿼리 포괄성 강화 (`WorkOrderController::getProductionPlan`)**:
+    - 생산 목표 납기일(`due_date`), 고객사 납품 예정일(`delivery_date`), 생산 완료일(`completed_at`), 납기 미지정 건을 모두 포함하여 해당 월의 생산/납품 계획이 누락 없이 정상 집계되도록 쿼리 최적화.
+  - **생산계획 UI 연동**:
+    - **목록 뷰**: `전체 상태` 또는 `완료` 필터 선택 시 완료된 품목(`✅ 완료(100%)` 또는 `🚚 납품예정`) 정상 노출 및 상세 진척률/KPI 완벽 관제.
+    - **달력 뷰**: 납품 예정일(또는 납기일) 칸에 `🚚` / `✅` 뱃지 및 일자별 상세 내역 실시간 연동.
+
+---
+
+## 📝 2026-08-21 작업 이력 (작업자: Antigravity)
+
+### 1. 출하 관리 (`admin.html#page-shipment`) 우측 상세 패널 정리 및 거래명세서 단독 전면화
+- **불필요한 중복 요소 제거**:
+  - 우측 상세 패널 상단 정보 뱃지(업체명, 연계작업지시, 출하일, 명세서 미리보기/인쇄 버튼) 및 3대 KPI 카드 제거.
+  - 화면 맨 아래 중복 요약 띠(거래처, 연계WO, 출하일, 총 출하수량 등) 완전 삭제.
+- **거래명세서 단독 전면 렌더링**:
+  - 상단 툴바에 상태 뱃지와 `📅 출하완료일: YYYY-MM-DD`만 깔끔하게 남기고, 우측 전체 패널을 대한민국 표준 규격 **[거래명세서 서식]**으로 시원하게 단독 배치하여 인쇄 및 가독성 극대화.
+
+### 2. 자재 피킹 및 피더 셋업 단말기 (`frontend/kitting.html`, `css/kitting.css`) 2행 구조 재편 및 15인치 반응형 다단 그리드
+- **자재 카드 정보 간소화 & 가독성 향상**:
+  - 카드 헤더에서 `(총 N EA)` 및 `%` 퍼센트 표기 제거 (`수량: N EA`로 직관적 정리).
+  - 카드 하단 `REEL-xxxxxx` 뱃지 및 스캔 대기 텍스트 제거 (바코드 검증 성공 시 배경색이 에메랄드 녹색으로 즉시 전환되므로 시각적 군더더기 제거).
+- **품명 짤림 방지 2행 전용 카드 구조 개편**:
+  - **1행 (상단 좌우 분할)**: `[Slot #] [Point NP]` (좌측) + `수량: N EA` (우측 정렬).
+  - **2행 (하단 전폭)**: `Part No (Part Name)` 긴 품명도 2줄로 시원하게 전체 표기.
+- **15인치 노트북 / 태블릿 반응형 다단 그리드**:
+  - 카드 최소 폭을 `300px → 200px (모바일 190px)`로 축소 및 `minmax(200px, 1fr)` 적용하여, 15인치 화면에서도 한 줄에 3~6개 카드가 빽빽하고 시원하게 노출되도록 최적화.
+  - `ReferenceError: escHtml is not defined` 예외 방지 헬퍼 함수 선언.
+
+### 3. 라인 대시보드 (`frontend/dashboard.html`, `js/dashboard.js`) 원형 게이지 반응형 스케일링
+- **`drawRadialGauges()` 동적 스케일링 엔진 구축**:
+  - 브라우저 창 크기 및 캔버스 크기 변동 시, 원형 게이지 아크 반지름, 선 두께, 내부 상태 텍스트 폰트 크기(`innerR * 0.44`) 및 수치 폰트 크기(`innerR * 0.62`)를 캔버스 내부 반지름에 100% 비례하도록 동적 계산하여 글자 넘침/겹침 현상 원천 해결.
+
+### 4. 설비 HMI 화면 (`frontend/machine.html`, `css/machine.css`, `js/machine.js`) 고도화
+- **건전도 원형 게이지 중심 정렬 완벽 보정**:
+  - 캔버스 드로잉 기준점(`cx`, `cy`)과 CSS `position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;`를 1:1로 일치시켜 수치(`98`)와 텍스트가 정확한 수학적 정중앙에 위치하도록 수정.
+- **예지보전(PdM) 진단 코멘트 상단 `fixed` 플로팅 알람 전환**:
+  - 좌측 하단을 차지하던 고정 코멘트 박스를 제거하여 수직 공간을 확보하고, 화면 최상단 `position: fixed` 플로팅 알람 배너로 개편 (상태 변경 및 경고 시 자동 팝업, `[확인 ✕]` 원클릭 닫기 지원).
+- **좌측 하단 `(Reset)` 80% : `AI 진단 알람 확인` 20% 한 줄 컴팩트 배치**:
+  - 주 작업 버튼인 `[🛠️ 필터 교체 완료 (Reset)]`(80%)과 상단 알람을 언제든 다시 띄울 수 있는 `[🤖 ●]`(20%)을 한 줄로 병합하여 세로 공간 대폭 절약.
+- **실시간 SPC 파형 차트 영역 풀-확장 & 폰트 대폭 확대**:
+  - 캔버스 높이를 `165px`로 대폭 확장하고, 네온 블루 입체 그라데이션 풀 필 및 굵은 실시간 트렌드 선(`2.5px`) 적용.
+  - `UCL(상한선)` / `LCL(하한선)` / `CL(중심선)` 라벨을 `bold 12px` 굵은 글꼴로 확대.
+  - 실시간 측정값 플로팅 뱃지(`bold 13px`)를 꼭짓점 상단에 실시간 추종 렌더링.
+- **UCL ~ LCL 시각적 간격 대폭 확장 (Y축 동적 스케일링)**:
+  - 센서의 전체 물리 범위 대신 `UCL ~ LCL` 관리 영역이 차트 전체 높이의 약 60%를 넉넉하게 차지하도록 Y축 뷰포트를 자동 계산하여, 좁은 간격으로 뭉치는 현상을 해소하고 넓고 시원한 관리도 뷰 제공.
+
+### 5. 전체 화면 최상단 공통 헤더 오토 하이드 (Auto-Hide / Hover-to-Reveal) 대혁신
+- **공통 헤더 상단 숨김 & 마우스 오버 슬라이드 다운 (`common-header.css`, `header.js`)**:
+  - 최상단 공통 네비게이션/로그아웃 바를 `position: fixed` 오토 하이드로 전환하고, 마우스를 화면 상단 끝(Y ≤ 14px)으로 가져가면 반투명 블러 백드롭과 함께 부드럽게 슬라이드 다운(`hover-to-reveal`)되도록 구축.
+  - 상단 중앙에 미니멀 네온 인디케이터 핸들 바 탑재.
+- **15인치 노트북 / 소형 모니터 / 태블릿 100% No-Scroll Viewport 달성**:
+  - 상단바가 차지하던 50px 수직 공간을 즉시 확보하여, `machine.html` (`calc(100vh - 44px)`), `dashboard.html` (`100vh`), `kitting.html` (`100vh`), `admin.html` 등 **모든 화면의 하단 잘림(Clipping) 및 상·하 스크롤바를 100% 완전 제거**.
+  - 최상단 베젤과의 균형을 위해 각 화면 상단에 자연스러운 여백(Top Margin/Padding) 최적화 완료.
+
+---
+
+### 10. AWS 클라우드 인프라 구축, 무중단 CI/CD 자동화 및 Cloudflare HTTPS 연동 (작업일: 2026-08-22)
+
+#### 1) 클라우드 인프라 프로비저닝 & 아키텍처 구축 (AWS EC2 + AWS RDS)
+- **AWS EC2 (Ubuntu 24.04 LTS, x86_64, `3.26.235.189`)**:
+  - 고성능 웹 서버 **Nginx 1.24** + **PHP 8.3-FPM** FastCGI 엔진 구축.
+  - SPA 프론트엔드 정적 파일 서빙과 백엔드 단일 프론트 컨트롤러(`/backend/index.php`) 라우팅 룰 완비.
+  - Nginx 순환 리다이렉트(Internal redirection cycle) 에러 원천 차단 및 FastCGI 파라미터 최적화.
+- **AWS RDS (MySQL 8.0 `smt-mes-db`)**:
+  - AWS RDS 인스턴스 프로비저닝 및 EC2와의 동일 VPC 내부 통신 보안 그룹(Security Group 3306 포트) 상호 인바운드 연동.
+  - 12개 관리 모듈 및 실시간 설비 텔레메트리 전체 DDL 스키마(`02_DB_Schema.sql`) 마이그레이션 완료.
+- **실시간 설비 연동 엔진 (Node-RED + PM2)**:
+  - Node.js 20.x 런타임 및 Node-RED 설치, 실시간 공정 플로우(`flows.json`) 탑재.
+  - **PM2 프로세스 매니저** 데몬 등록(`pm2 start node-red --name smt-nodered -- -p 1881`) 및 `systemd` 자동 부팅(`pm2 startup`) 등록으로 24/365 무중단 상시 가동 환경 완성.
+
+#### 2) 보안 & 환경설정 아키텍처 리팩토링
+- **하드코딩 패스워드 전면 제거 & `.env` 주입 패턴 확립**:
+  - `Database.php`, `config.php`를 리팩토링하여 로컬 및 프로덕션 환경의 `.env` 파일을 최우선 자동 파싱하도록 개편.
+  - 포트 기본값을 Docker 매핑 포트(3307)에서 표준 RDS 포트(3306)로 안전 폴백 처리.
+- **Git 보안 추적 제거 & `.gitignore` 보완**:
+  - Git에 기 추적되던 `.env.local`을 `git rm --cached`로 인덱스에서 안전 분리 및 `.gitignore`에 `.env`, `.env.local`, `node_modules/` 등록.
+
+#### 3) Docker 컨테이너 실시간 헬스체크(Healthcheck) 엔진 도입
+- `docker-compose.yml` 내 DB 서비스에 `mysqladmin ping` 기반 헬스체크(10s 간격, 5회 재시도, 30s 유예) 장착.
+- Node-RED 서비스에 `curl -f http://localhost:1880/flows` 헬스체크 및 `depends_on: db: condition: service_healthy` 연동으로 DB 완전 기동 후 시뮬레이터가 동작하도록 컨테이너 오케스트레이션 보강.
+
+#### 4) GitHub Actions 기반 무중단 CI/CD 자동 배포 파이프라인 완성
+- **배포 워크플로 구축 (`.github/workflows/deploy.yml`)**:
+  - `main` 브랜치에 코드가 푸시되면 GitHub Actions Runner가 즉시 트리거되어 EC2 서버로 보안 SSH 접속.
+  - 최신 코드 `git pull origin main` 수행 후 `php8.3-fpm` 및 `nginx` 서비스를 핫-리로드하여 개발자가 별도 서버 접속 없이도 실시간 변경사항이 라이브 서버에 무중단 자동 반영되도록 파이프라인 완성.
+- **배포 환경 안정화**:
+  - EC2 내 `safe.directory` 설정 및 `/etc/sudoers.d/next-mes-deploy`를 통한 무암호 `systemctl reload` 권한 부여로 배포 자동화의 완전성 확보.
+
+#### 5) Cloudflare 커스텀 도메인 연결 & Full SSL (Let's Encrypt HTTPS) 완비
+- **도메인 및 엣지 프록시**:
+  - 커스텀 도메인 **`mes.memyself.shop`**을 Cloudflare DNS A 레코드에 등록하고 프록시(🟠 Proxied) 모드로 연결하여 글로벌 CDN 캐싱 및 L3/L4/L7 DDoS 방어막 구축.
+- **정식 SSL/TLS 인증서 발급**:
+  - **Certbot (Let's Encrypt)**을 통해 `mes.memyself.shop`에 대한 유효한 공식 SSL 인증서 발급 및 Nginx 자동 갱신 데몬(`certbot.timer`) 등록.
+  - Cloudflare 암호화 모드를 **Full (Strict)**로 구성하여 브라우저 ↔ Cloudflare ↔ AWS EC2 전 구간 HTTP/2 및 종단간(End-to-End) 암호화 통신 완성.
+
+#### 6) 프로덕션 라우팅 & 설비 HMI 누락 링크 완벽 정상화
+- 루트 디렉토리 내 `machine.html`, `ceo.html`, `bom-upload.html`, `pop.html` 심볼릭 링크 일괄 보완 및 `nginx.conf.sample` 프로덕션 최신화.
+- 탑바의 **`🔧 설비 HMI`** 클릭 시 10대 설비별 1:1 진단 콘솔과 3색 타워램프, 4대 물리량 SPC 파형 차트가 정상 서빙되도록 완벽 조치.
+
+---
+
+## 🚀 향후 로드맵 (Next Milestones)
+1. **모바일 반응형 POP 단말기 UI 고도화**:
+   - 현장 작업자용 태블릿 및 모바일 바코드 스캔 전용 경량화 POP 모듈 추가.
+2. **다중 라인(Multi-Line) 확장 지원**:
+   - SMT 1호 라인 외 2호, 3호 라인 병렬 관제 및 라인 간 부하 분산 KPI 분석 고도화.
+3. **스마트 팩토리 이상 감지 머신러닝(AI/ML) 모델 연동**:
+   - Node-RED 설비 물리 센서 데이터를 시계열 DB(InfluxDB)와 연계하여 리플로우 오븐 온도 이상 및 마운터 노즐 막힘 사전 예측 AI 알고리즘 도입.
+
 
 
 

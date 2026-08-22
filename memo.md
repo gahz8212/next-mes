@@ -2,13 +2,16 @@
 
 ## 📌 시스템 개요
 SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
+- **Production URL**: `https://mes.memyself.shop` (Cloudflare CDN / DDoS 방어 / Let's Encrypt Full SSL)
 - **Frontend**: 
   - `frontend/admin.html` (관리자 12대 모듈 통합 대시보드)
   - `frontend/dashboard.html` (라인 종합 관제 콘솔 - 머신 실시간 3D 보더 빔 & 4-UP 어레이 셀 모니터링)
   - `frontend/kitting.html` (자재 피킹 및 피더 셋업 단말기 - 좌우 2분할 & 원형 도넛 게이지 & 3열 멀티 그리드)
+  - `frontend/machine.html` (설비 전용 1:1 HMI 진단 터미널 - 3색 타워램프 & 실시간 SPC 4-센서 파형도)
   - `frontend/login.html` (역할별 로그인 및 라우팅)
-- **Backend**: PHP 8.x + MySQL 8.0 (Docker `smt_mes_db`, host port 3307) + PHP 내장 웹서버 (`0.0.0.0:8080`)
-- **설비 시뮬레이터**: 로컬 Node-RED (`localhost:1880`) ➔ `/start-sim` (SMT) & `/start-dip-sim` (DIP)
+- **Backend & Web Server**: Nginx 1.24 (Let's Encrypt SSL) + PHP 8.3-FPM + AWS RDS (MySQL 8.0 `smt-mes-db`)
+- **설비 시뮬레이터**: AWS EC2 내 Node-RED (PM2 상시 데몬 관리, 포트 1881) ➔ `/start-sim` (SMT) & `/start-dip-sim` (DIP)
+- **CI/CD 파이프라인**: GitHub Actions (`deploy.yml`) ➔ `main` 푸시 시 EC2 자동 무중단 배포 및 서비스 핫-리로드
 - **인증**: Role 기반 권한 관리 (`admin` / `manager` / `worker`)
 - **공정**: 자삽(SMT: LASER ➔ SPI ➔ MOUNTER ➔ REFLOW) ➔ 수삽(DIP: DIP_AOI ➔ WAVE) 2단계 생산 및 실시간 바코드/셀 트래킹
 
@@ -19,8 +22,8 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
 | AI 모델 | 담당 개발 범위 및 주요 작업 내역 |
 |---|---|
 | **Claude 3.5 Sonnet** | • **초기 아키텍처 및 코어 엔진 구축**<br>  - SMT/DIP 상태 전이 머신, 개별 바코드 발행/스캐너 이력 추적<br>  - 거래처별 가변 엑셀 BOM 동적 매핑 및 자동 기억 기능<br>• **Phase 1 모듈 개발**<br>  - 거래처 마스터 관리 (CRUD, WO 통계)<br>  - 품목 마스터 관리 (CRUD, 카테고리 필터)<br>  - 불량 현황 분석 (공정별/업체별 통계 차트, 실시간 불량 이력)<br>  - 생산 계획 (월별 캘린더, D-Day, 실시간 진행률)<br>• **Phase 2 모듈 개발**<br>  - 자재 입출고 관리 (수불 이력, 파트 검색, 입출고 KPI)<br>  - 출하 관리 (출하 지시/등록, 상태 전이, 거래명세서)<br>  - 사용자 / 권한 관리 (Admin/Manager/Worker, SHA256 암호화)<br>  - 품질 검사 기준 (공정별 기준치/단위 마스터 관리) |
-| **Gemini 3.7 Flash** | • **Phase 3 모듈 개발**<br>  - 수주 (PO) 관리 (`sales_order` DB 마이그레이션, CRUD, 수주 ➔ WO 원클릭 연계 발행)<br>  - 종합 KPI 분석 대시보드 (종합 누적 수율, 납기 준수율, 일별 추이 바 차트, 라인 가동 카드)<br>  - 시스템 알림 센터 (D-3 납기 임박 자동 감지 경보, 실시간 뱃지, 10초 폴링)<br>  - 시스템 감사 로그 (`system_log` 변경 이력 추적)<br>• **자재 피킹 및 피더 셋업 단말기 (`kitting.html`) 전면 개편**<br>  - 좌우 2분할 레이아웃 (좌측 고정 스캐너 & 대형 SVG 원형 도넛 게이지 + 우측 3열 반응형 멀티 컬럼 피더 카드 그리드)<br>  - 2줄 컴팩트 카드 (슬롯/위치/품번/PASS 상태 + 소요량/릴 바코드/MSL 수명) 및 스캔 일치 카드 자동 스크롤/하이라이트<br>• **실시간 라인 관제 엔진 및 실시간성 복구 (`dashboard.html`, `dashboard.js`, `dashboard.css`)**<br>  - PHP 싱글스레드 블로킹 해소 (고속 논블로킹 SSE 및 0.8초 무결성 고속 실시간 폴링 엔진 구축)<br>  - 로컬 Node-RED (1880 포트) 연동 완비 (자삽/수삽 시작 트리거 ➔ Node-RED ➔ `update_process.php` 실시간 데이터 파이프라인)<br>  - 머신 카드 테두리 360도 회전 에메랄드 보더 빔 (Border Beam Sweep) 3초 주기 동기화 적용<br>  - **4-UP 어레이 패널 셀 인디케이터** (`#1 ~ #4` 셀 개별 판정 및 불량 셀 Bad Mark 스킵 시각화) 장착<br>  - 작업지시 롤백/중단 API (`stop_wo.php`) 구현 및 클린 리셋 로직 완성 |
-| **Antigravity (Google DeepMind)** | • **설비 예지보전(PdM) 듀얼 게이지 & 4대 물리량 막대 그래프 엔진 구축**<br>  - 설비별 상단 듀얼 원형 게이지(건전도 점수 + RUL 정비 주기) 및 하단 4대 물리량 막대 그래프 시각화<br>  - High-DPI Retina 무왜곡 렌더링 엔진 적용 (Canvas 해상도 보정으로 폰트 찌그러짐/흐림 완벽 제거)<br>  - 미가동 설비 대기(IDLE/WAIT) 잔잔한 숨결(Heartbeat) 시뮬레이션 루프 구축<br>• **실물 컨베이어 물리 슬롯 파이프라인 엔진 (Pipeline Conveyor Shift) 완성**<br>  - 4개 공정 슬롯 동시 가공 (`REFLOW: #1` ➔ `MOUNTER: #2` ➔ `SPI: #3` ➔ `LASER: #4`) 및 원자적 일괄 트랜잭션 구축<br>• **15인치/태블릿 맞춤 100% 한눈에 보기(No-Scroll Full Viewport) & UI/UX 대혁신**<br>  - 최상단 공통 헤더 **오토 하이드 (Hover-to-Reveal)** 적용으로 50px 수직 공간 확보 및 하단 짤림 완전 해소<br>  - 설비 HMI 건전도 게이지 완벽 중앙 정렬, 예지보전 상단 fixed 플로팅 알람, (Reset) 80% : AI 알람 20% 한 줄 배치<br>  - 실시간 SPC 파형 차트 영역 확장 및 UCL~LCL 시각적 간격 대폭 확장(60% 뷰포트 배정)<br>  - 자재 피킹 단말기 2행 구조 재편 및 15인치 반응형 다단 그리드(`minmax(200px, 1fr)`) 최적화<br>  - 출하 관리 대한민국 표준 거래명세서 단독 전면화 및 라인 대시보드 원형 게이지 반응형 스케일링 |
+| **Gemini 3.7 Flash** | • **Phase 3 모듈 개발**<br>  - 수주 (PO) 관리 (`sales_order` DB 마이그레이션, CRUD, 수주 ➔ WO 원클릭 연계 발행)<br>  - 종합 KPI 분석 대시보드 (종합 누적 수율, 납기 준수율, 일별 추이 바 차트, 라인 가동 카드)<br>  - 시스템 알림 센터 (D-3 납기 임박 자동 감지 경보, 실시간 뱃지, 10초 폴링)<br>  - 시스템 감사 로그 (`system_log` 변경 이력 추적)<br>• **자재 피킹 및 피더 셋업 단말기 (`kitting.html`) 전면 개편**<br>  - 좌우 2분할 레이아웃 (좌측 고정 스캐너 & 대형 SVG 원형 도넛 게이지 + 우측 3열 반응형 멀티 컬럼 피더 카드 그리드)<br>  - 2줄 컴팩트 카드 및 스캔 일치 카드 자동 스크롤/하이라이트<br>• **실시간 라인 관제 엔진 및 실시간성 복구 (`dashboard.html`)**<br>  - PHP 싱글스레드 블로킹 해소 (고속 논블로킹 SSE 및 0.8초 무결성 고속 실시간 폴링 엔진 구축)<br>  - 머신 카드 테두리 360도 회전 에메랄드 보더 빔 및 4-UP 어레이 패널 셀 인디케이터 장착<br>• **AWS 클라우드 인프라 프로비저닝 & 무중단 CI/CD 구축 (2026-08-22)**<br>  - AWS EC2 (Ubuntu 24.04) + Nginx 1.24 + PHP 8.3-FPM 고성능 프로덕션 환경 구축<br>  - AWS RDS (MySQL 8.0) 프로비저닝 및 12개 모듈 전체 스키마 마이그레이션<br>  - GitHub Actions 기반 무중단 자동 배포 파이프라인(`deploy.yml`) 구축<br>  - Cloudflare 커스텀 도메인(`mes.memyself.shop`) 연동 & Let's Encrypt 정식 SSL(HTTPS) 인증서 발급<br>  - Node-RED 시뮬레이터 PM2 상시 데몬 등록 및 누락 HMI 라우팅 심볼릭 링크 정상화 |
+| **Antigravity (Google DeepMind)** | • **설비 예지보전(PdM) 듀얼 게이지 & 4대 물리량 막대 그래프 엔진 구축**<br>  - 설비별 상단 듀얼 원형 게이지(건전도 점수 + RUL 정비 주기) 및 하단 4대 물리량 막대 그래프 시각화<br>  - High-DPI Retina 무왜곡 렌더링 엔진 적용 (Canvas 해상도 보정으로 폰트 찌그러짐/흐림 완벽 제거)<br>  - 미가동 설비 대기(IDLE/WAIT) 잔잔한 숨결(Heartbeat) 시뮬레이션 루프 구축<br>• **실물 컨베이어 물리 슬롯 파이프라인 엔진 (Pipeline Conveyor Shift) 완성**<br>  - 4개 공정 슬롯 동시 가공 (`REFLOW: #1` ➔ `MOUNTER: #2` ➔ `SPI: #3` ➔ `LASER: #4`) 및 원자적 일괄 트랜잭션 구축<br>• **15인치/태블릿 맞춤 100% 한눈에 보기(No-Scroll Full Viewport) & UI/UX 대혁신**<br>  - 최상단 공통 헤더 **오토 하이드 (Hover-to-Reveal)** 적용으로 50px 수직 공간 확보 및 하단 짤림 완전 해소<br>  - 설비 HMI 건전도 게이지 완벽 중앙 정렬, 예지보전 상단 fixed 플로팅 알람, (Reset) 80% : AI 알람 20% 한 줄 배치<br>  - 실시간 SPC 파형 차트 영역 확장 및 UCL~LCL 시각적 간격 대폭 확장(60% 뷰포트 배정)<br>  - 자재 피킹 단말기 2행 구조 재편 및 15인치 반응형 다단 그리드(`minmax(200px, 1fr)`) 최적화<br>  - 출하 관리 대한민국 표준 거래명세서 단독 전면화 및 라인 대시보드 원형 게이지 반응형 스케일링<br>• **Docker 컨테이너 헬스체크 및 환경변수 보안 아키텍처 고도화 (2026-08-22)**<br>  - Docker Compose MySQL & Node-RED 실시간 Healthcheck 엔진 구축<br>  - 하드코딩 패스워드 전면 제거 및 `.env` 파일 기반 환경변수 주입 보안 리팩토링 |
 
 ---
 
@@ -583,11 +586,58 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
 
 ---
 
+### 10. AWS 클라우드 인프라 구축, 무중단 CI/CD 자동화 및 Cloudflare HTTPS 연동 (작업일: 2026-08-22)
+
+#### 1) 클라우드 인프라 프로비저닝 & 아키텍처 구축 (AWS EC2 + AWS RDS)
+- **AWS EC2 (Ubuntu 24.04 LTS, x86_64, `3.26.235.189`)**:
+  - 고성능 웹 서버 **Nginx 1.24** + **PHP 8.3-FPM** FastCGI 엔진 구축.
+  - SPA 프론트엔드 정적 파일 서빙과 백엔드 단일 프론트 컨트롤러(`/backend/index.php`) 라우팅 룰 완비.
+  - Nginx 순환 리다이렉트(Internal redirection cycle) 에러 원천 차단 및 FastCGI 파라미터 최적화.
+- **AWS RDS (MySQL 8.0 `smt-mes-db`)**:
+  - AWS RDS 인스턴스 프로비저닝 및 EC2와의 동일 VPC 내부 통신 보안 그룹(Security Group 3306 포트) 상호 인바운드 연동.
+  - 12개 관리 모듈 및 실시간 설비 텔레메트리 전체 DDL 스키마(`02_DB_Schema.sql`) 마이그레이션 완료.
+- **실시간 설비 연동 엔진 (Node-RED + PM2)**:
+  - Node.js 20.x 런타임 및 Node-RED 설치, 실시간 공정 플로우(`flows.json`) 탑재.
+  - **PM2 프로세스 매니저** 데몬 등록(`pm2 start node-red --name smt-nodered -- -p 1881`) 및 `systemd` 자동 부팅(`pm2 startup`) 등록으로 24/365 무중단 상시 가동 환경 완성.
+
+#### 2) 보안 & 환경설정 아키텍처 리팩토링
+- **하드코딩 패스워드 전면 제거 & `.env` 주입 패턴 확립**:
+  - `Database.php`, `config.php`를 리팩토링하여 로컬 및 프로덕션 환경의 `.env` 파일을 최우선 자동 파싱하도록 개편.
+  - 포트 기본값을 Docker 매핑 포트(3307)에서 표준 RDS 포트(3306)로 안전 폴백 처리.
+- **Git 보안 추적 제거 & `.gitignore` 보완**:
+  - Git에 기 추적되던 `.env.local`을 `git rm --cached`로 인덱스에서 안전 분리 및 `.gitignore`에 `.env`, `.env.local`, `node_modules/` 등록.
+
+#### 3) Docker 컨테이너 실시간 헬스체크(Healthcheck) 엔진 도입
+- `docker-compose.yml` 내 DB 서비스에 `mysqladmin ping` 기반 헬스체크(10s 간격, 5회 재시도, 30s 유예) 장착.
+- Node-RED 서비스에 `curl -f http://localhost:1880/flows` 헬스체크 및 `depends_on: db: condition: service_healthy` 연동으로 DB 완전 기동 후 시뮬레이터가 동작하도록 컨테이너 오케스트레이션 보강.
+
+#### 4) GitHub Actions 기반 무중단 CI/CD 자동 배포 파이프라인 완성
+- **배포 워크플로 구축 (`.github/workflows/deploy.yml`)**:
+  - `main` 브랜치에 코드가 푸시되면 GitHub Actions Runner가 즉시 트리거되어 EC2 서버로 보안 SSH 접속.
+  - 최신 코드 `git pull origin main` 수행 후 `php8.3-fpm` 및 `nginx` 서비스를 핫-리로드하여 개발자가 별도 서버 접속 없이도 실시간 변경사항이 라이브 서버에 무중단 자동 반영되도록 파이프라인 완성.
+- **배포 환경 안정화**:
+  - EC2 내 `safe.directory` 설정 및 `/etc/sudoers.d/next-mes-deploy`를 통한 무암호 `systemctl reload` 권한 부여로 배포 자동화의 완전성 확보.
+
+#### 5) Cloudflare 커스텀 도메인 연결 & Full SSL (Let's Encrypt HTTPS) 완비
+- **도메인 및 엣지 프록시**:
+  - 커스텀 도메인 **`mes.memyself.shop`**을 Cloudflare DNS A 레코드에 등록하고 프록시(🟠 Proxied) 모드로 연결하여 글로벌 CDN 캐싱 및 L3/L4/L7 DDoS 방어막 구축.
+- **정식 SSL/TLS 인증서 발급**:
+  - **Certbot (Let's Encrypt)**을 통해 `mes.memyself.shop`에 대한 유효한 공식 SSL 인증서 발급 및 Nginx 자동 갱신 데몬(`certbot.timer`) 등록.
+  - Cloudflare 암호화 모드를 **Full (Strict)**로 구성하여 브라우저 ↔ Cloudflare ↔ AWS EC2 전 구간 HTTP/2 및 종단간(End-to-End) 암호화 통신 완성.
+
+#### 6) 프로덕션 라우팅 & 설비 HMI 누락 링크 완벽 정상화
+- 루트 디렉토리 내 `machine.html`, `ceo.html`, `bom-upload.html`, `pop.html` 심볼릭 링크 일괄 보완 및 `nginx.conf.sample` 프로덕션 최신화.
+- 탑바의 **`🔧 설비 HMI`** 클릭 시 10대 설비별 1:1 진단 콘솔과 3색 타워램프, 4대 물리량 SPC 파형 차트가 정상 서빙되도록 완벽 조치.
+
+---
+
 ## 🚀 향후 로드맵 (Next Milestones)
-1. **AWS 클라우드 인프라 배포**:
-   - AWS EC2 / ECS 컨테이너 기반 MES 프로덕션 환경 프로비저닝 (Docker Compose, Nginx Reverse Proxy, MySQL RDS 연동).
-2. **GitHub Actions 기반 CI/CD 자동화 파이프라인 구축**:
-   - `main` 브랜치 푸시 시 자동 린트, 테스트 및 AWS 프로덕션 무중단 자동 배포(Automated Deployment) 파이프라인 완성.
+1. **모바일 반응형 POP 단말기 UI 고도화**:
+   - 현장 작업자용 태블릿 및 모바일 바코드 스캔 전용 경량화 POP 모듈 추가.
+2. **다중 라인(Multi-Line) 확장 지원**:
+   - SMT 1호 라인 외 2호, 3호 라인 병렬 관제 및 라인 간 부하 분산 KPI 분석 고도화.
+3. **스마트 팩토리 이상 감지 머신러닝(AI/ML) 모델 연동**:
+   - Node-RED 설비 물리 센서 데이터를 시계열 DB(InfluxDB)와 연계하여 리플로우 오븐 온도 이상 및 마운터 노즐 막힘 사전 예측 AI 알고리즘 도입.
 
 
 
