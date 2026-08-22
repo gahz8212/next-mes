@@ -7,25 +7,34 @@ header('Content-Type: application/json; charset=utf-8');
 
 try {
     $pdo = Database::getConnection();
-    $dbName = getenv('DB_NAME') ?: 'smt_mes_db';
+    
+    $currentDb = $pdo->query("SELECT DATABASE()")->fetchColumn() ?: 'unknown';
 
     $applied = [];
     $skipped = [];
 
-    // Helper to check and add column
-    $addColumnIfNotExists = function(string $table, string $column, string $definition) use ($pdo, $dbName, &$applied, &$skipped) {
-        $stmt = $pdo->prepare("
-            SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
-            WHERE TABLE_SCHEMA = :db AND TABLE_NAME = :tbl AND COLUMN_NAME = :col
-        ");
-        $stmt->execute([':db' => $dbName, ':tbl' => $table, ':col' => $column]);
-        $exists = (int)$stmt->fetchColumn() > 0;
+    // Helper to check and add column using DATABASE()
+    $addColumnIfNotExists = function(string $table, string $column, string $definition) use ($pdo, &$applied, &$skipped) {
+        try {
+            $stmt = $pdo->prepare("
+                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?
+            ");
+            $stmt->execute([$table, $column]);
+            $exists = (int)$stmt->fetchColumn() > 0;
 
-        if (!$exists) {
-            $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$definition}");
-            $applied[] = "Added column `{$table}`.`{$column}`";
-        } else {
-            $skipped[] = "Column `{$table}`.`{$column}` already exists";
+            if (!$exists) {
+                $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$definition}");
+                $applied[] = "Added column `{$table}`.`{$column}`";
+            } else {
+                $skipped[] = "Column `{$table}`.`{$column}` already exists";
+            }
+        } catch (\PDOException $e) {
+            if (str_contains($e->getMessage(), 'Duplicate column name') || str_contains($e->getMessage(), '1060')) {
+                $skipped[] = "Column `{$table}`.`{$column}` already exists (1060)";
+            } else {
+                throw $e;
+            }
         }
     };
 
@@ -112,10 +121,10 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ");
 
-    // 10. index.php 라우팅 보완 또는 api.php 등록
     echo json_encode([
-        "status"  => "success",
-        "message" => "Database migration completed successfully.",
+        "status"          => "success",
+        "database"        => $currentDb,
+        "message"         => "Database migration completed successfully.",
         "applied_changes" => $applied,
         "skipped_count"   => count($skipped)
     ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
