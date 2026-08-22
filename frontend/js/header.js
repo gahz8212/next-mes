@@ -393,34 +393,8 @@ function setupAutoHideHeader() {
 }
 window.setupAutoHideHeader = setupAutoHideHeader;
 
-// 세로 모드(Portrait) 감지 및 미지원 안내 오버레이 보장
-function ensurePortraitWarningOverlay() {
-    if (document.getElementById('portraitWarningOverlay')) return;
-    const overlay = document.createElement('div');
-    overlay.id = 'portraitWarningOverlay';
-    overlay.className = 'portrait-warning-overlay';
-    overlay.innerHTML = `
-        <div class="portrait-warning-box">
-            <div class="portrait-icon-wrap">
-                <span class="portrait-rotate-icon">📱</span>
-            </div>
-            <div class="portrait-title">세로 모드는 지원하지 않습니다</div>
-            <div class="portrait-desc">
-                MES 라인 관제 콘솔은 정밀 공정 및 설비 모니터링을 위해 <b>가로 모드(Landscape)</b> 전용으로 설계되었습니다.<br>
-                기기를 가로 방향으로 회전해 주세요.
-            </div>
-            <div class="portrait-badge">
-                <span>🔄 가로 모드로 회전 필요</span>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(overlay);
-}
-window.ensurePortraitWarningOverlay = ensurePortraitWarningOverlay;
-
 // 자동 실행 (DOMContentLoaded)
 document.addEventListener('DOMContentLoaded', () => {
-    ensurePortraitWarningOverlay();
     const headerEl = document.querySelector('.mes-unified-header');
     if (headerEl && headerEl.dataset.currentScreen) {
         initMesHeader(headerEl.dataset.currentScreen);

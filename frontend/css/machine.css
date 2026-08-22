@@ -1242,12 +1242,21 @@ html, body {
 
 /* ── 3) 8인치 태블릿 / 소형 디스플레이 (1199px 이하): 시원한 단일/반응형 뷰 ── */
 @media (max-width: 1199px) {
+    html, body {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        height: auto !important;
+        min-height: 100vh;
+        -webkit-overflow-scrolling: touch;
+    }
+
     .hmi-workspace {
         grid-template-columns: 1fr;
         gap: 8px;
         padding: 6px 10px;
-        height: calc(100vh - 44px);
-        overflow-y: auto;
+        height: auto;
+        min-height: calc(100vh - 44px);
+        overflow-y: visible;
     }
 
     .left-col-stack {
