@@ -3090,25 +3090,14 @@
                         </div>
                     </div>
 
-                    <!-- 뷰 모드 전환 서브 탭 & 날짜 선택 컨트롤 (동일 라인 배치) -->
-                    <div style="padding:0 32px 12px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:12px; flex-wrap:wrap; gap:10px;">
-                        <!-- 좌측: 뷰 모드 서브 탭 버튼 -->
-                        <div style="display:flex; gap:8px;">
-                            <button id="btn-plan-view-list" class="consigned-tab-btn active" onclick="setPlanViewMode('list')">
-                                📋 일정 상세 목록
-                            </button>
-                            <button id="btn-plan-view-calendar" class="consigned-tab-btn" onclick="setPlanViewMode('calendar')">
-                                📅 월간 달력 & 일자별 상세
-                            </button>
-                        </div>
-
-                        <!-- 우측: 월간 날짜 선택 및 이동 컨트롤 -->
-                        <div style="display:flex; gap:6px; align-items:center; background:rgba(15,23,42,0.6); padding:4px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
-                            <button class="topbar-action-btn" style="background:rgba(255,255,255,0.08); padding:5px 10px; font-size:12px; height:28px;" onclick="changePlanMonth(-1)" title="이전 달">◀</button>
-                            <span id="plan-month-label" style="font-size:14px; font-weight:800; color:#f8fafc; min-width:95px; text-align:center; font-family:'JetBrains Mono',monospace;">—</span>
-                            <button class="topbar-action-btn" style="background:rgba(255,255,255,0.08); padding:5px 10px; font-size:12px; height:28px;" onclick="changePlanMonth(1)" title="다음 달">▶</button>
-                            <button class="topbar-action-btn" style="background:rgba(59,130,246,0.25); color:#93c5fd; border:1px solid rgba(59,130,246,0.4); padding:4px 10px; font-size:12px; height:28px; font-weight:700;" onclick="goPlanToday()">오늘</button>
-                        </div>
+                    <!-- 뷰 모드 전환 서브 탭 버튼 (우측 끝 배치) -->
+                    <div style="padding:0 32px 12px; display:flex; justify-content:flex-end; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:12px; gap:8px;">
+                        <button id="btn-plan-view-list" class="consigned-tab-btn active" onclick="setPlanViewMode('list')">
+                            📋 일정 상세 목록
+                        </button>
+                        <button id="btn-plan-view-calendar" class="consigned-tab-btn" onclick="setPlanViewMode('calendar')">
+                            📅 월간 달력 & 일자별 상세
+                        </button>
                     </div>
                 </div>
 
@@ -3135,17 +3124,17 @@
                     </div>
                 </div>
 
-                <!-- 하단 본문: 2) 달력 2분할 뷰 (좌측 컴팩트 달력 / 우측 선택일 상세 폼) -->
-                <div id="plan-calendar-view" style="display:none; flex:1 1 auto; min-height:0; gap:16px; padding:0 32px 24px; overflow:hidden;">
-                    <!-- 좌측: 컴팩트 월간 달력 (440px) -->
-                    <div style="width:450px; min-width:380px; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
-                        <div id="plan-calendar-container" style="flex:1; overflow-y:auto; display:flex; flex-direction:column;">
+                <!-- 하단 본문: 2) 달력 상하 분할 뷰 (상단 월간 달력 / 하단 선택일 상세 폼) -->
+                <div id="plan-calendar-view" style="display:none; flex:1 1 auto; min-height:0; flex-direction:column; gap:16px; padding:0 32px 24px; overflow-y:auto;">
+                    <!-- 상단: 월간 달력 -->
+                    <div style="width:100%; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden; flex-shrink:0;">
+                        <div id="plan-calendar-container" style="display:flex; flex-direction:column;">
                             <!-- JS에서 렌더링: renderPlanCalendar() -->
                         </div>
                     </div>
 
-                    <!-- 우측: 선택된 날짜의 생산/납기 상세 일정 폼 (독립 스크롤) -->
-                    <div id="plan-cal-day-detail-panel" style="flex:1; min-width:0; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
+                    <!-- 하단: 선택된 날짜의 생산/납기 상세 일정 폼 -->
+                    <div id="plan-cal-day-detail-panel" style="width:100%; min-height:220px; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden; flex-shrink:0;">
                         <!-- JS에서 렌더링: renderPlanCalDayDetail() -->
                     </div>
                 </div>
@@ -7276,15 +7265,18 @@ async function deleteCompany(id, name) {
 
         let html = '';
 
-        // ── Big Month Number Center Header ──
+        // ── Month Center Header with Month Navigator ──
         html += `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px; background:rgba(15,23,42,0.9); border-bottom:1px solid rgba(255,255,255,0.08);">
-                <button type="button" class="topbar-action-btn" style="background:rgba(255,255,255,0.08); padding:4px 10px; font-size:12px;" onclick="changePlanMonth(-1)" title="이전 달">◀</button>
-                <div style="display:flex; flex-direction:column; align-items:center;">
-                    <div style="font-size:32px; font-weight:900; color:#38bdf8; font-family:'JetBrains Mono',monospace; line-height:1; letter-spacing:-1px;">${planMonth}</div>
-                    <div style="font-size:10.5px; color:#64748b; font-weight:600; margin-top:2px;">${planYear}년</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background:rgba(15,23,42,0.9); border-bottom:1px solid rgba(255,255,255,0.08);">
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <button type="button" class="topbar-action-btn" style="background:rgba(255,255,255,0.08); padding:5px 12px; font-size:12.5px; font-weight:600;" onclick="changePlanMonth(-1)" title="이전 달">◀ 이전달</button>
+                    <button type="button" class="topbar-action-btn" style="background:rgba(59,130,246,0.2); color:#93c5fd; border:1px solid rgba(59,130,246,0.35); padding:5px 12px; font-size:12px; font-weight:700;" onclick="goPlanToday()">오늘</button>
                 </div>
-                <button type="button" class="topbar-action-btn" style="background:rgba(255,255,255,0.08); padding:4px 10px; font-size:12px;" onclick="changePlanMonth(1)" title="다음 달">▶</button>
+                <div style="display:flex; align-items:baseline; gap:8px;">
+                    <span style="font-size:26px; font-weight:900; color:#38bdf8; font-family:'JetBrains Mono',monospace; letter-spacing:-0.5px;">${planMonth}월</span>
+                    <span style="font-size:13.5px; color:#94a3b8; font-weight:700;">${planYear}년</span>
+                </div>
+                <button type="button" class="topbar-action-btn" style="background:rgba(255,255,255,0.08); padding:5px 12px; font-size:12.5px; font-weight:600;" onclick="changePlanMonth(1)" title="다음 달">다음달 ▶</button>
             </div>
         `;
 
