@@ -7,31 +7,20 @@ header('Content-Type: application/json; charset=utf-8');
 
 try {
     $pdo = Database::getConnection();
-    
     $currentDb = $pdo->query("SELECT DATABASE()")->fetchColumn() ?: 'unknown';
 
     $applied = [];
     $skipped = [];
 
-    // Helper to check and add column using DATABASE()
-    $addColumnIfNotExists = function(string $table, string $column, string $definition) use ($pdo, &$applied, &$skipped) {
+    // Helper to directly add column with try/catch for error 1060 (Duplicate column)
+    $addColumnDirect = function(string $table, string $column, string $definition) use ($pdo, &$applied, &$skipped) {
         try {
-            $stmt = $pdo->prepare("
-                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?
-            ");
-            $stmt->execute([$table, $column]);
-            $exists = (int)$stmt->fetchColumn() > 0;
-
-            if (!$exists) {
-                $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$definition}");
-                $applied[] = "Added column `{$table}`.`{$column}`";
-            } else {
-                $skipped[] = "Column `{$table}`.`{$column}` already exists";
-            }
+            $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$definition}");
+            $applied[] = "Added column `{$table}`.`{$column}`";
         } catch (\PDOException $e) {
-            if (str_contains($e->getMessage(), 'Duplicate column name') || str_contains($e->getMessage(), '1060')) {
-                $skipped[] = "Column `{$table}`.`{$column}` already exists (1060)";
+            $msg = $e->getMessage();
+            if (str_contains($msg, 'Duplicate column') || str_contains($msg, '1060')) {
+                $skipped[] = "Column `{$table}`.`{$column}` already exists";
             } else {
                 throw $e;
             }
@@ -39,49 +28,49 @@ try {
     };
 
     // 1. item 테이블 컬럼
-    $addColumnIfNotExists('item', 'company_id', 'INT DEFAULT NULL COMMENT "고객사/거래처 ID"');
-    $addColumnIfNotExists('item', 'unit_price', 'DECIMAL(12,2) DEFAULT 0.00 COMMENT "기본 단가"');
-    $addColumnIfNotExists('item', 'status', 'VARCHAR(20) DEFAULT "ACTIVE" COMMENT "상태"');
+    $addColumnDirect('item', 'company_id', 'INT DEFAULT NULL COMMENT "고객사/거래처 ID"');
+    $addColumnDirect('item', 'unit_price', 'DECIMAL(12,2) DEFAULT 0.00 COMMENT "기본 단가"');
+    $addColumnDirect('item', 'status', 'VARCHAR(20) DEFAULT "ACTIVE" COMMENT "상태"');
 
     // 2. part_alias 테이블 컬럼
-    $addColumnIfNotExists('part_alias', 'company_id', 'INT DEFAULT NULL COMMENT "거래처/고객사 ID"');
+    $addColumnDirect('part_alias', 'company_id', 'INT DEFAULT NULL COMMENT "거래처/고객사 ID"');
 
     // 3. work_order 테이블 컬럼
-    $addColumnIfNotExists('work_order', 'company_id', 'INT DEFAULT NULL');
-    $addColumnIfNotExists('work_order', 'due_date', 'DATE DEFAULT NULL COMMENT "납기일"');
-    $addColumnIfNotExists('work_order', 'completed_at', 'DATETIME DEFAULT NULL');
-    $addColumnIfNotExists('work_order', 'delivery_date', 'DATE DEFAULT NULL');
-    $addColumnIfNotExists('work_order', 'shipped', 'TINYINT(1) NOT NULL DEFAULT 0');
-    $addColumnIfNotExists('work_order', 'shipped_at', 'DATETIME DEFAULT NULL');
-    $addColumnIfNotExists('work_order', 'remark', 'VARCHAR(255) DEFAULT NULL');
-    $addColumnIfNotExists('work_order', 'parent_wo_id', 'VARCHAR(50) DEFAULT NULL');
+    $addColumnDirect('work_order', 'company_id', 'INT DEFAULT NULL');
+    $addColumnDirect('work_order', 'due_date', 'DATE DEFAULT NULL COMMENT "납기일"');
+    $addColumnDirect('work_order', 'completed_at', 'DATETIME DEFAULT NULL');
+    $addColumnDirect('work_order', 'delivery_date', 'DATE DEFAULT NULL');
+    $addColumnDirect('work_order', 'shipped', 'TINYINT(1) NOT NULL DEFAULT 0');
+    $addColumnDirect('work_order', 'shipped_at', 'DATETIME DEFAULT NULL');
+    $addColumnDirect('work_order', 'remark', 'VARCHAR(255) DEFAULT NULL');
+    $addColumnDirect('work_order', 'parent_wo_id', 'VARCHAR(50) DEFAULT NULL');
 
     // 4. material_inout 테이블 컬럼
-    $addColumnIfNotExists('material_inout', 'company_id', 'INT DEFAULT NULL COMMENT "공급처/고객사 ID"');
-    $addColumnIfNotExists('material_inout', 'supply_type', 'ENUM("CONSIGNED", "PROCURED") NOT NULL DEFAULT "PROCURED" COMMENT "사급/도급 구분"');
-    $addColumnIfNotExists('material_inout', 'order_no', 'VARCHAR(50) DEFAULT NULL COMMENT "연결 수주 번호"');
-    $addColumnIfNotExists('material_inout', 'bom_id', 'INT DEFAULT NULL COMMENT "연결 BOM ID"');
+    $addColumnDirect('material_inout', 'company_id', 'INT DEFAULT NULL COMMENT "공급처/고객사 ID"');
+    $addColumnDirect('material_inout', 'supply_type', 'ENUM("CONSIGNED", "PROCURED") NOT NULL DEFAULT "PROCURED" COMMENT "사급/도급 구분"');
+    $addColumnDirect('material_inout', 'order_no', 'VARCHAR(50) DEFAULT NULL COMMENT "연결 수주 번호"');
+    $addColumnDirect('material_inout', 'bom_id', 'INT DEFAULT NULL COMMENT "연결 BOM ID"');
 
     // 5. shipment 테이블 컬럼
-    $addColumnIfNotExists('shipment', 'company_id', 'INT DEFAULT NULL');
-    $addColumnIfNotExists('shipment', 'invoice_no', 'VARCHAR(50) DEFAULT NULL');
+    $addColumnDirect('shipment', 'company_id', 'INT DEFAULT NULL');
+    $addColumnDirect('shipment', 'invoice_no', 'VARCHAR(50) DEFAULT NULL');
 
     // 6. company 테이블 컬럼
-    $addColumnIfNotExists('company', 'biz_no', 'VARCHAR(30) DEFAULT NULL COMMENT "사업자등록번호"');
-    $addColumnIfNotExists('company', 'ceo_name', 'VARCHAR(50) DEFAULT NULL COMMENT "대표자명"');
-    $addColumnIfNotExists('company', 'type', 'VARCHAR(30) DEFAULT "CUSTOMER" COMMENT "구분"');
-    $addColumnIfNotExists('company', 'tel', 'VARCHAR(30) DEFAULT NULL COMMENT "전화번호"');
-    $addColumnIfNotExists('company', 'email', 'VARCHAR(100) DEFAULT NULL COMMENT "이메일"');
-    $addColumnIfNotExists('company', 'manager_name', 'VARCHAR(50) DEFAULT NULL COMMENT "담당자명"');
-    $addColumnIfNotExists('company', 'manager_dept', 'VARCHAR(50) DEFAULT NULL COMMENT "담당자 부서"');
-    $addColumnIfNotExists('company', 'manager_phone', 'VARCHAR(30) DEFAULT NULL COMMENT "담당자 연락처"');
-    $addColumnIfNotExists('company', 'manager_email', 'VARCHAR(100) DEFAULT NULL COMMENT "담당자 이메일"');
-    $addColumnIfNotExists('company', 'address', 'VARCHAR(255) DEFAULT NULL COMMENT "주소"');
-    $addColumnIfNotExists('company', 'bom_mapping', 'TEXT DEFAULT NULL COMMENT "BOM 컬럼 매핑 JSON"');
+    $addColumnDirect('company', 'biz_no', 'VARCHAR(30) DEFAULT NULL COMMENT "사업자등록번호"');
+    $addColumnDirect('company', 'ceo_name', 'VARCHAR(50) DEFAULT NULL COMMENT "대표자명"');
+    $addColumnDirect('company', 'type', 'VARCHAR(30) DEFAULT "CUSTOMER" COMMENT "구분"');
+    $addColumnDirect('company', 'tel', 'VARCHAR(30) DEFAULT NULL COMMENT "전화번호"');
+    $addColumnDirect('company', 'email', 'VARCHAR(100) DEFAULT NULL COMMENT "이메일"');
+    $addColumnDirect('company', 'manager_name', 'VARCHAR(50) DEFAULT NULL COMMENT "담당자명"');
+    $addColumnDirect('company', 'manager_dept', 'VARCHAR(50) DEFAULT NULL COMMENT "담당자 부서"');
+    $addColumnDirect('company', 'manager_phone', 'VARCHAR(30) DEFAULT NULL COMMENT "담당자 연락처"');
+    $addColumnDirect('company', 'manager_email', 'VARCHAR(100) DEFAULT NULL COMMENT "담당자 이메일"');
+    $addColumnDirect('company', 'address', 'VARCHAR(255) DEFAULT NULL COMMENT "주소"');
+    $addColumnDirect('company', 'bom_mapping', 'TEXT DEFAULT NULL COMMENT "BOM 컬럼 매핑 JSON"');
 
     // 7. bom_master 테이블 컬럼
-    $addColumnIfNotExists('bom_master', 'item_id', 'INT DEFAULT NULL COMMENT "연결 품목 ID"');
-    $addColumnIfNotExists('bom_master', 'version', 'VARCHAR(20) DEFAULT "v1.0" COMMENT "BOM 버전"');
+    $addColumnDirect('bom_master', 'item_id', 'INT DEFAULT NULL COMMENT "연결 품목 ID"');
+    $addColumnDirect('bom_master', 'version', 'VARCHAR(20) DEFAULT "v1.0" COMMENT "BOM 버전"');
 
     // 8. 신규 테이블 생성: consigned_return_master
     $pdo->exec("
