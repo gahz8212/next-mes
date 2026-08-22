@@ -1,8 +1,23 @@
 <?php
-// Docker 컨테이너의 3306 포트가 호스트의 3307 포트로 매핑되어 있습니다.
-$dsn = "mysql:host=127.0.0.1;port=3307;dbname=smt_mes_db;charset=utf8mb4";
+// .env 파일에서 환경변수 로드
+$envFile = __DIR__ . '/../.env';
+if (file_exists($envFile)) {
+    foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        if (str_starts_with(trim($line), '#')) continue;
+        [$key, $val] = array_map('trim', explode('=', $line, 2));
+        if (!getenv($key)) putenv("$key=$val");
+    }
+}
+
+$db_host = getenv('DB_HOST') ?: '127.0.0.1';
+$db_port = getenv('DB_PORT') ?: '3306';
+$db_name = getenv('DB_NAME') ?: 'smt_mes_db';
+$db_user = getenv('DB_USER') ?: 'root';
+$db_pass = getenv('DB_PASSWORD') ?: '';
+
+$dsn = "mysql:host={$db_host};port={$db_port};dbname={$db_name};charset=utf8mb4";
 try {
-    $pdo = new PDO($dsn, 'root', 'your_password_here', [
+    $pdo = new PDO($dsn, $db_user, $db_pass, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci"
@@ -12,7 +27,7 @@ try {
     exit;
 }
 
-// Node-RED 설정 (Docker 기본 포트: 1881)
+// Node-RED 설정
 if (!defined('NODERED_HOST')) define('NODERED_HOST', getenv('NODERED_HOST') ?: '127.0.0.1');
 if (!defined('NODERED_PORT')) define('NODERED_PORT', intval(getenv('NODERED_PORT') ?: 1881));
 ?>
