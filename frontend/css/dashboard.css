@@ -1243,13 +1243,13 @@ html, body {
 }
 
 .mac-spark-box.spark-gauge-box {
-    flex: 1;
+    flex: 1.1;
     min-height: 44px;
 }
 
 .mac-spark-box.spark-bars-box {
-    flex: 0.8;
-    min-height: 35px;
+    flex: 0.9;
+    min-height: 36px;
 }
 
 .gauge-canvas,
@@ -1260,6 +1260,77 @@ html, body {
     width: 100%;
     height: 100%;
     display: block;
+}
+
+/* ── 27인치 대형 모니터 (QHD / 4K / 1700px 이상) ── */
+@media (min-width: 1700px) {
+    .mac-spark-box.spark-gauge-box {
+        min-height: 56px;
+    }
+    .mac-spark-box.spark-bars-box {
+        min-height: 46px;
+    }
+    .mac-title {
+        font-size: 15px;
+    }
+    .mac-data {
+        font-size: 14px;
+    }
+    .mac-status-indicator {
+        font-size: 12px;
+        padding: 3px 8px;
+    }
+}
+
+/* ── 15인치 표준 노트북 / 소형 데스크톱 (1200px ~ 1699px) ── */
+@media (max-width: 1699px) and (min-width: 1200px) {
+    .mac-spark-box.spark-gauge-box {
+        min-height: 44px;
+    }
+    .mac-spark-box.spark-bars-box {
+        min-height: 36px;
+    }
+    .mac-title {
+        font-size: 13px;
+    }
+    .mac-data {
+        font-size: 12.5px;
+    }
+}
+
+/* ── 8인치 태블릿 / 소형 디스플레이 (1199px 이하) ── */
+@media (max-width: 1199px) {
+    .machine-card {
+        min-width: 130px;
+        padding: 3px 4px;
+    }
+    .mac-spark-box.spark-gauge-box {
+        min-height: 38px;
+    }
+    .mac-spark-box.spark-bars-box {
+        min-height: 30px;
+    }
+    .mac-title {
+        font-size: 11px;
+    }
+    .mac-status-indicator {
+        font-size: 9.5px;
+        padding: 1px 5px;
+    }
+    .mac-data-label {
+        font-size: 9px;
+    }
+    .mac-data {
+        font-size: 11px;
+    }
+    .array-panel-strip {
+        padding: 2px 4px;
+        gap: 3px;
+    }
+    .cell-chip {
+        font-size: 9.5px;
+        padding: 1px 4px;
+    }
 }
 
 /* ═══════════════════════════════════════════════════════════════════

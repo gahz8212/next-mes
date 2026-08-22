@@ -352,15 +352,15 @@ function resetAllMachines(targetLine = 'ALL') {
     }
 }
 
-// 5-1. 상단: 건전도 & 정비주기 듀얼 원형 게이지
+// 5-1. 상단: 건전도 & 정비주기 듀얼 원형 게이지 (27인치/15인치/8인치 태블릿 완벽 반응형 동적 스케일링)
 function drawRadialGauges(processId, healthVal, cycleVal, cycleText, cycleSub, pdmStatus) {
     const canvas = document.getElementById(`canvas-radial-${processId}`);
     if (!canvas) return;
 
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
-    const cssW = Math.max(140, Math.round(rect.width) || canvas.offsetWidth || 180);
-    const cssH = Math.max(34, Math.round(rect.height) || canvas.offsetHeight || 46);
+    const cssW = Math.max(100, Math.round(rect.width) || canvas.offsetWidth || 180);
+    const cssH = Math.max(28, Math.round(rect.height) || canvas.offsetHeight || 46);
 
     if (canvas.width !== Math.round(cssW * dpr) || canvas.height !== Math.round(cssH * dpr)) {
         canvas.width = Math.round(cssW * dpr);
@@ -390,22 +390,28 @@ function drawRadialGauges(processId, healthVal, cycleVal, cycleText, cycleSub, p
     const halfW = midX;
 
     // 원형 게이지 반지름 및 선 굵기 (화면 크기 / 컨테이너 높이에 비례하여 동적 계산)
-    const strokeW = Math.max(3, Math.min(5.2, cssH * 0.095));
-    const r = Math.max(13, Math.min((cssH / 2) - (strokeW / 2) - 1.5, (halfW / 2) - 8));
-    const innerR = r - (strokeW / 2);
+    // 27인치(cssH 60~80), 15인치(cssH 44~52), 8인치 태블릿(cssH 30~40)에 맞춘 선형 스케일링
+    const strokeW = Math.max(2.5, Math.min(6.5, cssH * 0.09));
+    const maxRByHeight = (cssH / 2) - (strokeW / 2) - 1.5;
+    const maxRByWidth = (halfW / 2) - (strokeW / 2) - 4;
+    const r = Math.max(10, Math.min(maxRByHeight, maxRByWidth));
+    const innerR = Math.max(7, r - (strokeW / 2));
 
-    // 내부 텍스트 폰트 크기 및 간격 (내부 반지름 innerR에 완벽하게 비례하도록 동적 스케일링)
-    const numFontSize = Math.max(9, Math.min(13.5, Math.round(innerR * 0.62)));
-    const statusFontSize = Math.max(7.5, Math.min(10.5, Math.round(innerR * 0.44)));
-    const lineGap = Math.max(3.5, Math.round(innerR * 0.36));
+    // 내부 텍스트 폰트 크기 및 상하 오프셋 (innerR에 1:1 완벽 비례)
+    // 27인치(innerR 25~32): numFontSize 16~21px, statusFontSize 11~14px
+    // 15인치(innerR 16~20): numFontSize 11~14px, statusFontSize 8~10px
+    // 8인치 태블릿(innerR 10~14): numFontSize 8~10px, statusFontSize 6.5~8px
+    const numFontSize = Math.max(8, Math.min(22, Math.round(innerR * 0.65)));
+    const statusFontSize = Math.max(6.5, Math.min(15, Math.round(innerR * 0.44)));
+    const lineGap = Math.max(2.8, Math.round(innerR * 0.38));
 
     // ── 중앙 구분선 ──
     ctx.save();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(midX, 2);
-    ctx.lineTo(midX, cssH - 2);
+    ctx.moveTo(midX, Math.max(2, cssH * 0.1));
+    ctx.lineTo(midX, Math.min(cssH - 2, cssH * 0.9));
     ctx.stroke();
     ctx.restore();
 
@@ -473,15 +479,16 @@ function drawRadialGauges(processId, healthVal, cycleVal, cycleText, cycleSub, p
     ctx.restore();
 }
 
-// 5-2. 하단: 4대 핵심 물리량 수직 막대 그래프
+// 5-2. 하단: 4대 핵심 물리량 수직 막대 그래프 (27인치/15인치/8인치 태블릿 완벽 반응형)
 function drawVerticalBars(processId, metricsValues, pdmStatus) {
     const canvas = document.getElementById(`canvas-bars-${processId}`);
     const schema = MACHINE_TELEMETRY_SCHEMAS[processId];
     if (!canvas || !schema) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const cssW = Math.max(160, canvas.offsetWidth || 180);
-    const cssH = Math.max(38, canvas.offsetHeight || 48);
+    const rect = canvas.getBoundingClientRect();
+    const cssW = Math.max(100, Math.round(rect.width) || canvas.offsetWidth || 180);
+    const cssH = Math.max(26, Math.round(rect.height) || canvas.offsetHeight || 48);
 
     if (canvas.width !== Math.round(cssW * dpr) || canvas.height !== Math.round(cssH * dpr)) {
         canvas.width = Math.round(cssW * dpr);
@@ -493,11 +500,13 @@ function drawVerticalBars(processId, metricsValues, pdmStatus) {
     ctx.clearRect(0, 0, cssW, cssH);
 
     const slotWidth = cssW / 4;
-    const labelH = Math.round(cssH * 0.16);   // 상단 수치 영역
-    const footH  = Math.round(cssH * 0.16);   // 하단 명칭 영역
-    const trackY = labelH + 2;
-    const trackH = Math.max(16, cssH - trackY - footH - 2);
-    const trackW = 12;
+    const valFontSize = Math.max(7.5, Math.min(14, Math.round(cssH * 0.22)));
+    const labelFontSize = Math.max(7, Math.min(13, Math.round(cssH * 0.20)));
+    const labelH = Math.max(10, Math.round(cssH * 0.22));   // 상단 수치 영역
+    const footH  = Math.max(10, Math.round(cssH * 0.22));   // 하단 명칭 영역
+    const trackY = labelH + 1;
+    const trackH = Math.max(10, cssH - trackY - footH - 1);
+    const trackW = Math.max(6, Math.min(18, Math.round(slotWidth * 0.25)));
 
     schema.bars.forEach((b, i) => {
         const val = (metricsValues && metricsValues[i] !== undefined) ? metricsValues[i] : b.base;
@@ -505,7 +514,7 @@ function drawVerticalBars(processId, metricsValues, pdmStatus) {
 
         // 정규화 비율
         const ratio = Math.max(0.06, Math.min(0.94, (val - b.min) / (b.max - b.min)));
-        const fillH = Math.max(3, trackH * ratio);
+        const fillH = Math.max(2, trackH * ratio);
         const fillY = trackY + trackH - fillH;
 
         // 색상 판정
@@ -516,21 +525,30 @@ function drawVerticalBars(processId, metricsValues, pdmStatus) {
         ctx.save();
 
         // 1. 상단 측정 수치
-        ctx.font = 'bold 11px "JetBrains Mono", monospace';
+        ctx.font = `bold ${valFontSize}px "JetBrains Mono", monospace`;
         ctx.fillStyle = '#f1f5f9';
         ctx.textAlign = 'center';
-        ctx.fillText(`${val}${b.unit}`, cx, labelH);
+        ctx.textBaseline = 'top';
+        ctx.fillText(`${val}${b.unit}`, cx, 1);
 
         // 2. 바 배경 트랙
         const rx = cx - trackW / 2;
         ctx.beginPath();
-        ctx.roundRect(rx, trackY, trackW, trackH, 3.5);
+        if (ctx.roundRect) {
+            ctx.roundRect(rx, trackY, trackW, trackH, Math.min(3.5, trackW / 2));
+        } else {
+            ctx.rect(rx, trackY, trackW, trackH);
+        }
         ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
         ctx.fill();
 
         // 3. 내부 채움 막대
         ctx.beginPath();
-        ctx.roundRect(rx, fillY, trackW, fillH, 3.5);
+        if (ctx.roundRect) {
+            ctx.roundRect(rx, fillY, trackW, fillH, Math.min(3.5, trackW / 2));
+        } else {
+            ctx.rect(rx, fillY, trackW, fillH);
+        }
         ctx.fillStyle = barColor;
         ctx.fill();
 
@@ -543,10 +561,11 @@ function drawVerticalBars(processId, metricsValues, pdmStatus) {
         ctx.stroke();
 
         // 5. 하단 물리량 명칭
-        ctx.font = 'bold 11px sans-serif';
+        ctx.font = `bold ${labelFontSize}px sans-serif`;
         ctx.fillStyle = '#94a3b8';
         ctx.textAlign = 'center';
-        ctx.fillText(b.label, cx, cssH - 2);
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(b.label, cx, cssH - 1);
 
         ctx.restore();
     });
@@ -1374,8 +1393,8 @@ syncKPI().then(() => {
     setInterval(pollLiveStream, 600);
 });
 
-// 화면 크기 변경 시 고해상도 즉시 재렌더링
-window.addEventListener('resize', () => {
+// 화면 크기 변경 및 요소 리사이즈 시 고해상도 즉시 재렌더링
+function renderAllTelemetryGauges() {
     Object.keys(MACHINE_TELEMETRY_SCHEMAS).forEach(id => {
         const state = machineCurrentState[id];
         if (state) {
@@ -1383,4 +1402,18 @@ window.addEventListener('resize', () => {
             drawVerticalBars(id, state.bars, state.status);
         }
     });
-});
+}
+
+window.addEventListener('resize', renderAllTelemetryGauges);
+
+// ResizeObserver로 머신 카드 및 라인 컨테이너 크기 변화 정밀 감지 (27"/15"/8" 뷰포트 전환 대응)
+if (window.ResizeObserver) {
+    let resizeTimer = null;
+    const ro = new ResizeObserver(() => {
+        if (resizeTimer) cancelAnimationFrame(resizeTimer);
+        resizeTimer = requestAnimationFrame(renderAllTelemetryGauges);
+    });
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.machine-card, .line-panel, .lines-wrapper').forEach(el => ro.observe(el));
+    });
+}
