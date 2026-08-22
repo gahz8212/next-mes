@@ -21,7 +21,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /var/www/next-mes
-            sudo -u www-data git pull origin main
+            git pull origin main
             sudo systemctl reload php8.3-fpm
             sudo systemctl reload nginx
             echo "✅ 배포 완료: $(date)"
