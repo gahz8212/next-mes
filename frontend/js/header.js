@@ -23,7 +23,7 @@ const SCREEN_INFO = {
     },
     machine: {
         name: '설비 HMI 관제',
-        url: 'machine.html?eq=LASER',
+        url: 'machine.html',
         icon: '🔧',
         label: '설비 HMI'
     },
@@ -87,7 +87,7 @@ const ROLE_SPECS = {
     machine: {
         level: 1,
         homeKey: 'machine',
-        homeUrl: 'machine.html?eq=LASER',
+        homeUrl: 'machine.html',
         homeLabel: '설비 HMI',
         allowedScreens: ['kitting', 'machine']
     },
