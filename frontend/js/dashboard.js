@@ -500,13 +500,39 @@ function drawVerticalBars(processId, metricsValues, pdmStatus) {
     ctx.clearRect(0, 0, cssW, cssH);
 
     const slotWidth = cssW / 4;
-    const valFontSize = Math.max(7.5, Math.min(14, Math.round(cssH * 0.22)));
-    const labelFontSize = Math.max(7, Math.min(13, Math.round(cssH * 0.20)));
-    const labelH = Math.max(10, Math.round(cssH * 0.22));   // 상단 수치 영역
-    const footH  = Math.max(10, Math.round(cssH * 0.22));   // 하단 명칭 영역
+    const is8InchOrLess = (window.innerWidth <= 1199) || (cssW < 135);
+    const is15Inch = !is8InchOrLess && (window.innerWidth < 1700 || slotWidth < 70);
+
+    let valFontSize = Math.max(7.5, Math.min(13, Math.round(cssH * 0.20)));
+    let labelFontSize = Math.max(7, Math.min(12, Math.round(cssH * 0.19)));
+    let labelH = 0;
+    let footH = 0;
+    let staggerOffset = 0;
+
+    if (is8InchOrLess) {
+        // 8인치 이하: 그래프만 표시 (상단 수치 및 하단 라벨 미표시)
+        labelH = 2;
+        footH = 2;
+    } else if (is15Inch) {
+        // 15인치: 상단 수치값 위,아래,위,아래 지그재그 배치로 텍스트 겹침 방지
+        valFontSize = Math.max(7, Math.min(10.5, Math.round(cssH * 0.18)));
+        labelFontSize = Math.max(7, Math.min(10, Math.round(cssH * 0.18)));
+        staggerOffset = Math.max(8.5, Math.round(valFontSize + 1.5));
+        labelH = Math.round(valFontSize + staggerOffset + 2);
+        footH = Math.max(8, Math.round(cssH * 0.18));
+    } else {
+        // 27인치 대화면: 상단 수치값 한 줄 배치
+        valFontSize = Math.max(8.5, Math.min(14, Math.round(cssH * 0.22)));
+        labelFontSize = Math.max(7.5, Math.min(13, Math.round(cssH * 0.20)));
+        labelH = Math.max(12, Math.round(cssH * 0.22));
+        footH = Math.max(10, Math.round(cssH * 0.22));
+    }
+
     const trackY = labelH + 1;
-    const trackH = Math.max(10, cssH - trackY - footH - 1);
-    const trackW = Math.max(6, Math.min(18, Math.round(slotWidth * 0.25)));
+    const trackH = Math.max(6, cssH - trackY - footH - 1);
+    const trackW = is8InchOrLess
+        ? Math.max(5, Math.min(14, Math.round(slotWidth * 0.32)))
+        : Math.max(6, Math.min(18, Math.round(slotWidth * 0.25)));
 
     schema.bars.forEach((b, i) => {
         const val = (metricsValues && metricsValues[i] !== undefined) ? metricsValues[i] : b.base;
@@ -524,12 +550,20 @@ function drawVerticalBars(processId, metricsValues, pdmStatus) {
 
         ctx.save();
 
-        // 1. 상단 측정 수치
-        ctx.font = `bold ${valFontSize}px "JetBrains Mono", monospace`;
-        ctx.fillStyle = '#f1f5f9';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText(`${val}${b.unit}`, cx, 1);
+        // 1. 상단 측정 수치 (8인치 이하에서는 그래프만 표시)
+        if (!is8InchOrLess) {
+            ctx.font = `bold ${valFontSize}px "JetBrains Mono", monospace`;
+            ctx.fillStyle = '#f1f5f9';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+
+            let valY = 1;
+            if (is15Inch) {
+                // 위(0, 2), 아래(1, 3) 위/아래 교대 배치로 인접 텍스트 겹침 방지
+                valY = (i % 2 === 0) ? 1 : (1 + staggerOffset);
+            }
+            ctx.fillText(`${val}${b.unit}`, cx, valY);
+        }
 
         // 2. 바 배경 트랙
         const rx = cx - trackW / 2;
@@ -560,12 +594,14 @@ function drawVerticalBars(processId, metricsValues, pdmStatus) {
         ctx.lineTo(rx + trackW + 2, trackY + trackH * 0.5);
         ctx.stroke();
 
-        // 5. 하단 물리량 명칭
-        ctx.font = `bold ${labelFontSize}px sans-serif`;
-        ctx.fillStyle = '#94a3b8';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        ctx.fillText(b.label, cx, cssH - 1);
+        // 5. 하단 물리량 명칭 (8인치 이하에서는 숨김)
+        if (!is8InchOrLess) {
+            ctx.font = `bold ${labelFontSize}px sans-serif`;
+            ctx.fillStyle = '#94a3b8';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(b.label, cx, cssH - 1);
+        }
 
         ctx.restore();
     });

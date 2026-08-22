@@ -186,21 +186,25 @@ html, body {
 /* ── KPI Strip (Top Metrics) ── */
 .kpi-strip {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
     gap: 8px;
-    padding: 10px 16px 4px;
+    padding: 8px 16px 4px;
     background: var(--bg);
     flex-shrink: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .kpi-card {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
     border-radius: var(--radius);
-    padding: 6px 12px;
+    padding: 6px 10px;
     display: flex;
     flex-direction: column;
     gap: 1px;
+    min-width: 0 !important;
+    overflow: hidden;
     transition: all 0.2s;
 }
 .kpi-card:hover {
@@ -208,19 +212,25 @@ html, body {
 }
 
 .kpi-label {
-    font-size: 10px;
+    font-size: clamp(8px, 0.85vw, 10px);
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.03em;
     color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .kpi-val {
-    font-size: 18px;
+    font-size: clamp(12px, 1.35vw, 18px);
     font-weight: 800;
     letter-spacing: -0.03em;
     color: var(--text-primary);
     line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .kpi-val.accent  { color: #60a5fa; }
@@ -1288,7 +1298,7 @@ html, body {
         min-height: 44px;
     }
     .mac-spark-box.spark-bars-box {
-        min-height: 36px;
+        min-height: 48px;
     }
     .mac-title {
         font-size: 13px;
@@ -1298,17 +1308,78 @@ html, body {
     }
 }
 
-/* ── 8인치 태블릿 / 소형 디스플레이 (1199px 이하) ── */
+/* ── 8인치 태블릿 / 소형 디스플레이 (1199px 이하): 상하 스크롤 허용 & 한 줄 KPI ── */
 @media (max-width: 1199px) {
+    html, body {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        height: auto !important;
+        min-height: 100vh;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .app-body {
+        overflow-y: visible !important;
+        height: auto !important;
+        min-height: calc(100vh - 120px);
+        flex: 1 0 auto;
+        padding: 0 10px 10px;
+    }
+
+    .main-stage {
+        overflow-y: visible !important;
+        height: auto !important;
+        flex: 1 0 auto;
+    }
+
+    .lines-wrapper {
+        overflow-y: visible !important;
+        height: auto !important;
+        flex: 1 0 auto;
+        gap: 10px;
+    }
+
+    .line-panel {
+        min-height: 220px;
+        flex: 0 0 auto;
+        overflow: visible;
+    }
+
+    .line-machines-row {
+        overflow-x: auto;
+        padding-bottom: 6px;
+    }
+
+    .kpi-strip {
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+        gap: 4px !important;
+        padding: 6px 10px 4px !important;
+    }
+
+    .kpi-card {
+        padding: 4px 6px !important;
+        border-radius: var(--radius-sm) !important;
+    }
+
+    .kpi-label {
+        font-size: clamp(7.5px, 0.8vw, 9px) !important;
+        letter-spacing: 0 !important;
+    }
+
+    .kpi-val {
+        font-size: clamp(11px, 1.2vw, 14px) !important;
+    }
+
     .machine-card {
         min-width: 130px;
+        min-height: 175px;
         padding: 3px 4px;
     }
     .mac-spark-box.spark-gauge-box {
         min-height: 38px;
     }
     .mac-spark-box.spark-bars-box {
-        min-height: 30px;
+        min-height: 32px;
     }
     .mac-title {
         font-size: 11px;
@@ -1330,6 +1401,12 @@ html, body {
     .cell-chip {
         font-size: 9.5px;
         padding: 1px 4px;
+    }
+
+    .wo-sidebar,
+    .event-terminal-vertical {
+        height: auto !important;
+        min-height: 480px;
     }
 }
 

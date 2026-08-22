@@ -446,6 +446,104 @@ textarea::placeholder,
     font-weight: normal !important;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   세로 모드(Portrait) 미지원 안내 오버레이
+   ═══════════════════════════════════════════════════════════════════ */
+.portrait-warning-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    background: rgba(11, 17, 32, 0.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 30px 24px;
+    color: #f1f5f9;
+}
+
+@media screen and (orientation: portrait) {
+    .portrait-warning-overlay {
+        display: flex !important;
+    }
+}
+
+.portrait-warning-box {
+    max-width: 400px;
+    width: 100%;
+    background: #131f33;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 16px;
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(239, 68, 68, 0.15);
+    animation: portraitPulse 2s infinite ease-in-out;
+}
+
+@keyframes portraitPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+
+.portrait-icon-wrap {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1.5px solid rgba(239, 68, 68, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.portrait-rotate-icon {
+    font-size: 32px;
+    animation: deviceRotate 2.4s infinite ease-in-out;
+    display: inline-block;
+}
+
+@keyframes deviceRotate {
+    0% { transform: rotate(0deg); }
+    30% { transform: rotate(-90deg); }
+    70% { transform: rotate(-90deg); }
+    100% { transform: rotate(0deg); }
+}
+
+.portrait-title {
+    font-size: 19px;
+    font-weight: 800;
+    color: #fca5a5;
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+}
+
+.portrait-desc {
+    font-size: 13.5px;
+    color: #94a3b8;
+    line-height: 1.6;
+    word-break: keep-all;
+    margin-bottom: 18px;
+}
+
+.portrait-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    color: #93c5fd;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 9999px;
+}
+
 input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]):focus,
 textarea:focus,
 .form-control:not(select):focus,
