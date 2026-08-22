@@ -12,8 +12,12 @@ class Database {
     }
 
     private static function init(): void {
-        // Load .env.local if exists
-        $envFile = dirname(__DIR__, 2) . '/.env.local';
+        // .env 우선, 없으면 .env.local fallback
+        $baseDir = dirname(__DIR__, 2);
+        $envFile = file_exists($baseDir . '/.env')
+            ? $baseDir . '/.env'
+            : $baseDir . '/.env.local';
+
         if (file_exists($envFile)) {
             $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
             foreach ($lines as $line) {
@@ -30,10 +34,10 @@ class Database {
         if ($host === 'localhost') {
             $host = '127.0.0.1';
         }
-        $port = getenv('DB_PORT') ?: '3307';
+        $port = getenv('DB_PORT') ?: '3306';
         $db   = getenv('DB_NAME') ?: 'smt_mes_db';
         $user = getenv('DB_USER') ?: 'root';
-        $pass = getenv('DB_PASSWORD') ?: 'your_password_here';
+        $pass = getenv('DB_PASSWORD') ?: '';
         $charset = 'utf8mb4';
 
         $dsn = "mysql:host={$host};port={$port};dbname={$db};charset={$charset}";
