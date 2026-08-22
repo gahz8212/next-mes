@@ -233,9 +233,9 @@ class ProcessController {
                   COUNT(bh.history_id) as fail_count,
                   COALESCE(SUM(CASE WHEN bm.status IN ('SHIPPING') THEN 1 ELSE 0 END), 0) as good_count
                 FROM barcode_history bh
-                JOIN barcode_master bm ON bh.barcode = bm.barcode
-                JOIN work_order w ON bm.wo_id = w.wo_id
-                JOIN company c ON w.company_id = c.id
+                LEFT JOIN barcode_master bm ON bh.barcode = bm.barcode
+                LEFT JOIN work_order w ON bm.wo_id = w.wo_id
+                LEFT JOIN company c ON w.company_id = c.id
                 WHERE bh.result_status = 'FAIL' AND DATE(bh.created_at) BETWEEN :start AND :end
             ";
             $compParams = [':start' => $startDate, ':end' => $endDate];
@@ -249,12 +249,15 @@ class ProcessController {
             $stmtCompany->execute($compParams);
             $byCompanyRows = $stmtCompany->fetchAll();
 
+            $totalCompFails = array_sum(array_column($byCompanyRows, 'fail_count'));
             $by_company = [];
             foreach ($byCompanyRows as $row) {
+                $cnt = (int)$row['fail_count'];
                 $by_company[] = [
                     'company_name' => $row['company_name'],
-                    'fail_count'   => (int)$row['fail_count'],
-                    'good_count'   => (int)$row['good_count']
+                    'fail_count'   => $cnt,
+                    'good_count'   => (int)$row['good_count'],
+                    'ratio'        => $totalCompFails > 0 ? round($cnt * 100.0 / $totalCompFails, 1) : 0.0
                 ];
             }
 
@@ -273,9 +276,9 @@ class ProcessController {
                       '—'
                   ) as item_name
                 FROM barcode_history bh
-                JOIN barcode_master bm ON bh.barcode = bm.barcode
-                JOIN work_order w ON bm.wo_id = w.wo_id
-                JOIN company c ON w.company_id = c.id
+                LEFT JOIN barcode_master bm ON bh.barcode = bm.barcode
+                LEFT JOIN work_order w ON bm.wo_id = w.wo_id
+                LEFT JOIN company c ON w.company_id = c.id
                 WHERE bh.result_status = 'FAIL' AND DATE(bh.created_at) BETWEEN :start AND :end
             ";
             if (!empty($process))     $sqlRecent .= " AND bh.process_name = :process";

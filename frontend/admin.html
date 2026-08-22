@@ -6878,10 +6878,10 @@ async function deleteCompany(id, name) {
         document.getElementById('d-kpi-top').textContent = byProc.length ? byProc[0].process_name : '—';
 
         // 1. 공정별 불량 점유율 (그래프 + %만 노출, 클릭 시 발생이력 필터링)
-        renderDefectBars('defect-by-process', byProc, 'bar-fill-red', s.total_fail, 'process');
+        renderDefectBars('defect-by-process', byProc, 'bar-fill-red', 'process');
         
         // 2. 업체별 불량 점유율 (그래프 + %만 노출, 클릭 시 발생이력 필터링)
-        renderDefectBars('defect-by-company', data.data.by_company || [], 'bar-fill-yellow', s.total_fail, 'company');
+        renderDefectBars('defect-by-company', data.data.by_company || [], 'bar-fill-yellow', 'company');
 
         // 3. 최근 불량 발생 이력 테이블
         const tbody = document.getElementById('defect-recent-tbody');
@@ -6974,19 +6974,23 @@ async function deleteCompany(id, name) {
         loadDefects();
     }
 
-    function renderDefectBars(containerId, items, fillClass, totalFail, filterType) {
+    function renderDefectBars(containerId, items, fillClass, filterType) {
         const el = document.getElementById(containerId);
         if (!el) return;
 
-        if (!items.length) {
+        if (!items || !items.length) {
             el.innerHTML = `<div style="text-align:center; padding:32px; color:#94a3b8; font-size:13px;">불량 데이터가 없습니다.</div>`;
             return;
         }
-        const max = Math.max(...items.map(i => i.fail_count));
+        const max = Math.max(...items.map(i => Number(i.fail_count) || 0));
+        const listTotal = items.reduce((sum, i) => sum + (Number(i.fail_count) || 0), 0);
         el.innerHTML = items.map(i => {
             const label = i.process_name || i.company_name || '-';
-            const pct   = max > 0 ? Math.round(i.fail_count / max * 100) : 0;
-            const ratio = totalFail > 0 ? (i.fail_count / totalFail * 100).toFixed(1) + '%' : '0.0%';
+            const cnt = Number(i.fail_count) || 0;
+            const pct = max > 0 ? Math.round(cnt / max * 100) : 0;
+            const ratio = (i.ratio !== undefined && i.ratio !== null)
+                ? (typeof i.ratio === 'number' ? i.ratio.toFixed(1) + '%' : i.ratio + '%')
+                : (listTotal > 0 ? (cnt / listTotal * 100).toFixed(1) + '%' : '0.0%');
             const isSelected = (filterType === 'process' && defectSelectedProcess === label) ||
                                (filterType === 'company' && defectSelectedCompany === label);
 

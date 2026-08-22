@@ -225,3 +225,11 @@ Router::any('/get_system_logs.php',        [DashboardController::class, 'getSyst
 Router::any('/get_notifications.php',      [DashboardController::class, 'getNotifications']);
 Router::any('/read_notification.php',      [DashboardController::class, 'readNotification']);
 Router::any('/dashboard_sse.php',          [DashboardController::class, 'dashboardSse']);
+
+// Database Migration Route
+Router::any('/migrate', function() {
+    require __DIR__ . '/../migrate.php';
+});
+Router::any('/run_migration.php', function() {
+    require __DIR__ . '/../migrate.php';
+});

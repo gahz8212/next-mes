@@ -22,6 +22,7 @@ jobs:
           script: |
             cd /var/www/next-mes
             git pull origin main
+            php backend/migrate.php
             sudo systemctl reload php8.3-fpm
             sudo systemctl reload nginx
-            echo "✅ 배포 완료: $(date)"
+            echo "✅ 배포 및 DB 마이그레이션 완료: $(date)"
