@@ -1046,3 +1046,269 @@ html, body {
     transform: translateY(0);
     opacity: 1;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   6. RESPONSIVE MULTI-DEVICE FULL-VIEWPORT OPTIMIZATION
+   - 27인치 대형 모니터 (QHD / 4K / 1700px 이상)
+   - 15인치 표준 노트북 / 데스크톱 (1200px ~ 1699px)
+   - 8인치 태블릿 / 소형 디스플레이 (1199px 이하)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 1) 27인치 대형 모니터 (1700px 이상): 공간 100% 꽉 채우는 웅장한 대화면 ── */
+@media (min-width: 1700px) {
+    .hmi-workspace {
+        grid-template-columns: 460px 1fr;
+        gap: 16px;
+        padding: 12px 24px;
+        height: calc(100vh - 54px);
+    }
+
+    .hmi-subbar {
+        padding: 10px 24px 8px;
+        gap: 14px;
+    }
+
+    .subbar-label {
+        font-size: 14px;
+    }
+
+    .mach-tab-btn {
+        font-size: 13.5px;
+        padding: 10px 8px;
+    }
+
+    .tab-seq-num {
+        font-size: 12px;
+    }
+
+    .hmi-card {
+        padding: 18px 20px;
+        border-radius: var(--radius-lg);
+    }
+
+    .card-title {
+        font-size: 15px;
+    }
+
+    .card-tag {
+        font-size: 11.5px;
+        padding: 3px 8px;
+    }
+
+    .mach-title-large {
+        font-size: 22px;
+    }
+
+    .mach-code-badge {
+        font-size: 12px;
+        padding: 3px 8px;
+    }
+
+    .mach-category-desc {
+        font-size: 12.5px;
+    }
+
+    .health-score-canvas-wrap {
+        width: 190px;
+        height: 190px;
+    }
+
+    .health-val-num {
+        font-size: 48px;
+    }
+
+    .health-unit-max {
+        font-size: 12px;
+    }
+
+    .health-status-desc {
+        font-size: 14px;
+        padding: 4px 16px;
+    }
+
+    .tpm-metric-box {
+        padding: 14px 16px;
+        margin-bottom: 12px;
+    }
+
+    .tpm-name {
+        font-size: 15px;
+    }
+
+    .tpm-days-badge {
+        font-size: 14px;
+        padding: 3px 9px;
+    }
+
+    .tpm-bar-track {
+        height: 12px;
+    }
+
+    .tpm-detail-row {
+        font-size: 13px;
+    }
+
+    .btn-tpm-reset {
+        font-size: 14px;
+        padding: 13px 16px;
+    }
+
+    .btn-pdm-guide-trigger {
+        font-size: 13px;
+        padding: 13px 8px;
+    }
+
+    .sensor-stat-card {
+        padding: 12px 14px;
+    }
+
+    .sensor-label {
+        font-size: 13px;
+    }
+
+    .sensor-limit-tag {
+        font-size: 11px;
+    }
+
+    .sensor-big-val {
+        font-size: 26px;
+    }
+
+    .sensor-unit {
+        font-size: 13px;
+    }
+
+    #hmiWaveformCanvas {
+        height: 250px;
+    }
+
+    .active-pcb-box {
+        padding: 14px;
+    }
+
+    .active-barcode-val {
+        font-size: 16px;
+        padding: 6px 12px;
+    }
+
+    .hmi-cell-chip {
+        font-size: 12px;
+        padding: 8px 4px;
+    }
+
+    .scanner-input-field {
+        font-size: 14px;
+        padding: 8px 12px;
+    }
+
+    .btn-scan-trigger {
+        font-size: 13px;
+        padding: 8px 16px;
+    }
+
+    .hmi-table th {
+        font-size: 12.5px;
+        padding: 8px 10px;
+    }
+
+    .hmi-table td {
+        font-size: 12.5px;
+        padding: 7px 10px;
+    }
+}
+
+/* ── 2) 15인치 표준 노트북 / 데스크톱 (1200px ~ 1699px) ── */
+@media (max-width: 1699px) and (min-width: 1200px) {
+    .hmi-workspace {
+        grid-template-columns: 360px 1fr;
+        gap: 10px;
+        padding: 8px 16px;
+        height: calc(100vh - 44px);
+    }
+
+    .health-score-canvas-wrap {
+        width: 140px;
+        height: 140px;
+    }
+
+    .health-val-num {
+        font-size: 32px;
+    }
+
+    #hmiWaveformCanvas {
+        height: 165px;
+    }
+}
+
+/* ── 3) 8인치 태블릿 / 소형 디스플레이 (1199px 이하): 시원한 단일/반응형 뷰 ── */
+@media (max-width: 1199px) {
+    .hmi-workspace {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 6px 10px;
+        height: calc(100vh - 44px);
+        overflow-y: auto;
+    }
+
+    .left-col-stack {
+        overflow-y: visible;
+        height: auto;
+    }
+
+    .right-col-stack {
+        overflow-y: visible;
+        height: auto;
+    }
+
+    .hmi-subbar {
+        padding: 6px 10px;
+        gap: 6px;
+    }
+
+    .subbar-label {
+        font-size: 11px;
+    }
+
+    .mach-tab-btn {
+        font-size: 10px;
+        padding: 5px 2px;
+        gap: 3px;
+    }
+
+    .tab-seq-num {
+        font-size: 9px;
+        padding: 1px 3px;
+    }
+
+    .health-score-canvas-wrap {
+        width: 115px;
+        height: 115px;
+    }
+
+    .health-val-num {
+        font-size: 28px;
+    }
+
+    .health-unit-max {
+        font-size: 9px;
+    }
+
+    .health-status-desc {
+        font-size: 10.5px;
+        padding: 2px 8px;
+    }
+
+    #hmiWaveformCanvas {
+        height: 130px;
+    }
+
+    .sensor-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+
+    .tracking-grid-2 {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+}

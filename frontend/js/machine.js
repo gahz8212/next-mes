@@ -440,7 +440,7 @@ function renderSensorGrid(sensors) {
     grid.innerHTML = html;
 }
 
-// ── 4. 건전도 원형 게이지 Canvas 드로잉 ──
+// ── 4. 건전도 원형 게이지 Canvas 드로잉 (27"/15"/8" 완벽 반응형) ──
 function updateHealthUI(score, status) {
     const canvas = document.getElementById('healthScoreCanvas');
     const valEl = document.getElementById('healthValNum');
@@ -463,7 +463,7 @@ function updateHealthUI(score, status) {
     if (!canvas) return;
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
-    const cssSize = Math.max(100, Math.round(rect.width) || canvas.offsetWidth || 140);
+    const cssSize = Math.max(90, Math.round(rect.width) || canvas.offsetWidth || 140);
     if (canvas.width !== Math.round(cssSize * dpr) || canvas.height !== Math.round(cssSize * dpr)) {
         canvas.width = Math.round(cssSize * dpr);
         canvas.height = Math.round(cssSize * dpr);
@@ -475,8 +475,8 @@ function updateHealthUI(score, status) {
 
     const cx = cssSize / 2;
     const cy = cssSize / 2;
-    const strokeW = Math.max(6, Math.min(9, cssSize * 0.06));
-    const r = Math.max(20, (cssSize / 2) - (strokeW / 2) - 4);
+    const strokeW = Math.max(6, Math.min(14, cssSize * 0.065));
+    const r = Math.max(16, (cssSize / 2) - (strokeW / 2) - 4);
 
     // 1. 배경 트랙
     ctx.beginPath();
@@ -501,7 +501,7 @@ function updateHealthUI(score, status) {
     ctx.stroke();
 }
 
-// ── 5. 실시간 SPC 파형 차트 캔버스 렌더링 ──
+// ── 5. 실시간 SPC 파형 차트 캔버스 렌더링 (27"/15"/8" 완벽 반응형) ──
 function initWaveformHistory(primarySensor) {
     waveformHistory = [];
     const base = primarySensor.base;
@@ -521,8 +521,8 @@ function drawWaveformChart() {
     const sensor = def.sensors[0];
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
-    const w = Math.max(300, Math.round(rect.width) || canvas.offsetWidth || 700);
-    const h = Math.max(140, Math.round(rect.height) || canvas.offsetHeight || 165);
+    const w = Math.max(260, Math.round(rect.width) || canvas.offsetWidth || 700);
+    const h = Math.max(110, Math.round(rect.height) || canvas.offsetHeight || 165);
 
     if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
         canvas.width = Math.round(w * dpr);
@@ -533,10 +533,11 @@ function drawWaveformChart() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
-    const padL = 74; // UCL/LCL 수치 라벨 가시성 확보
-    const padR = 20;
-    const padT = 20;
-    const padB = 22;
+    const labelFontSize = Math.max(9, Math.min(14, Math.round(h * 0.065)));
+    const padL = Math.max(60, Math.min(95, Math.round(w * 0.08))); // UCL/LCL 수치 라벨 가시성 확보
+    const padR = Math.max(14, Math.round(w * 0.02));
+    const padT = Math.max(16, Math.round(h * 0.09));
+    const padB = Math.max(18, Math.round(h * 0.1));
     const plotW = w - padL - padR;
     const plotH = h - padT - padB;
 
@@ -582,7 +583,7 @@ function drawWaveformChart() {
     ctx.lineTo(w - padR, uclY);
     ctx.stroke();
 
-    ctx.font = 'bold 12px "JetBrains Mono", monospace';
+    ctx.font = `bold ${labelFontSize}px "JetBrains Mono", monospace`;
     ctx.fillStyle = '#ef4444';
     ctx.textAlign = 'right';
     ctx.fillText(`UCL ${sensor.ucl}`, padL - 8, uclY + 4);
@@ -1021,3 +1022,22 @@ function dismissAiPdmBanner() {
 
 window.showAiPdmBanner = showAiPdmBanner;
 window.dismissAiPdmBanner = dismissAiPdmBanner;
+
+// ── 13. 27인치/15인치/8인치 화면 크기 변경 시 차트 & 게이지 즉시 고해상도 리렌더링 ──
+function renderAllHmiCanvases() {
+    updateHealthUI(currentHealth);
+    drawWaveformChart();
+}
+
+window.addEventListener('resize', renderAllHmiCanvases);
+
+if (window.ResizeObserver) {
+    let resizeHmiTimer = null;
+    const hmiRo = new ResizeObserver(() => {
+        if (resizeHmiTimer) cancelAnimationFrame(resizeHmiTimer);
+        resizeHmiTimer = requestAnimationFrame(renderAllHmiCanvases);
+    });
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.hmi-workspace, .hmi-card, .health-score-canvas-wrap, .waveform-chart-wrap').forEach(el => hmiRo.observe(el));
+    });
+}
