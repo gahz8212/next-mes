@@ -12117,7 +12117,7 @@ function renderOrderModalItems() {
         if (isCustom) {
             itemFieldHtml = `
             <div style="display:flex; gap:4px; align-items:center;">
-                <input type="text" class="form-control ord-custom-item-inp" style="width:100%; box-sizing:border-box; padding:6px 10px; font-size:13px;" value="${escHtml(it.item_name || '')}" placeholder="신규 품목명 직접 입력" oninput="updateOrderModalItemField(${idx}, 'item_name', this.value);">
+                <input type="text" class="form-control ord-custom-item-inp" style="width:100%; box-sizing:border-box; padding:6px 10px; font-size:13px;" value="${escHtml(it.item_name || '')}" placeholder="신규 품목명 직접 입력" onfocus="this.select()" onclick="this.select()" oninput="updateOrderModalItemField(${idx}, 'item_name', this.value);">
                 <button type="button" class="card-btn" style="padding:5px 8px; font-size:11px; background:rgba(255,255,255,0.08); white-space:nowrap;" onclick="setOrderModalItemCustom(${idx}, false)" title="등록 품목 드롭다운으로 전환">목록</button>
             </div>`;
         } else if (compItemList.length > 0) {
@@ -12133,7 +12133,7 @@ function renderOrderModalItems() {
             </select>`;
         } else {
             itemFieldHtml = `
-            <input type="text" class="form-control ord-custom-item-inp" style="width:100%; box-sizing:border-box; padding:6px 10px; font-size:13px;" value="${escHtml(it.item_name || '')}" placeholder="${compId ? '등록된 품목 없음 (직접 입력)' : '고객사 선택 시 품목 목록 표시 / 직접 입력'}" oninput="updateOrderModalItemField(${idx}, 'item_name', this.value);">`;
+            <input type="text" class="form-control ord-custom-item-inp" style="width:100%; box-sizing:border-box; padding:6px 10px; font-size:13px;" value="${escHtml(it.item_name || '')}" placeholder="${compId ? '등록된 품목 없음 (직접 입력)' : '고객사 선택 시 품목 목록 표시 / 직접 입력'}" onfocus="this.select()" onclick="this.select()" oninput="updateOrderModalItemField(${idx}, 'item_name', this.value);">`;
         }
 
         return `
@@ -12143,10 +12143,10 @@ function renderOrderModalItems() {
                 ${itemFieldHtml}
             </td>
             <td>
-                <input type="number" class="form-control" style="width:100%; box-sizing:border-box; padding:6px 10px; font-size:13px; text-align:right; font-weight:700;" value="${it.order_qty}" min="1" placeholder="1" oninput="updateOrderModalItemField(${idx}, 'order_qty', this.value)">
+                <input type="number" class="form-control" style="width:100%; box-sizing:border-box; padding:6px 10px; font-size:13px; text-align:right; font-weight:700;" value="${it.order_qty}" min="1" placeholder="1" onfocus="this.select()" onclick="this.select()" oninput="updateOrderModalItemField(${idx}, 'order_qty', this.value)">
             </td>
             <td>
-                <input type="number" class="form-control ord-inp-item-price" style="width:100%; box-sizing:border-box; padding:6px 10px; font-size:13px; text-align:right;" value="${it.unit_price}" min="0" placeholder="0" oninput="updateOrderModalItemField(${idx}, 'unit_price', this.value)">
+                <input type="number" class="form-control ord-inp-item-price" style="width:100%; box-sizing:border-box; padding:6px 10px; font-size:13px; text-align:right;" value="${it.unit_price}" min="0" placeholder="0" onfocus="this.select()" onclick="this.select()" oninput="updateOrderModalItemField(${idx}, 'unit_price', this.value)">
             </td>
             <td class="ord-subtotal-cell" style="text-align:right; color:#34d399; font-weight:700; font-family:'JetBrains Mono',monospace; font-size:13px; padding-right:8px; white-space:nowrap;">
                 ₩ ${Math.round(subtotal).toLocaleString()}

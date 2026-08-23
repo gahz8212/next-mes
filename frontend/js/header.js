@@ -397,40 +397,36 @@ window.setupAutoHideHeader = setupAutoHideHeader;
  * 모든 인풋박스 및 텍스트에리어 포커스 시 기존 입력값 전체 선택 (새로 입력/삭제 편의성)
  */
 (function setupGlobalInputAutoSelect() {
-    let mousedownEl = null;
-
-    document.addEventListener('mousedown', (e) => {
-        const el = e.target;
-        if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
-            mousedownEl = (document.activeElement === el) ? el : null;
-        }
-    }, true);
+    function trySelect(el) {
+        if (!el || typeof el.select !== 'function') return;
+        const type = (el.getAttribute('type') || el.type || '').toLowerCase();
+        if (['button', 'submit', 'reset', 'checkbox', 'radio', 'file', 'color', 'range', 'hidden'].includes(type)) return;
+        try {
+            el.select();
+        } catch (e) {}
+    }
 
     document.addEventListener('focusin', (e) => {
         const el = e.target;
         if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
-            const type = (el.getAttribute('type') || el.type || '').toLowerCase();
-            if (['button', 'submit', 'reset', 'checkbox', 'radio', 'file', 'color', 'range', 'hidden'].includes(type)) return;
-            setTimeout(() => {
-                if (document.activeElement === el && typeof el.select === 'function') {
-                    el.select();
-                }
-            }, 10);
+            trySelect(el);
+            setTimeout(() => trySelect(el), 1);
+            setTimeout(() => trySelect(el), 30);
+            setTimeout(() => trySelect(el), 80);
         }
     }, true);
 
     document.addEventListener('mouseup', (e) => {
         const el = e.target;
         if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
-            const type = (el.getAttribute('type') || el.type || '').toLowerCase();
-            if (['button', 'submit', 'reset', 'checkbox', 'radio', 'file', 'color', 'range', 'hidden'].includes(type)) return;
-            if (mousedownEl !== el) {
-                setTimeout(() => {
-                    if (document.activeElement === el && typeof el.select === 'function') {
-                        el.select();
-                    }
-                }, 10);
-            }
+            setTimeout(() => trySelect(el), 10);
+        }
+    }, true);
+
+    document.addEventListener('click', (e) => {
+        const el = e.target;
+        if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+            setTimeout(() => trySelect(el), 10);
         }
     }, true);
 })();
