@@ -38,52 +38,6 @@ class WorkOrderController {
                 $statusLine = $headers[0] ?? '';
             }
         }
-
-        // Node-RED 서비스 미구동 시 내장 시뮬레이션 데이터 즉시 주입 (Fallback Engine)
-        if (empty($statusLine) || strpos($statusLine, '200') === false) {
-            self::seedFallbackSimulationData($path, $data);
-        }
-    }
-
-    /**
-     * Node-RED 미구동 환경 폴백: 초기 공정 파이프라인 이벤트 자동 생성
-     */
-    private static function seedFallbackSimulationData(string $path, array $data): void {
-        try {
-            $pdo = Database::getConnection();
-            $wo_id = $data['wo_id'] ?? '';
-            if (!$wo_id) return;
-
-            $mode = ($path === '/start-dip-sim') ? 'DIP' : 'SMT';
-            $processList = ($mode === 'SMT')
-                ? ["LASER", "SPI", "MOUNTER_1", "MOUNTER_2", "REFLOW"]
-                : ["DIP_AOI", "WAVE", "ICT", "COATING", "FCT"];
-
-            $barcode = $wo_id . "-0001";
-            
-            $stmtBm = $pdo->prepare("INSERT IGNORE INTO barcode_master (barcode, wo_id, status) VALUES (?, ?, 'WAIT')");
-            $stmtBm->execute([$barcode, $wo_id]);
-
-            foreach ($processList as $proc) {
-                $pdata = [
-                    'metric_name' => ($proc === 'LASER' ? '레이저 출력' : ($proc === 'SPI' ? '납 도포 체적율' : ($proc === 'MOUNTER_1' ? '노즐 진공압' : ($proc === 'MOUNTER_2' ? '부품 가압력' : '피크 프로파일 온도')))),
-                    'metric_val' => ($proc === 'LASER' ? 15.2 : ($proc === 'SPI' ? 102.5 : ($proc === 'MOUNTER_1' ? -84.2 : ($proc === 'MOUNTER_2' ? 1.85 : 245.5)))),
-                    'metric_unit' => ($proc === 'MOUNTER_1' ? 'kPa' : ($proc === 'MOUNTER_2' ? 'N' : ($proc === 'REFLOW' ? '℃' : ($proc === 'SPI' ? '%' : 'W')))),
-                    'pdm_health' => 98,
-                    'pdm_status' => 'NORMAL',
-                    'pcb_no' => 1,
-                    'recommendation' => '자삽 공정 파이프라인가동 시작'
-                ];
-
-                $stmtHist = $pdo->prepare("
-                    INSERT INTO barcode_history (barcode, process_name, result_status, process_data, created_at)
-                    VALUES (?, ?, 'PASS', ?, NOW())
-                ");
-                $stmtHist->execute([$barcode, $proc, json_encode($pdata, JSON_UNESCAPED_UNICODE)]);
-            }
-        } catch (Exception $e) {
-            // Ignore fallback exception
-        }
     }
 
     /**
@@ -496,6 +450,7 @@ class WorkOrderController {
 
             $pdo->prepare("UPDATE work_order SET status = 'IN_PROGRESS' WHERE wo_id = ?")->execute([$wo_id]);
             $pdo->prepare("UPDATE barcode_master SET status = 'WAIT' WHERE wo_id = ?")->execute([$wo_id]);
+            $pdo->prepare("DELETE FROM barcode_history WHERE barcode LIKE ?")->execute([$wo_id . '-%']);
 
             $pdo->commit();
 

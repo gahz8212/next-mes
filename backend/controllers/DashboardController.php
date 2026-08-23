@@ -349,7 +349,7 @@ class DashboardController {
             $targetQty = (int)($activeWo['target_qty'] ?? 0);
             if (!$woId || ($status !== 'IN_PROGRESS' && $status !== 'DIP_IN_PROGRESS')) return;
 
-            // 1.0초 이내에 생성된 이력이 있으면 스킵
+            // 1.0초 이내에 생성된 이력이 있으면 중복 틱 방지
             $stmtLast = $pdo->query("SELECT created_at FROM barcode_history ORDER BY history_id DESC LIMIT 1");
             $lastRow = $stmtLast->fetch();
             if ($lastRow && (time() - strtotime($lastRow['created_at'])) < 1) {
@@ -361,15 +361,20 @@ class DashboardController {
                 ? ["LASER", "SPI", "MOUNTER_1", "MOUNTER_2", "REFLOW"]
                 : ["DIP_AOI", "WAVE", "ICT", "COATING", "FCT"];
 
-            $stmtCount = $pdo->prepare("SELECT count(*) FROM barcode_master WHERE wo_id = ? AND status != 'WAIT'");
-            $stmtCount->execute([$woId]);
-            $processedCount = (int)$stmtCount->fetchColumn();
+            $firstProc = $processList[0];
+            $lastProc  = $processList[4];
 
-            $stmtTotalBm = $pdo->prepare("SELECT count(*) FROM barcode_master WHERE wo_id = ?");
-            $stmtTotalBm->execute([$woId]);
-            $totalRegistered = (int)$stmtTotalBm->fetchColumn();
+            // 1. 투입 수량(inCount) 및 완제품 배출 수량(outCount) 집계
+            $stmtIn = $pdo->prepare("SELECT count(*) FROM barcode_history WHERE barcode LIKE ? AND process_name = ? AND result_status != 'IDLE'");
+            $stmtIn->execute([$woId . '-%', $firstProc]);
+            $inCount = (int)$stmtIn->fetchColumn();
 
-            if ($processedCount >= $targetQty && $targetQty > 0) {
+            $stmtOut = $pdo->prepare("SELECT count(*) FROM barcode_history WHERE barcode LIKE ? AND process_name = ? AND result_status != 'IDLE'");
+            $stmtOut->execute([$woId . '-%', $lastProc]);
+            $outCount = (int)$stmtOut->fetchColumn();
+
+            // 2. 전체 목표 수량이 공정 파이프라인을 완전히 빠져나왔는지 확인
+            if ($outCount >= $targetQty && $targetQty > 0) {
                 if ($mode === 'SMT') {
                     $pdo->prepare("UPDATE work_order SET status = 'SMT_DONE' WHERE wo_id = ? AND status = 'IN_PROGRESS'")->execute([$woId]);
                 } else {
@@ -378,39 +383,63 @@ class DashboardController {
                 return;
             }
 
-            $nextSeq = $totalRegistered + 1;
-            if ($nextSeq <= $targetQty) {
-                $barcode = sprintf('%s-%04d', $woId, $nextSeq);
-                $pdo->prepare("INSERT IGNORE INTO barcode_master (barcode, wo_id, status) VALUES (?, ?, 'WAIT')")->execute([$barcode, $woId]);
+            // 3. 현재 컨베이어 슬롯 전진 스텝(currentStep) 계산
+            if ($inCount < $targetQty) {
+                $currentStep = $inCount + 1;
             } else {
-                $barcode = sprintf('%s-%04d', $woId, min($targetQty, max(1, $nextSeq - 1)));
+                $currentStep = $targetQty + ($outCount - max(0, $targetQty - 4)) + 1;
             }
 
-            $isFail = (mt_rand(1, 100) <= 2);
-            $pdmHealth = $isFail ? 82 : mt_rand(95, 99);
+            // 4. 5개 설비 슬롯별 기판 이동 및 텔레메트리 생성 (Pipeline Shift)
+            foreach ($processList as $pIdx => $proc) {
+                $pcbNum = $currentStep - $pIdx;
 
-            foreach ($processList as $proc) {
-                $pdata = [
-                    'metric_name' => ($proc === 'LASER' ? '레이저 출력' : ($proc === 'SPI' ? '납 도포 체적율' : ($proc === 'MOUNTER_1' ? '노즐 진공압' : ($proc === 'MOUNTER_2' ? '부품 가압력' : ($proc === 'REFLOW' ? '피크 프로파일 온도' : '공정 검사값'))))),
-                    'metric_val' => ($proc === 'LASER' ? round(15.2 + (mt_rand(-3, 3) / 10), 2) : ($proc === 'SPI' ? round(102.5 + (mt_rand(-5, 5) / 10), 1) : ($proc === 'MOUNTER_1' ? round(-84.2 + (mt_rand(-15, 15) / 10), 1) : ($proc === 'MOUNTER_2' ? round(1.85 + (mt_rand(-1, 1) / 10), 2) : 245.5)))),
-                    'metric_unit' => ($proc === 'MOUNTER_1' ? 'kPa' : ($proc === 'MOUNTER_2' ? 'N' : ($proc === 'REFLOW' ? '℃' : ($proc === 'SPI' ? '%' : 'W')))),
-                    'pdm_health' => $pdmHealth,
-                    'pdm_status' => $isFail ? 'WARNING' : 'NORMAL',
-                    'pcb_no' => $nextSeq,
-                    'recommendation' => $isFail ? '이상 파라미터 감지 점검 권장' : '라인 컨베이어 파이프라인 정상 가동 중'
-                ];
+                if ($pcbNum >= 1 && $pcbNum <= $targetQty) {
+                    $barcode = sprintf('%s-%04d', $woId, $pcbNum);
 
-                $stmtHist = $pdo->prepare("
-                    INSERT INTO barcode_history (barcode, process_name, result_status, process_data, created_at)
-                    VALUES (?, ?, ?, ?, NOW())
-                ");
-                $stmtHist->execute([$barcode, $proc, $isFail ? 'FAIL' : 'PASS', json_encode($pdata, JSON_UNESCAPED_UNICODE)]);
-            }
+                    // 기판 바코드 마스터 등록 및 상태 갱신
+                    $pdo->prepare("INSERT IGNORE INTO barcode_master (barcode, wo_id, status) VALUES (?, ?, 'WAIT')")->execute([$barcode, $woId]);
 
-            if ($mode === 'SMT') {
-                $pdo->prepare("UPDATE barcode_master SET status = 'TEST_PASS' WHERE barcode = ?")->execute([$barcode]);
-            } else {
-                $pdo->prepare("UPDATE barcode_master SET status = 'SHIPPING' WHERE barcode = ?")->execute([$barcode]);
+                    $isFail = (mt_rand(1, 100) <= 2);
+                    $pdmHealth = $isFail ? 82 : mt_rand(95, 99);
+
+                    $pdata = [
+                        'pcb_no' => $pcbNum,
+                        'metric_name' => ($proc === 'LASER' ? '레이저 출력' : ($proc === 'SPI' ? '납 도포 체적율' : ($proc === 'MOUNTER_1' ? '노즐 진공압' : ($proc === 'MOUNTER_2' ? '부품 가압력' : ($proc === 'REFLOW' ? '피크 프로파일 온도' : '공정 검사값'))))),
+                        'metric_val' => ($proc === 'LASER' ? round(15.2 + (mt_rand(-3, 3) / 10), 2) : ($proc === 'SPI' ? round(102.5 + (mt_rand(-5, 5) / 10), 1) : ($proc === 'MOUNTER_1' ? round(-84.2 + (mt_rand(-15, 15) / 10), 1) : ($proc === 'MOUNTER_2' ? round(1.85 + (mt_rand(-1, 1) / 10), 2) : 245.5)))),
+                        'metric_unit' => ($proc === 'MOUNTER_1' ? 'kPa' : ($proc === 'MOUNTER_2' ? 'N' : ($proc === 'REFLOW' ? '℃' : ($proc === 'SPI' ? '%' : 'W')))),
+                        'pdm_health' => $pdmHealth,
+                        'pdm_status' => $isFail ? 'WARNING' : 'NORMAL',
+                        'recommendation' => $isFail ? "PCB #{$pcbNum} 공정 검사 이상 ➔ 점검 권장" : "라인 컨베이어 파이프라인 정상 가동 중 (PCB #{$pcbNum})"
+                    ];
+
+                    $stmtHist = $pdo->prepare("
+                        INSERT INTO barcode_history (barcode, process_name, result_status, process_data, created_at)
+                        VALUES (?, ?, ?, ?, NOW())
+                    ");
+                    $stmtHist->execute([$barcode, $proc, $isFail ? 'FAIL' : 'PASS', json_encode($pdata, JSON_UNESCAPED_UNICODE)]);
+
+                    // 마지막 공정(REFLOW 또는 FCT)을 통과한 기판은 최종 양품(또는 불량) 완료 상태로 전이
+                    if ($pIdx === 4) {
+                        $nextBmStatus = $isFail ? 'DEFECT' : ($mode === 'SMT' ? 'TEST_PASS' : 'SHIPPING');
+                        $pdo->prepare("UPDATE barcode_master SET status = ? WHERE barcode = ?")->execute([$nextBmStatus, $barcode]);
+                    } else {
+                        // 공정 진행 중인 기판 상태
+                        $pdo->prepare("UPDATE barcode_master SET status = 'IN_PROCESS' WHERE barcode = ? AND status = 'WAIT'")->execute([$barcode]);
+                    }
+                } else {
+                    // 현재 슬롯에 기판이 없는 경우 (대기/IDLE 텔레메트리 기록)
+                    $idleData = [
+                        'pdm_health' => 99,
+                        'pdm_status' => 'NORMAL',
+                        'recommendation' => '설비 대기(IDLE) 정상'
+                    ];
+                    $stmtHist = $pdo->prepare("
+                        INSERT INTO barcode_history (barcode, process_name, result_status, process_data, created_at)
+                        VALUES ('-', ?, 'IDLE', ?, NOW())
+                    ");
+                    $stmtHist->execute([$proc, json_encode($idleData, JSON_UNESCAPED_UNICODE)]);
+                }
             }
 
         } catch (\Throwable $e) {
