@@ -7199,7 +7199,7 @@ async function deleteCompany(id, name) {
                         const reelBarcode = s.reel_barcode || s.scanned_reel || (isVerified ? `REEL-${s.part_no}-A01` : '(미장착)');
                         const points = s.points !== undefined && s.points !== null ? s.points : s.req_qty;
                         return `
-                            <tr style="cursor:pointer;" onclick="selectTraceSlotReel(${idx}, '${escHtml(reelBarcode)}', '${escHtml(s.slot_no)}', '${escHtml(s.part_no)}')" title="클릭 시 상단에 투입 PCB 번호 범위(${startSeq}~${endSeq}) 연동">
+                            <tr style="cursor:pointer;" onclick="selectTraceSlotReel(${idx})" title="클릭 시 상단에 투입 PCB 번호 범위(${startSeq}~${endSeq}) 연동">
                                 <td style="text-align:center; font-family:'JetBrains Mono',monospace; font-weight:800; color:#38bdf8; font-size:13px;">#${escHtml(s.slot_no)}</td>
                                 <td style="font-weight:700; color:#f8fafc;">
                                     <div style="font-size:12.5px; font-family:'JetBrains Mono',monospace; color:#ffffff;">${escHtml(s.part_no)}</div>
@@ -7232,7 +7232,7 @@ async function deleteCompany(id, name) {
     }
 
     // ── 자재 릴 행 클릭 시 상단 메타 정보(투입 PCB 범위 001~030) 하이라이트 동기화 ──
-    function selectTraceSlotReel(index, reelBarcode, slotNo, partNo) {
+    function selectTraceSlotReel(index) {
         const rows = document.querySelectorAll('#traceModalReelsTbody tr');
         rows.forEach((r, idx) => {
             if (idx === index) {
