@@ -7039,7 +7039,7 @@ async function deleteCompany(id, name) {
                 const itemName = r.item_name || '—';
 
                 return `
-                <tr style="min-height:40px;">
+                <tr style="min-height:40px; cursor:pointer;" onclick="openDefectTraceModal('${escHtml(r.barcode)}', '${escHtml(r.wo_id || '')}', '${escHtml(r.company_name || '')}', '${escHtml(itemName)}', '${escHtml(r.process_name || '')}', '${escHtml(r.created_at || '')}')" title="클릭 시 [불량 기판 자재 릴 역추적] 팝업 열기">
                     <!-- 1. 업체명 -->
                     <td style="padding:6px 6px; color:#ffffff; font-weight:700; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escHtml(r.company_name || '-')}">
                         ${escHtml(r.company_name || '-')}
@@ -7048,9 +7048,9 @@ async function deleteCompany(id, name) {
                     <td style="padding:6px 4px; text-align:center; white-space:nowrap;">
                         <span class="status-badge status-progress" style="padding:2px 6px; font-size:11px;">${escHtml(r.process_name)}</span>
                     </td>
-                    <!-- 3. 바코드 (우측 20px 여백 확보) -->
-                    <td style="padding:6px 4px 6px 20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escHtml(r.barcode)}">
-                        <code style="font-size:12px; padding:1px 4px; border-radius:3px;">${escHtml(seq ? '#' + seq : r.barcode)}</code>
+                    <!-- 3. 바코드 (우측 20px 여백 확보, 클릭 유도 강조) -->
+                    <td style="padding:6px 4px 6px 20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escHtml(r.barcode)} (클릭하여 자재 추적)">
+                        <code style="font-size:12px; padding:2px 6px; border-radius:4px; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-weight:700; cursor:pointer;">${escHtml(seq ? '#' + seq : r.barcode)} 🔍</code>
                     </td>
                     <!-- 4. 제품명 (15인치에서는 아래 2행에 발생일 표시) -->
                     <td style="padding:6px 6px; min-width:0;">
@@ -7134,6 +7134,66 @@ async function deleteCompany(id, name) {
             defectSelectedCompany = (defectSelectedCompany === value) ? '' : value;
         }
         loadDefects();
+    }
+
+    // ── 불량 기판 역추적 & 자재 릴 검증 (Lot Traceability) ──
+    async function openDefectTraceModal(barcode, woId, companyName, itemName, processName, createdAt) {
+        const modal = document.getElementById('defectTraceModal');
+        if (!modal) return;
+
+        document.getElementById('traceModalPcbBarcode').innerText = barcode || '—';
+        document.getElementById('traceModalWoId').innerText = woId || '—';
+        document.getElementById('traceModalCompany').innerText = companyName || '—';
+        document.getElementById('traceModalItem').innerText = itemName || '—';
+        document.getElementById('traceModalProcess').innerText = processName || '—';
+        document.getElementById('traceModalDate').innerText = createdAt || '—';
+
+        const tbody = document.getElementById('traceModalReelsTbody');
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:#94a3b8;">자재 릴 및 피더 셋업 이력을 조회하는 중...</td></tr>`;
+
+        openModal('defectTraceModal');
+
+        try {
+            if (!woId && barcode) {
+                const lastDash = barcode.lastIndexOf('-');
+                if (lastDash > 0) woId = barcode.substring(0, lastDash);
+            }
+
+            const res = await fetch(`../backend/api/get_feeder_setup.php?wo_id=${encodeURIComponent(woId)}`);
+            const json = await res.json();
+
+            if (json.status === 'success' && json.data && json.data.slots && json.data.slots.length > 0) {
+                tbody.innerHTML = json.data.slots.map(s => {
+                    const isVerified = (s.status === 'VERIFIED');
+                    const reelBarcode = s.scanned_reel || '(미장착/기본)';
+                    const points = s.points !== undefined && s.points !== null ? s.points : s.req_qty;
+                    return `
+                        <tr>
+                            <td style="text-align:center; font-family:'JetBrains Mono',monospace; font-weight:800; color:#38bdf8; font-size:13px;">#${escHtml(s.slot_no)}</td>
+                            <td style="font-weight:700; color:#f8fafc;">
+                                <div style="font-size:12.5px; font-family:'JetBrains Mono',monospace;">${escHtml(s.part_no)}</div>
+                                ${s.part_name && s.part_name !== s.part_no ? `<div style="font-size:11px; color:#94a3b8; margin-top:2px;">${escHtml(s.part_name)}</div>` : ''}
+                            </td>
+                            <td>
+                                <code style="background:rgba(15,23,42,0.85); border:1px solid rgba(56,189,248,0.45); color:#38bdf8; padding:3px 8px; border-radius:4px; font-size:12px; font-family:'JetBrains Mono',monospace; font-weight:700; display:inline-block;">
+                                    ${escHtml(reelBarcode)}
+                                </code>
+                            </td>
+                            <td style="text-align:center; font-family:'JetBrains Mono',monospace; color:#fcd34d; font-weight:800; font-size:12.5px;">${points}P</td>
+                            <td style="text-align:center;">
+                                <span class="status-badge ${isVerified ? 'status-active' : 'status-draft'}" style="font-size:11px; padding:2px 7px; font-weight:700;">
+                                    ${isVerified ? '✅ 검증완료' : '⏳ 미검증'}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:#94a3b8;">해당 작업지시의 피더 자재 릴 등록 이력이 없습니다.</td></tr>`;
+            }
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:#f87171;">자재 이력 조회 실패: ${escHtml(e.message)}</td></tr>`;
+        }
     }
 
     // ════════════════════════════════════════════════
@@ -14465,6 +14525,79 @@ document.addEventListener('DOMContentLoaded', () => {
     <div style="text-align:center;">
         <div id="globalLoadingTitle" style="font-size:20px; font-weight:900; color:#f8fafc; letter-spacing:-0.02em;">데이터 등록 및 동기화 중...</div>
         <div id="globalLoadingSub" style="font-size:13.5px; color:#94a3b8; margin-top:8px;">잠시만 기다려 주세요. 시스템에 안전하게 반영하고 있습니다.</div>
+    </div>
+</div>
+
+<!-- ════════ MODAL: 불량 기판 자재 릴 역추적 (Lot Traceability) ════════ -->
+<div class="modal-overlay" id="defectTraceModal" style="z-index:9999;">
+    <div class="modal-box wide" style="max-width:880px; background:#0f172a; border:1px solid rgba(56,189,248,0.4); border-radius:12px; padding:22px 24px; box-shadow:0 24px 64px rgba(0,0,0,0.7);">
+        <div class="modal-header" style="margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:22px;">🔍</span>
+                <div>
+                    <div class="modal-title" style="font-size:17px; color:#f8fafc; font-weight:800;">불량 기판 역추적 & 자재 릴 검증 (Lot Traceability)</div>
+                    <div style="font-size:11.5px; color:#94a3b8; margin-top:2px;">불량 발생 PCB에 실장된 전체 피더 슬롯의 부품 규격 및 자재 릴(Reel Barcode) 역추적 이력입니다.</div>
+                </div>
+            </div>
+            <button class="modal-close" onclick="closeModal('defectTraceModal')">✕</button>
+        </div>
+
+        <!-- 1. 기판 및 불량 발생 메타 정보 -->
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px 16px; margin-bottom:16px;">
+            <div>
+                <div style="font-size:11px; color:#94a3b8; font-weight:600;">불량 PCB 바코드</div>
+                <div id="traceModalPcbBarcode" style="font-size:13.5px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#38bdf8; margin-top:2px;">—</div>
+            </div>
+            <div>
+                <div style="font-size:11px; color:#94a3b8; font-weight:600;">작업지시 (WO ID)</div>
+                <div id="traceModalWoId" style="font-size:13.5px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#f8fafc; margin-top:2px;">—</div>
+            </div>
+            <div>
+                <div style="font-size:11px; color:#94a3b8; font-weight:600;">수주업체 / 제품명</div>
+                <div style="font-size:13px; font-weight:700; color:#f8fafc; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    <span id="traceModalCompany">—</span> / <span id="traceModalItem" style="color:#cbd5e1;">—</span>
+                </div>
+            </div>
+            <div>
+                <div style="font-size:11px; color:#94a3b8; font-weight:600;">불량 검출 공정</div>
+                <div id="traceModalProcess" style="font-size:13px; font-weight:800; color:#f87171; margin-top:2px;">—</div>
+            </div>
+            <div style="grid-column:span 2;">
+                <div style="font-size:11px; color:#94a3b8; font-weight:600;">검사 시각</div>
+                <div id="traceModalDate" style="font-size:12.5px; font-family:'JetBrains Mono',monospace; color:#cbd5e1; margin-top:2px;">—</div>
+            </div>
+        </div>
+
+        <!-- 2. 연계 피더 슬롯 및 자재 릴 목록 테이블 -->
+        <div style="font-size:13px; font-weight:800; color:#93c5fd; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+            <span>📦</span> <span>실장 투입된 자재 릴(Reel) 및 피더 슬롯 목록</span>
+        </div>
+        <div style="max-height:48vh; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:8px; margin-bottom:16px;">
+            <table class="admin-table" style="width:100%; border-collapse:collapse; font-size:12.5px;">
+                <thead>
+                    <tr style="background:#1e293b; color:#94a3b8; font-size:11.5px;">
+                        <th style="padding:8px 10px; width:70px; text-align:center;">슬롯</th>
+                        <th style="padding:8px 10px;">BOM 소요 품번 / 부품명</th>
+                        <th style="padding:8px 10px;">장착된 자재 릴 바코드</th>
+                        <th style="padding:8px 10px; width:65px; text-align:center;">개소수</th>
+                        <th style="padding:8px 10px; width:90px; text-align:center;">피더 상태</th>
+                    </tr>
+                </thead>
+                <tbody id="traceModalReelsTbody">
+                    <!-- Rendered dynamically by openDefectTraceModal() -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 하단 액션 버튼 -->
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px;">
+            <div style="font-size:11.5px; color:#94a3b8;">
+                💡 릴 바코드는 피더 셋업 시 바코드 건으로 스캔 검증된 고유 식별 번호입니다.
+            </div>
+            <button type="button" class="card-btn" style="background:rgba(255,255,255,0.08); color:#cbd5e1; border:1px solid rgba(255,255,255,0.15); padding:7px 18px; font-size:13px; font-weight:700; cursor:pointer;" onclick="closeModal('defectTraceModal')">
+                닫기 (ESC)
+            </button>
+        </div>
     </div>
 </div>
 
