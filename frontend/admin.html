@@ -4033,7 +4033,16 @@
         <input type="hidden" id="bom_company_id">
         <input type="hidden" id="bom_edit_bom_id">
 
-        <textarea id="bomPaste" class="form-control" rows="5" placeholder="여기에 붙여넣기 (Ctrl+V)…" style="resize:vertical; font-family:monospace; font-size:12px;"></textarea>
+        <div style="position:relative;">
+            <textarea id="bomPaste" class="form-control" rows="8" placeholder="엑셀에서 복사(Ctrl+C)한 후 여기에 붙여넣기(Ctrl+V)…" style="width:100%; min-height:140px; height:180px; max-height:800px; resize:vertical !important; font-family:'JetBrains Mono', Consolas, monospace; font-size:12.5px; line-height:1.5; padding:10px 12px; box-sizing:border-box; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.15); border-radius:6px;"></textarea>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:11.5px; color:#94a3b8;">
+                <span>💡 엑셀 셀 복사 후 붙여넣으세요. 우측 하단 모서리를 마우스로 드래그하여 영역을 아래로 늘릴 수 있습니다.</span>
+                <div style="display:flex; gap:6px;">
+                    <button type="button" class="topbar-action-btn" style="padding:2px 8px; font-size:11px; height:24px;" onclick="adjustBomPasteHeight(80)" title="붙여넣기 창 높이 늘리기">➕ 창 늘리기</button>
+                    <button type="button" class="topbar-action-btn" style="padding:2px 8px; font-size:11px; height:24px;" onclick="adjustBomPasteHeight(-80)" title="붙여넣기 창 높이 줄이기">➖ 창 줄이기</button>
+                </div>
+            </div>
+        </div>
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; gap:10px; flex-wrap:wrap; background:rgba(30,41,59,0.7); padding:10px 14px; border-radius:6px; border:1px solid rgba(255,255,255,0.08);">
             <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:700; color:#93c5fd;">
@@ -5133,48 +5142,84 @@ const ALL_PAGE_TITLES = {
         return parsedRows;
     }
 
+    let bomExcludedZeroCount = 0;
+
+    function adjustBomPasteHeight(delta) {
+        const el = document.getElementById('bomPaste');
+        if (!el) return;
+        const curH = el.offsetHeight || 180;
+        const newH = Math.max(120, Math.min(800, curH + delta));
+        el.style.height = newH + 'px';
+    }
+
     /**
      * 지능형 BOM 다열(Multi-Column) 자동 매핑 추론기
      */
-    function guessBOMColumns(rows) {
+    function guessBOMColumns(rows, headerRow = null) {
         if (!rows || rows.length === 0) return {};
         const numCols = Math.max(...rows.map(r => r.length));
         const mapping = {};
         const assigned = new Set();
 
-        // 1. 파트번호(Part No)는 통상 1열(Col 0)
-        mapping[0] = 'part_no';
-        assigned.add('part_no');
+        // 0. 헤더 행(Header Row)이 주어지면 헤더 텍스트 키워드 우선 매칭
+        if (headerRow && Array.isArray(headerRow)) {
+            for (let c = 0; c < numCols; c++) {
+                const headerText = (headerRow[c] || '').toLowerCase().replace(/[\s_\-\/\(\)]/g, '');
+                if (!headerText) continue;
 
-        // 2. 실장 위치(Location)는 통상 마지막 열 또는 쉼표(,)가 다수 포함된 열
-        for (let c = numCols - 1; c >= 1; c--) {
-            const colVals = rows.map(r => (r[c] || '').trim()).filter(v => v !== '');
-            const hasMultipleRefs = colVals.some(v => v.includes(',') || /^[A-Z]+[0-9]+(\s*,\s*[A-Z]+[0-9]+)+/i.test(v));
-            if (hasMultipleRefs && !assigned.has('location')) {
-                mapping[c] = 'location';
-                assigned.add('location');
-                break;
+                if (!assigned.has('part_no') && /품번|partno|pn|파트번호|자재코드|부품번호|자재번호|부품코드|itemcode|materialno/.test(headerText)) {
+                    mapping[c] = 'part_no';
+                    assigned.add('part_no');
+                } else if (!assigned.has('points') && /포인트|수량|qty|quantity|points|point|pts|소요량|소요|소요수량|reqqty|req/.test(headerText)) {
+                    mapping[c] = 'points';
+                    assigned.add('points');
+                } else if (!assigned.has('part_name') && /품명|자재명|파트명|부품명|규격|description|desc|spec|partname|itemname/.test(headerText)) {
+                    mapping[c] = 'part_name';
+                    assigned.add('part_name');
+                } else if (!assigned.has('location') && /실장위치|위치|location|loc|ref|designator|refdes|pos/.test(headerText)) {
+                    mapping[c] = 'location';
+                    assigned.add('location');
+                }
             }
         }
 
-        // 3. 파트명(Part Name)은 통상 2열(Col 1)
-        if (numCols > 1 && !mapping[1]) {
+        // 1. 파트번호(Part No) 미할당 시 통상 1열(Col 0)
+        if (!assigned.has('part_no')) {
+            mapping[0] = 'part_no';
+            assigned.add('part_no');
+        }
+
+        // 2. 실장 위치(Location) 미할당 시 통상 마지막 열 또는 쉼표(,)가 다수 포함된 열
+        if (!assigned.has('location')) {
+            for (let c = numCols - 1; c >= 1; c--) {
+                if (mapping[c]) continue;
+                const colVals = rows.map(r => (r[c] || '').trim()).filter(v => v !== '');
+                const hasMultipleRefs = colVals.some(v => v.includes(',') || /^[A-Z]+[0-9]+(\s*,\s*[A-Z]+[0-9]+)+/i.test(v));
+                if (hasMultipleRefs) {
+                    mapping[c] = 'location';
+                    assigned.add('location');
+                    break;
+                }
+            }
+        }
+
+        // 3. 파트명(Part Name) 미할당 시 통상 2열(Col 1)
+        if (numCols > 1 && !mapping[1] && !assigned.has('part_name')) {
             mapping[1] = 'part_name';
             assigned.add('part_name');
         }
 
         // 4. 포인트(Points) 및 제공 수량(Provide Qty) 추론
-        for (let c = 2; c < numCols; c++) {
-            if (mapping[c]) continue;
-            const colVals = rows.map(r => (r[c] || '').trim().replace(/,/g, '')).filter(v => v !== '');
-            const isNumeric = colVals.length > 0 && colVals.every(v => /^[0-9]+(?:\.[0-9]+)?$/.test(v) && parseFloat(v) > 0);
-            if (isNumeric && !assigned.has('points')) {
-                mapping[c] = 'points';
-                assigned.add('points');
-            } else if (isNumeric && !assigned.has('provide_qty')) {
-                mapping[c] = 'provide_qty';
-                assigned.add('provide_qty');
-                break;
+        if (!assigned.has('points')) {
+            for (let c = 1; c < numCols; c++) {
+                if (mapping[c]) continue;
+                const colVals = rows.map(r => (r[c] || '').trim().replace(/,/g, '')).filter(v => v !== '');
+                const isNumeric = colVals.length > 0 && colVals.every(v => /^[0-9]+(?:\.[0-9]+)?$/.test(v));
+                if (isNumeric) {
+                    mapping[c] = 'points';
+                    assigned.add('points');
+                    break;
+                }
             }
         }
 
@@ -5261,19 +5306,82 @@ const ALL_PAGE_TITLES = {
             rawData = parseExcelText(raw);
         }
 
-        bomParsedData = filterAllEmptyColumns(rawData);
-        if (bomParsedData.length === 0) { alert('붙여넣은 데이터가 비어 있습니다.'); return; }
+        let parsed = filterAllEmptyColumns(rawData);
+        if (parsed.length === 0) { alert('붙여넣은 데이터가 비어 있습니다.'); return; }
 
         const includeCb = document.getElementById('bom-include-first-row');
-        if (!isExisting && includeCb) {
-            const firstRow = bomParsedData[0];
+        let hasHeaderWord = false;
+        if (parsed.length > 0) {
+            const firstRow = parsed[0];
             const headerKeywords = ['품번', 'part_no', 'pn', 'p/n', '파트번호', '코드', '품명', '자재명', '파트명', '부품명', '포인트', '수량', 'qty', '제공', '소요', '위치', 'loc', 'ref', 'designator', 'item'];
-            const hasHeaderWord = firstRow.some(cell => {
+            hasHeaderWord = firstRow.some(cell => {
                 const text = (cell || '').toLowerCase().trim();
                 return headerKeywords.some(k => text.includes(k));
             });
-            // 헤더 단어가 전혀 없고 실제 데이터처럼 보이면 첫 번째 행 포함 자동 체크
-            includeCb.checked = !hasHeaderWord;
+            if (!isExisting && includeCb) {
+                // 헤더 단어가 전혀 없고 실제 데이터처럼 보이면 첫 번째 행 포함 자동 체크
+                includeCb.checked = !hasHeaderWord;
+            }
+        }
+
+        const includeFirstRow = includeCb ? includeCb.checked : !hasHeaderWord;
+        const headerRow = (!includeFirstRow && hasHeaderWord) ? parsed[0] : null;
+        const dataRows = (!includeFirstRow && hasHeaderWord) ? parsed.slice(1) : parsed;
+
+        // 1. 포인트 열(Column) 감지
+        const company_id = document.getElementById('bom_company_id').value;
+        const company = companies.find(c => c.id == company_id);
+        let savedMapping = null;
+        if (!isExisting && company && company.bom_mapping) {
+            try { savedMapping = JSON.parse(company.bom_mapping); } catch (e) {}
+        }
+
+        const guessedMapping = guessBOMColumns(dataRows, headerRow);
+        let pointsCol = undefined;
+
+        if (savedMapping && Array.isArray(savedMapping)) {
+            const idx = savedMapping.indexOf('points');
+            if (idx >= 0) pointsCol = idx;
+        }
+        if (pointsCol === undefined && guessedMapping) {
+            for (const [colIdx, mapType] of Object.entries(guessedMapping)) {
+                if (mapType === 'points') {
+                    pointsCol = parseInt(colIdx);
+                    break;
+                }
+            }
+        }
+
+        // 2. 포인트가 0인 자재 행 자동 제외 (불러오기 및 열 매핑 클릭 시 추가되지 않음)
+        bomExcludedZeroCount = 0;
+        let filteredDataRows = dataRows;
+
+        if (pointsCol !== undefined) {
+            filteredDataRows = [];
+            for (const r of dataRows) {
+                if (r.join('').trim() === '') continue;
+                const rawPts = (r[pointsCol] !== undefined ? String(r[pointsCol]) : '').trim().replace(/,/g, '').replace(/[^\d.-]/g, '');
+                const ptsVal = rawPts !== '' ? parseFloat(rawPts) : NaN;
+
+                // 포인트가 0으로 명시된 자재는 제외
+                if (!isNaN(ptsVal) && Math.round(ptsVal) === 0) {
+                    bomExcludedZeroCount++;
+                    continue;
+                }
+                filteredDataRows.push(r);
+            }
+        }
+
+        // 헤더 행이 있던 경우 헤더 행 + 필터링된 데이터 행 결합
+        if (headerRow) {
+            bomParsedData = [headerRow, ...filteredDataRows];
+        } else {
+            bomParsedData = filteredDataRows;
+        }
+
+        if (bomParsedData.length === 0 || (headerRow && bomParsedData.length === 1)) {
+            alert('유효한 데이터 행이 없거나 모든 자재의 포인트가 0입니다.');
+            return;
         }
 
         renderBOMTable(isExisting);
@@ -5339,11 +5447,17 @@ const ALL_PAGE_TITLES = {
             try { savedMapping = JSON.parse(company.bom_mapping); } catch (e) {}
         }
 
+        const headerRow = !includeFirstRow ? bomParsedData[0] : null;
+        const dataRows = !includeFirstRow ? bomParsedData.slice(1) : bomParsedData;
+        const autoMapping = guessBOMColumns(dataRows, headerRow);
+
         const selects = document.querySelectorAll('.bom-map-select');
 
         for (let i = 0; i < numCols; i++) {
-            if (savedMapping && i < savedMapping.length) {
+            if (savedMapping && i < savedMapping.length && savedMapping[i] !== 'ignore') {
                 selects[i].value = savedMapping[i];
+            } else if (autoMapping && autoMapping[i]) {
+                selects[i].value = autoMapping[i];
             } else {
                 selects[i].value = 'ignore';
             }
@@ -5364,10 +5478,14 @@ const ALL_PAGE_TITLES = {
         }
 
         const totalDataRows = includeFirstRow ? bomParsedData.length : Math.max(0, bomParsedData.length - 1);
+        let countNotice = `총 ${totalDataRows}개 부품 데이터 (${includeFirstRow ? '첫 번째 행 포함' : '헤더 1행 제외'})`;
+        if (bomExcludedZeroCount > 0) {
+            countNotice += ` <span style="color:#f59e0b; font-weight:700; margin-left:8px;">[⚡ 포인트 0인 자재 ${bomExcludedZeroCount}건 자동 제외됨]</span>`;
+        }
         if (bomParsedData.length > maxPreview) {
-            body.innerHTML += `<tr><td colspan="${numCols}" style="text-align:center;color:var(--text-muted);">… 총 ${totalDataRows}개 행 (${includeFirstRow ? '첫 번째 행 포함' : '헤더 1행 제외'})</td></tr>`;
+            body.innerHTML += `<tr><td colspan="${numCols}" style="text-align:center;color:var(--text-muted);">… ${countNotice}</td></tr>`;
         } else if (totalDataRows > 0) {
-            body.innerHTML += `<tr><td colspan="${numCols}" style="text-align:center;color:#64748b;font-size:11.5px;background:rgba(0,0,0,0.15);">총 ${totalDataRows}개 부품 데이터 (${includeFirstRow ? '첫 번째 행 포함' : '헤더 1행 제외'})</td></tr>`;
+            body.innerHTML += `<tr><td colspan="${numCols}" style="text-align:center;color:#94a3b8;font-size:12px;background:rgba(0,0,0,0.2);padding:8px;">${countNotice}</td></tr>`;
         }
     }
 
@@ -5398,7 +5516,8 @@ const ALL_PAGE_TITLES = {
             const pNo = (row[mapping.part_no] || '').trim();
             const pName = mapping.part_name !== undefined ? (row[mapping.part_name] || '').trim() : pNo;
             const rawPointsStr = pointsCol !== undefined ? String(row[pointsCol] || '').trim() : '';
-            const pointsVal = rawPointsStr !== '' ? Math.round(parseFloat(rawPointsStr.replace(/,/g, ''))) : 0;
+            const cleanedPointsStr = rawPointsStr.replace(/,/g, '').replace(/[^\d.-]/g, '');
+            const pointsVal = cleanedPointsStr !== '' ? parseFloat(cleanedPointsStr) : NaN;
             const loc = mapping.location !== undefined ? (row[mapping.location] || '').trim().replace(/[\r\n]+/g, ' ') : '';
             const rowNum = i + 1;
 
@@ -5407,17 +5526,25 @@ const ALL_PAGE_TITLES = {
                 continue;
             }
 
-            // 포인트(PCB 소요수량)가 빠져있거나 0 이하인 경우 엄격 검출
-            if (rawPointsStr === '' || isNaN(pointsVal) || pointsVal <= 0) {
+            // 포인트(PCB 소요수량)가 0인 자재는 BOM 등록 대상에서 자동 제외 (추가하지 않음)
+            if (!isNaN(pointsVal) && Math.round(pointsVal) === 0) {
+                continue;
+            }
+
+            // 포인트가 누락되었거나 숫자가 아니거나 음수인 경우에만 경고
+            if (rawPointsStr === '' || isNaN(pointsVal) || pointsVal < 0) {
                 missingQtyRows.push(`• [행 ${rowNum}] 파트번호: ${pNo} (입력된 포인트: "${rawPointsStr || '빈값'}")`);
             } else {
-                finalData.push({
-                    part_no: pNo,
-                    part_name: pName || pNo,
-                    points: pointsVal,
-                    req_qty: pointsVal,
-                    location: loc
-                });
+                const finalPts = Math.round(pointsVal);
+                if (finalPts > 0) {
+                    finalData.push({
+                        part_no: pNo,
+                        part_name: pName || pNo,
+                        points: finalPts,
+                        req_qty: finalPts,
+                        location: loc
+                    });
+                }
             }
         }
 

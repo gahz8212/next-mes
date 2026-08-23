@@ -717,6 +717,21 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
   - SMT MES 모니터를 보고 시작된 C언어, Access DB, JS/Node.js 독학 ➔ 퇴사 후 6개월 AI 웹서비스 풀스택 부트캠프 몰입.
   - Next-MES 앱의 핵심 도메인 로직(피더 오삽방지 포카요케, 컨베이어 물리 슬롯 파이프라인, 사급 자재 정산, 15인치 No-Scroll UX)과 개발자 철학을 진솔하게 연결.
 
+#### 8) 사급 자재 및 반납 4개 서브뷰 독립 스크롤바 최적화 (2026-08-24)
+- **전체 창 스크롤바 비활성화 (`admin.html`)**:
+  - `#page-consigned-material` 및 `.consigned-subview`에 `height: 100%; overflow: hidden !important;` 적용하여 브라우저 전체 스크롤바 제거.
+- **좌측 리스트/우측 상세 패널 독립 스크롤바 활성화**:
+  - `수주 BOM 입고`, `사급 반납 정산`, `반납 명세서 이력`, `사급 재고 수불` 4개 서브뷰 모두 좌측 목록(`.consigned-left-panel`) 및 우측 상세 영역(`.detail-table-wrap`)이 각자 독립적으로 스크롤되도록 CSS 및 컨테이너 레이아웃 재구성.
+
+#### 9) 품목 표준 BOM 등록 0-포인트 자재 자동 제외 및 붙여넣기 영역 수동 높이 조절 (2026-08-24)
+- **포인트 0(미실장/옵션 자재) 자동 제외 (`admin.html`)**:
+  - 대량 SMT 고객사 엑셀 BOM 붙여넣기 후 `[불러오기 및 열 매핑]`(`parseExcel`) 클릭 시 포인트(소요수량)가 0인 부품을 자동 감지하여 목록에서 즉시 제외.
+  - 미리보기 테이블 하단에 `[⚡ 포인트 0인 자재 N건 자동 제외됨]` 상태 알림 제공.
+  - `saveBOM()` 실행 시에도 0-포인트 행을 정상 스킵하여 저장 차단 에러 방지.
+- **BOM 붙여넣기 텍스트 영역 수동 높이 확장 기능**:
+  - `#bomPaste`에 `resize: vertical !important;` 및 `min-height: 140px; height: 180px; max-height: 800px;` 설정으로 마우스 드래그를 통한 자유로운 수직 확장 지원.
+  - 상/하단에 `[➕ 창 늘리기]` (+80px), `[➖ 창 줄이기]` (-80px) 원클릭 퀵 조절 버튼 및 사용 가이드 툴팁 추가.
+
 ---
 
 ## 🚀 향후 로드맵 (Next Milestones)
