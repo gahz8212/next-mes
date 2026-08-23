@@ -267,7 +267,7 @@ td {
     vertical-align: middle;
 }
 tr:last-child td { border-bottom: none; }
-tr:hover td { background-color: #F8FAFC; }
+table:not(.admin-table):not(.trace-modal-table):not(.data-table):not(.detail-balanced-table):not(.hmi-table):not(.ceo-table) tr:hover td { background-color: #F8FAFC; }
 
 /* Badges */
 .badge {
