@@ -2342,6 +2342,13 @@
             min-height: 42px !important;
             padding: 5px 9px !important;
         }
+        .modal-overlay textarea#bomPaste {
+            min-height: 120px !important;
+            height: 180px;
+            max-height: 800px !important;
+            resize: vertical !important;
+            box-sizing: border-box !important;
+        }
         .modal-overlay .btn-submit,
         .modal-overlay .btn-cancel {
             margin-top: 6px !important;
@@ -4038,8 +4045,8 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:11.5px; color:#94a3b8;">
                 <span>💡 엑셀 셀 복사 후 붙여넣으세요. 우측 하단 모서리를 마우스로 드래그하여 영역을 아래로 늘릴 수 있습니다.</span>
                 <div style="display:flex; gap:6px;">
-                    <button type="button" class="topbar-action-btn" style="padding:2px 8px; font-size:11px; height:24px;" onclick="adjustBomPasteHeight(80)" title="붙여넣기 창 높이 늘리기">➕ 창 늘리기</button>
-                    <button type="button" class="topbar-action-btn" style="padding:2px 8px; font-size:11px; height:24px;" onclick="adjustBomPasteHeight(-80)" title="붙여넣기 창 높이 줄이기">➖ 창 줄이기</button>
+                    <button type="button" class="btn-primary" style="padding:3px 10px; font-size:11.5px; font-weight:700; height:26px; display:inline-flex; align-items:center; gap:4px; background:#2563eb; border:1px solid #3b82f6; color:#ffffff; border-radius:4px; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.3);" onclick="adjustBomPasteHeight(80)" title="붙여넣기 창 높이 80px 늘리기">➕ 창 늘리기</button>
+                    <button type="button" class="btn-secondary" style="padding:3px 10px; font-size:11.5px; font-weight:700; height:26px; display:inline-flex; align-items:center; gap:4px; background:#475569; border:1px solid #64748b; color:#f1f5f9; border-radius:4px; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.3);" onclick="adjustBomPasteHeight(-80)" title="붙여넣기 창 높이 80px 줄이기">➖ 창 줄이기</button>
                 </div>
             </div>
         </div>
@@ -5147,9 +5154,10 @@ const ALL_PAGE_TITLES = {
     function adjustBomPasteHeight(delta) {
         const el = document.getElementById('bomPaste');
         if (!el) return;
-        const curH = el.offsetHeight || 180;
-        const newH = Math.max(120, Math.min(800, curH + delta));
-        el.style.height = newH + 'px';
+        const curH = el.offsetHeight || parseInt(window.getComputedStyle(el).height) || 180;
+        const newH = Math.max(120, Math.min(900, Math.round(curH + delta)));
+        el.style.setProperty('height', newH + 'px', 'important');
+        el.style.setProperty('min-height', Math.min(140, newH) + 'px', 'important');
     }
 
     /**
