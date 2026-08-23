@@ -736,9 +736,15 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
 - **스크롤 리셋 방지 및 위치 보존 (`admin.html`)**:
   - 품목 마스터 BOM 상세 화면에서 피더 슬롯 배정 모달(`feederSlotPickerModal`), NC 토글, 부품 수정 후 재조회(`loadBomVersionTable`) 시 부품 테이블 스크롤이 최상단(#1)으로 튀던 문제 해결.
   - 리렌더링 전 `.detail-table-wrap.scrollTop` 및 좌측 품목 리스트 `#item-list-container.scrollTop`을 보존하여 기존 스크롤 위치를 100% 복원.
-- **설정 품목 자동 시야(View) 배치 및 하이라이트 효과**:
-  - 피더 슬롯을 저장하거나 폼을 닫을 때 방금 설정한 부품 행(`bom-row-${detailId}`)으로 부드럽게 자동 스크롤(`scrollIntoView({ block: 'center' })`).
   - 설정된 부품 행에 은은한 사이언(#38bdf8) 테두리 및 2초간 배경 하이라이트 펄스를 적용하여 사용자가 다음 부품을 즉시 연속 작업할 수 있도록 UX 혁신.
+
+#### 11) 실장위치(RefDes) 기반 피더 설비(CHIP/ODD/TRAY) 지능형 자동 분류 고도화 (2026-08-24)
+- **원인 분석**:
+  - 기존 코드에서 부품명(partName)에 'IC' 문자열(`pName.includes('IC')`)이 포함되어 있는지 단순 검색하여, 세라믹 커패시터("CERAM**IC** CAP")나 전해 커패시터("ELECTROLYT**IC**")의 `IC` 철자가 트레이(`TRAY`)로 오분류되던 문제 발견.
+- **실장위치 토큰 최우선 분류 엔진 구축 (`detectFeederMachineType`, `admin.html`)**:
+  - **칩 마운터 (CHIP / C-01 ~ C-80)**: `R`(저항), `L`(인덕터/비드), `C`(커패시터: `C1,C2` 등), `Q`(TR/FET), `D`(다이오드/LED), `FB`, `TP`, `JP`, `F` 등 표준 칩 부품을 최우선으로 정확히 자동 분류.
+  - **이형 마운터 (ODD / O-01 ~ O-40)**: `CN`, `J`(커넥터), `SW`(스위치), `VR`, `RELAY`, `TRANS`, `JACK` 등.
+  - **이형 트레이 (TRAY / TR-01 ~ TR-20)**: `U`, `IC`, `BGA`, `CPU`, `MCU`, `DSP`, `FPGA`, `MODULE` 등 단어 경계(`\bIC\b`) 매칭.
 
 ---
 

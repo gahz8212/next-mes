@@ -6569,6 +6569,67 @@ async function deleteCompany(id, name) {
         return occupied;
     }
 
+    /**
+     * 실장위치(Location / RefDes) 및 파트 규격 기반 피더 설비(CHIP / ODD / TRAY) 지능형 자동 분류
+     * - R, L, C, Q, D, LED, FB, TP, JP, F 등: 칩 마운터 (CHIP / C-01 ~ C-80)
+     * - CN, J, SW, VR, RELAY, TRANSFORMER, JACK 등: 이형 마운터 (ODD / O-01 ~ O-40)
+     * - U, IC, BGA, MCU, DSP, FPGA, MODULE 등: 이형 트레이 (TRAY / TR-01 ~ TR-20)
+     */
+    function detectFeederMachineType(location = '', partName = '', partNo = '', currentSlot = '') {
+        const curr = (currentSlot || '').trim().toUpperCase();
+        if (curr.startsWith('TR-') || curr.startsWith('TR')) return 'TRAY';
+        if (curr.startsWith('O-') || curr.startsWith('ODD-') || curr.startsWith('O')) return 'ODD';
+        if (curr.startsWith('C-') || curr.startsWith('C')) return 'CHIP';
+
+        const locRaw = (location || '').trim().toUpperCase();
+        const pName = (partName || '').trim().toUpperCase();
+        const pNo = (partNo || '').trim().toUpperCase();
+
+        // 1. 실장위치(Location) 토큰 기준 최우선 판별
+        if (locRaw) {
+            const firstLoc = locRaw.split(/[\s,;~\-\/\.\:\(\)\[\]]+/)[0] || locRaw;
+
+            // ODD: 커넥터, 스위치, 잭, 트랜스, 릴레이 등
+            if (/^(CN|CON|JACK|PLUG|HDR|PIN|SW|VR|RELAY|RY|TRANS|ANT|SPK|BZ|BAT|BT|SK|SOCKET)/i.test(firstLoc) ||
+                /^(J|T)[0-9]/i.test(firstLoc)) {
+                return 'ODD';
+            }
+
+            // TRAY: 대형 IC, MCU, BGA, QFP, 모듈류
+            if (/^(CPU|MCU|DSP|FPGA|BGA|MODULE|MOD|FLASH|EPROM|DRAM|SOC)/i.test(firstLoc) ||
+                /^(U|IC)[0-9]/i.test(firstLoc) ||
+                firstLoc === 'U' || firstLoc === 'IC') {
+                return 'TRAY';
+            }
+
+            // CHIP: R, L, C, Q, D 등 표준 칩 부품
+            if (/^(R|L|C|Q|D)[0-9]/i.test(firstLoc) ||
+                /^(LED|FB|TP|JP|FL|VA|TH|X|Y|F)[0-9]/i.test(firstLoc) ||
+                /^(R|L|C|Q|D|LED|FB|TP|JP|FL|VA|TH|X|Y|F)$/i.test(firstLoc)) {
+                return 'CHIP';
+            }
+        }
+
+        // 2. 부품명(Part Name) 및 파트번호 기준 2차 판별
+        if (/\b(CONNECTOR|CONN|HEADER|SOCKET|TERMINAL|SWITCH|TACT|RELAY|TRANSFORMER|JACK|PLUG)\b/i.test(pName) ||
+            /\b(CONNECTOR|CONN|HEADER|SOCKET|SWITCH)\b/i.test(pNo)) {
+            return 'ODD';
+        }
+
+        if (/\b(BGA|QFP|LQFP|TQFP|PLCC|MCU|DSP|FPGA|PROCESSOR|MICROCONTROLLER|MEMORY|FLASH|MODULE)\b/i.test(pName) ||
+            /\b(BGA|QFP|LQFP|MCU|FPGA)\b/i.test(pNo) ||
+            /\bIC\b/i.test(pName)) {
+            return 'TRAY';
+        }
+
+        if (/\b(RES|RESISTOR|CAP|CAPACITOR|CHIP|MLCC|INDUCTOR|COIL|BEAD|FERRITE|DIODE|LED|ZENER|TVS|TRANSISTOR|MOSFET|FET)\b/i.test(pName)) {
+            return 'CHIP';
+        }
+
+        // 3. 기본값: 칩 마운터 (CHIP)
+        return 'CHIP';
+    }
+
     function openFeederSlotPickerModalByIndex(index, bomId) {
         if (!window.currentBomDetailsList || !window.currentBomDetailsList[index]) return;
         const r = window.currentBomDetailsList[index];
@@ -6594,25 +6655,8 @@ async function deleteCompany(id, name) {
         if (pNmEl) pNmEl.textContent = partName || partNo;
         if (pLocEl) pLocEl.textContent = location || '—';
 
-        // Parse current slot or smart detect machine type
-        const curr = (currentSlot || '').trim().toUpperCase();
-        if (curr.startsWith('TR-') || curr.startsWith('TR')) {
-            fspState.machineType = 'TRAY';
-        } else if (curr.startsWith('O-') || curr.startsWith('ODD-') || curr.startsWith('O')) {
-            fspState.machineType = 'ODD';
-        } else if (curr.startsWith('C-') || curr.startsWith('C')) {
-            fspState.machineType = 'CHIP';
-        } else {
-            const loc = (location || '').toUpperCase();
-            const pName = (partName || '').toUpperCase();
-            if (loc.startsWith('U') || loc.startsWith('IC') || pName.includes('IC') || pName.includes('MCU') || pName.includes('BGA')) {
-                fspState.machineType = 'TRAY';
-            } else if (loc.startsWith('CN') || loc.startsWith('J') || pName.includes('CONN') || pName.includes('CONNECTOR')) {
-                fspState.machineType = 'ODD';
-            } else {
-                fspState.machineType = 'CHIP';
-            }
-        }
+        // 지능형 설비 타입(CHIP/ODD/TRAY) 자동 감지
+        fspState.machineType = detectFeederMachineType(location, partName, partNo, currentSlot);
 
         // Parse current assigned slots if exists, or auto-preselect next available slot
         if (curr) {
