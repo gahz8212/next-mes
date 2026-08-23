@@ -3125,7 +3125,7 @@
                 </div>
 
                 <!-- 하단 본문: 2) 달력 2분할 뷰 (좌측 컴팩트 달력 / 우측 선택일 상세 폼) -->
-                <div id="plan-calendar-view" style="display:none; flex:1 1 auto; min-height:0; display:flex; gap:16px; padding:0 32px 24px; overflow:hidden;">
+                <div id="plan-calendar-view" style="display:none; flex:1 1 auto; min-height:0; gap:16px; padding:0 32px 24px; overflow:hidden;">
                     <!-- 좌측: 컴팩트 월간 달력 (480px, KPI 바로 아래부터 100% 전폭 높이) -->
                     <div style="width:480px; min-width:400px; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden; height:100%;">
                         <div id="plan-calendar-container" style="flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; height:100%;">
@@ -3217,7 +3217,7 @@
                 </div>
 
                 <!-- SUB-VIEW 2: 수주 BOM 입고 2분할 뷰 -->
-                <div id="consigned-subview-receive" class="consigned-subview" style="display:none; flex:1 1 auto; min-height:0; display:flex; flex-direction:row !important; gap:16px; padding:0 32px 24px; overflow:hidden;">
+                <div id="consigned-subview-receive" class="consigned-subview" style="display:none; flex:1 1 auto; min-height:0; flex-direction:row !important; gap:16px; padding:0 32px 24px; overflow:hidden;">
                     <!-- 좌측: 입고 대상 수주 목록 (360px) -->
                     <div class="consigned-left-panel" style="width:360px; min-width:300px; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
                         <div style="padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:8px; background:rgba(15,23,42,0.6);">
@@ -3241,7 +3241,7 @@
                 </div>
 
                 <!-- SUB-VIEW 3: 사급 반납 정산 2분할 뷰 -->
-                <div id="consigned-subview-reconcile" class="consigned-subview" style="display:none; flex:1 1 auto; min-height:0; display:flex; flex-direction:row !important; gap:16px; padding:0 32px 24px; overflow:hidden;">
+                <div id="consigned-subview-reconcile" class="consigned-subview" style="display:none; flex:1 1 auto; min-height:0; flex-direction:row !important; gap:16px; padding:0 32px 24px; overflow:hidden;">
                     <!-- 좌측: 정산 대상 수주 목록 (360px) -->
                     <div class="consigned-left-panel" style="width:360px; min-width:300px; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
                         <div style="padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:8px; background:rgba(15,23,42,0.6);">
@@ -3265,7 +3265,7 @@
                 </div>
 
                 <!-- SUB-VIEW 4: 반납 완료 명세서 이력 (2분할 프리미엄 뷰) -->
-                <div id="consigned-subview-returns" class="consigned-subview" style="display:none; flex:1 1 auto; min-height:0; display:flex; flex-direction:row !important; gap:16px; padding:0 32px 24px; overflow:hidden;">
+                <div id="consigned-subview-returns" class="consigned-subview" style="display:none; flex:1 1 auto; min-height:0; flex-direction:row !important; gap:16px; padding:0 32px 24px; overflow:hidden;">
                     <!-- Left: Return Receipts List Panel (360px) -->
                     <div class="consigned-left-panel" style="width:360px; min-width:360px; max-width:360px; display:flex; flex-direction:column; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden; height:100%;">
                         <!-- Top Filter Strip -->
@@ -3684,7 +3684,6 @@
                                 <option value="14" selected>최근 14일</option>
                                 <option value="30">최근 30일</option>
                             </select>
-                            <button class="topbar-action-btn" onclick="loadKpiAnalytics()">새로고침</button>
                         </div>
                     </div>
 
@@ -3713,11 +3712,12 @@
                 <div class="kpi-charts-wrapper" style="display:flex; gap:16px; padding:0 32px 24px; flex:1 1 auto; min-height:0; overflow:hidden;">
                     <!-- Daily Trend Bar Chart -->
                     <div class="board-col kpi-left-chart" style="flex:1 1 auto; min-width:0; overflow:visible;">
-                        <div class="board-col-header">
+                        <div class="board-col-header" style="display:flex; justify-content:space-between; align-items:center;">
                             <div class="board-col-title">
                                 <div class="col-dot blue"></div>
                                 일별 생산량 및 수율 추이
                             </div>
+                            <button class="topbar-action-btn" onclick="loadKpiAnalytics()" style="padding:4px 10px; font-size:12px;">🔄 새로고침</button>
                         </div>
                         <div style="padding:16px; overflow-y:auto; flex:1;" id="kpi-trend-container">
                             <div class="empty-msg">데이터를 불러오는 중…</div>
@@ -5083,6 +5083,7 @@ const ALL_PAGE_TITLES = {
             }
         }
 
+        let parsedRows = rows;
         if (!hasTabs) {
             const finalRows = [];
             for (const r of rows) {
@@ -5092,10 +5093,26 @@ const ALL_PAGE_TITLES = {
                     finalRows.push(cols);
                 }
             }
-            return finalRows;
+            parsedRows = finalRows;
         }
 
-        return rows;
+        // 엑셀에서 떨어진 컬럼 선택 복사 시 발생하는 완전히 빈 열(Unselected Blank Columns) 자동 필터링
+        if (parsedRows.length > 0) {
+            const maxCols = Math.max(...parsedRows.map(r => r.length));
+            const validColIndices = [];
+            for (let c = 0; c < maxCols; c++) {
+                const hasData = parsedRows.some(r => r[c] !== undefined && (r[c] || '').trim() !== '');
+                if (hasData) {
+                    validColIndices.push(c);
+                }
+            }
+
+            if (validColIndices.length > 0 && validColIndices.length < maxCols) {
+                return parsedRows.map(r => validColIndices.map(c => (r[c] || '').trim()));
+            }
+        }
+
+        return parsedRows;
     }
 
     /**
@@ -5206,30 +5223,13 @@ const ALL_PAGE_TITLES = {
             try { savedMapping = JSON.parse(company.bom_mapping); } catch (e) {}
         }
 
-        const firstRow = bomParsedData[0];
         const selects = document.querySelectorAll('.bom-map-select');
-        const guessedMap = guessBOMColumns(bomParsedData);
 
         for (let i = 0; i < numCols; i++) {
             if (savedMapping && i < savedMapping.length) {
                 selects[i].value = savedMapping[i];
-            } else if (!includeFirstRow && firstRow && i < firstRow.length) {
-                const text = (firstRow[i] || '').toLowerCase().trim();
-                if (text.includes('품번') || text.includes('part_no') || text.includes('pn') || text.includes('p/n') || text.includes('코드') || (text.includes('part') && !text.includes('name'))) {
-                    selects[i].value = 'part_no';
-                } else if (text.includes('품명') || text.includes('자재명') || text.includes('파트명') || text.includes('부품명') || text.includes('name') || text.includes('desc')) {
-                    selects[i].value = 'part_name';
-                } else if (text.includes('제공') || text.includes('제공수량') || text.includes('입고수량') || text.includes('사급수량') || text.includes('사급') || text.includes('provide') || text.includes('supplied')) {
-                    selects[i].value = 'provide_qty';
-                } else if (text.includes('포인트') || text.includes('point') || text.includes('pt') || text.includes('수량') || text.includes('qty') || text.includes('소요')) {
-                    selects[i].value = 'points';
-                } else if (text.includes('위치') || text.includes('loc') || text.includes('ref')) {
-                    selects[i].value = 'location';
-                } else {
-                    selects[i].value = guessedMap[i] || 'ignore';
-                }
             } else {
-                selects[i].value = guessedMap[i] || 'ignore';
+                selects[i].value = 'ignore';
             }
         }
 
@@ -6850,6 +6850,16 @@ async function deleteCompany(id, name) {
         const data = await res.json();
         if (data.status === 'success') {
             closeModal('itemModal');
+            
+            // 검색 필터 및 거래처 필터 초기화하여 새 품목이 리스트에 즉시 렌더링되도록 함
+            const searchEl = document.getElementById('item-search');
+            const filterEl = document.getElementById('item-company-filter');
+            if (searchEl) searchEl.value = '';
+            if (filterEl) filterEl.value = '';
+
+            const newId = data.data ? data.data.id : null;
+            if (newId) selectedItemId = newId;
+
             await loadItems();
             
             // 신규 등록 시 BOM 즉시 등록 여부 확인
@@ -7213,11 +7223,7 @@ async function deleteCompany(id, name) {
                 rateEl.className = 'kpi-val ' + (rate >= 80 ? 'good' : rate >= 50 ? 'warn' : 'accent');
             }
 
-            if (planViewMode === 'calendar') {
-                renderPlanCalendar();
-            } else {
-                filterPlanList();
-            }
+            setPlanViewMode(planViewMode);
         } catch (e) {
             console.error('loadPlan error:', e);
         }

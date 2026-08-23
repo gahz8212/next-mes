@@ -483,14 +483,23 @@ html, body {
 .tpm-section-card {
     background: var(--surface-card);
     border: 1px solid var(--border-color);
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 0;
 }
 
 .tpm-metric-box {
     background: var(--surface-inner);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
-    padding: 10px 12px;
+    padding: 12px 14px;
     margin-bottom: 8px;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .tpm-metric-head {
@@ -736,6 +745,9 @@ html, body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 /* 4대 핵심 센서 4-Grid */
@@ -874,6 +886,14 @@ html, body {
     display: grid;
     grid-template-columns: 1fr 1.2fr;
     gap: 10px;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.tracking-grid-2 > .hmi-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 @media (max-width: 1000px) {
@@ -1319,5 +1339,11 @@ html, body {
     .tracking-grid-2 {
         grid-template-columns: 1fr;
         gap: 8px;
+        flex: 0 0 auto;
+    }
+
+    .tpm-section-card,
+    .tpm-metric-box {
+        flex: 0 0 auto;
     }
 }
