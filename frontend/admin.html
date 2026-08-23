@@ -4749,6 +4749,13 @@ const ALL_PAGE_TITLES = {
     function closeModal(id) {
         const el = document.getElementById(id);
         if (el) el.classList.remove('open');
+
+        if (id === 'feederSlotPickerModal' && typeof fspState !== 'undefined' && fspState.detailId) {
+            const targetRow = document.getElementById(`bom-row-${fspState.detailId}`);
+            if (targetRow) {
+                targetRow.scrollIntoView({ behavior: 'auto', block: 'center' });
+            }
+        }
     }
 
     // ── Company logic ──
@@ -6152,7 +6159,15 @@ async function deleteCompany(id, name) {
                 }
             }
 
+            const listContainer = document.getElementById('item-list-container');
+            const prevListScrollTop = listContainer ? listContainer.scrollTop : 0;
+
             renderItemMasterList(items);
+
+            if (listContainer && prevListScrollTop > 0) {
+                listContainer.scrollTop = prevListScrollTop;
+            }
+
             if (items.length > 0) {
                 if (!selectedItemId || !items.some(i => i.item_id === selectedItemId)) {
                     selectItem(items[0].item_id);
@@ -6229,7 +6244,7 @@ async function deleteCompany(id, name) {
         }).join('');
     }
 
-    function selectItem(itemId, targetBomId = null) {
+    function selectItem(itemId, targetBomId = null, targetDetailId = null) {
         selectedItemId = itemId;
         const item = itemsData.find(i => i.item_id === itemId);
         if (!item) return;
@@ -6251,7 +6266,7 @@ async function deleteCompany(id, name) {
             card.style.border = isSel ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.06)';
         });
 
-        renderSelectedBomDetail();
+        renderSelectedBomDetail(targetDetailId);
     }
 
     function changeBomVersion(bomId) {
@@ -6259,7 +6274,7 @@ async function deleteCompany(id, name) {
         renderSelectedBomDetail();
     }
 
-    async function renderSelectedBomDetail() {
+    async function renderSelectedBomDetail(targetDetailId = null) {
         const panel = document.getElementById('item-bom-detail-panel');
         if (!panel) return;
 
@@ -6324,13 +6339,16 @@ async function deleteCompany(id, name) {
         `;
 
         if (currentVer) {
-            loadBomVersionTable(currentVer.bom_id);
+            loadBomVersionTable(currentVer.bom_id, targetDetailId);
         }
     }
 
-    async function loadBomVersionTable(bomId) {
+    async function loadBomVersionTable(bomId, targetDetailId = null) {
         const container = document.getElementById('bom-parts-table-container');
         if (!container) return;
+
+        const prevWrap = container.querySelector('.detail-table-wrap');
+        const prevScrollTop = prevWrap ? prevWrap.scrollTop : 0;
 
         try {
             const res = await fetch(`../backend/api/get_bom_version_details.php?bom_id=${bomId}`);
@@ -6379,8 +6397,9 @@ async function deleteCompany(id, name) {
                             ${list.map((r, i) => {
                                 const isNc = (r.is_nc == 1 || parseFloat(r.points || r.req_qty || 0) <= 0);
                                 const ptsVal = parseFloat(r.points !== undefined && r.points !== null ? r.points : (r.req_qty || 1));
+                                const rowId = r.detail_id || `idx_${i}`;
                                 return `
-                                <tr style="min-height:42px; ${isNc ? 'background:rgba(249,115,22,0.06);' : ''}">
+                                <tr id="bom-row-${rowId}" data-detail-id="${r.detail_id || 0}" style="min-height:42px; transition:background 0.4s ease, box-shadow 0.4s ease; ${isNc ? 'background:rgba(249,115,22,0.06);' : ''}">
                                     <td style="text-align:center; color:#64748b; font-family:'JetBrains Mono',monospace; padding:4px 2px;">${i + 1}</td>
                                     <!-- 파트번호 (클릭 시 대치품/AVL 모달 오픈, 15인치 이하에서는 2행에 파트명 노출) -->
                                     <td style="min-width:0; overflow:hidden; padding:5px 6px;">
@@ -6442,6 +6461,26 @@ async function deleteCompany(id, name) {
                     <span>총 실장 점수: <strong style="color:#38bdf8; font-size:15px; font-weight:800; font-family:'JetBrains Mono',monospace;">${totalPoints.toLocaleString()} Points</strong></span>
                 </div>
             `;
+
+            const newWrap = container.querySelector('.detail-table-wrap');
+            if (newWrap) {
+                if (targetDetailId) {
+                    const targetRow = document.getElementById(`bom-row-${targetDetailId}`);
+                    if (targetRow) {
+                        targetRow.scrollIntoView({ behavior: 'auto', block: 'center' });
+                        targetRow.style.background = 'rgba(56, 189, 248, 0.22)';
+                        targetRow.style.boxShadow = 'inset 0 0 0 1.5px #38bdf8';
+                        setTimeout(() => {
+                            targetRow.style.background = '';
+                            targetRow.style.boxShadow = '';
+                        }, 2200);
+                    } else if (prevScrollTop > 0) {
+                        newWrap.scrollTop = prevScrollTop;
+                    }
+                } else if (prevScrollTop > 0) {
+                    newWrap.scrollTop = prevScrollTop;
+                }
+            }
         } catch (e) {
             container.innerHTML = `<div style="text-align:center; padding:30px; color:#f87171;">통신 오류가 발생했습니다.</div>`;
         }
@@ -6457,7 +6496,7 @@ async function deleteCompany(id, name) {
             });
             const d = await res.json();
             if (d.status === 'success') {
-                loadBomVersionTable(bomId);
+                await loadBomVersionTable(bomId, detailId);
             } else {
                 alert(d.message || 'NC 상태 변경 실패');
             }
@@ -6681,21 +6720,23 @@ async function deleteCompany(id, name) {
 
     async function saveFeederSlotFromPicker() {
         const slotString = getFspFormattedSlotString() || null;
+        const targetDetailId = fspState.detailId;
+        const bomId = fspState.bomId;
         try {
             const res = await fetch('../backend/api/update_bom_component.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'update_slot',
-                    detail_id: fspState.detailId,
-                    bom_id: fspState.bomId,
+                    detail_id: targetDetailId,
+                    bom_id: bomId,
                     feeder_slot: slotString
                 })
             });
             const data = await res.json();
             if (data.status === 'success') {
                 closeModal('feederSlotPickerModal');
-                loadBomVersionTable(fspState.bomId);
+                await loadBomVersionTable(bomId, targetDetailId);
             } else {
                 alert('슬롯 저장 실패: ' + data.message);
             }
@@ -6946,7 +6987,7 @@ async function deleteCompany(id, name) {
             });
             const data = await res.json();
             if (data.status === 'success') {
-                loadBomVersionTable(bomId);
+                loadBomVersionTable(bomId, detailId);
                 if (typeof loadItems === 'function') loadItems();
             } else {
                 alert('수정 실패: ' + data.message);

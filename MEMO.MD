@@ -732,6 +732,14 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
   - `#bomPaste`에 `resize: vertical !important;` 및 `min-height: 140px; height: 180px; max-height: 800px;` 설정으로 마우스 드래그를 통한 자유로운 수직 확장 지원.
   - 상/하단에 `[➕ 창 늘리기]` (+80px), `[➖ 창 줄이기]` (-80px) 원클릭 퀵 조절 버튼 및 사용 가이드 툴팁 추가.
 
+#### 10) 피더 슬롯 설정 및 부품 수정 시 스크롤 위치 유지 및 자동 포커스 (2026-08-24)
+- **스크롤 리셋 방지 및 위치 보존 (`admin.html`)**:
+  - 품목 마스터 BOM 상세 화면에서 피더 슬롯 배정 모달(`feederSlotPickerModal`), NC 토글, 부품 수정 후 재조회(`loadBomVersionTable`) 시 부품 테이블 스크롤이 최상단(#1)으로 튀던 문제 해결.
+  - 리렌더링 전 `.detail-table-wrap.scrollTop` 및 좌측 품목 리스트 `#item-list-container.scrollTop`을 보존하여 기존 스크롤 위치를 100% 복원.
+- **설정 품목 자동 시야(View) 배치 및 하이라이트 효과**:
+  - 피더 슬롯을 저장하거나 폼을 닫을 때 방금 설정한 부품 행(`bom-row-${detailId}`)으로 부드럽게 자동 스크롤(`scrollIntoView({ block: 'center' })`).
+  - 설정된 부품 행에 은은한 사이언(#38bdf8) 테두리 및 2초간 배경 하이라이트 펄스를 적용하여 사용자가 다음 부품을 즉시 연속 작업할 수 있도록 UX 혁신.
+
 ---
 
 ## 🚀 향후 로드맵 (Next Milestones)
