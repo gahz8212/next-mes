@@ -442,17 +442,32 @@ class ConsignedMaterialController {
                         soi.id, soi.order_no, soi.item_name, soi.item_code, soi.order_qty, soi.due_date, soi.status, soi.wo_id,
                         so.company_id, c.name as company_name,
                         COALESCE(
-                            (SELECT SUM(CASE WHEN bm.status != 'WAIT' THEN 1 ELSE 0 END)
+                            (SELECT SUM(CASE 
+                                WHEN bm.status IN ('BOTTOM_DONE','TEST_PASS','SHIPPING','DONE','DEFECT','FAIL') 
+                                     OR EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = bm.barcode AND bh.result_status IN ('PASS','FAIL'))
+                                THEN 1 ELSE 0 END)
                              FROM barcode_master bm JOIN work_order wo ON bm.wo_id = wo.wo_id
-                             WHERE wo.wo_id = soi.wo_id),
+                             WHERE wo.wo_id = soi.wo_id OR wo.parent_wo_id = soi.wo_id),
                             0
                         ) as processed_qty,
                         COALESCE(
-                            (SELECT SUM(CASE WHEN bm.status IN ('BOTTOM_DONE','TEST_PASS','SHIPPING') THEN 1 ELSE 0 END)
+                            (SELECT SUM(CASE 
+                                WHEN bm.status IN ('BOTTOM_DONE','TEST_PASS','SHIPPING','DONE') 
+                                     AND NOT EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = bm.barcode AND bh.result_status = 'FAIL')
+                                THEN 1 ELSE 0 END)
                              FROM barcode_master bm JOIN work_order wo ON bm.wo_id = wo.wo_id
-                             WHERE wo.wo_id = soi.wo_id),
+                             WHERE wo.wo_id = soi.wo_id OR wo.parent_wo_id = soi.wo_id),
                             0
                         ) as good_qty,
+                        COALESCE(
+                            (SELECT SUM(CASE 
+                                WHEN bm.status IN ('DEFECT','FAIL') 
+                                     OR EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = bm.barcode AND bh.result_status = 'FAIL')
+                                THEN 1 ELSE 0 END)
+                             FROM barcode_master bm JOIN work_order wo ON bm.wo_id = wo.wo_id
+                             WHERE wo.wo_id = soi.wo_id OR wo.parent_wo_id = soi.wo_id),
+                            0
+                        ) as fail_qty,
                         (SELECT bm.bom_id FROM bom_master bm 
                          WHERE bm.product_id = soi.item_name 
                             OR bm.product_id = soi.item_code
@@ -478,10 +493,15 @@ class ConsignedMaterialController {
 
                     $partsMap = [];
                     foreach ($orderItems as $it) {
-                        $itOrderQty = (float)($it['order_qty'] ?? 0);
-                        $itGoodQty  = (float)($it['good_qty'] ?? 0);
-                        $itProduced = (int)($itGoodQty > 0 ? $itGoodQty : $itOrderQty);
-                        $totalProducedQty += $itProduced;
+                        $itOrderQty     = (float)($it['order_qty'] ?? 0);
+                        $itGoodQty      = (float)($it['good_qty'] ?? 0);
+                        $itFailQty      = (float)($it['fail_qty'] ?? 0);
+                        $itProcessedQty = (float)($it['processed_qty'] ?? 0);
+
+                        // 양품 100% 충족 기준 총 실소요량 (기존 투입 가공분 + 불량에 따른 추가 재작업/보충 생산분)
+                        $neededMakeUp = max(0, $itOrderQty - $itGoodQty);
+                        $itConsumedBoards = ($itProcessedQty > 0) ? ($itProcessedQty + $neededMakeUp) : $itOrderQty;
+                        $totalProducedQty += $itOrderQty;
                         $itBomId = (int)($it['bom_id'] ?? 0);
                         $itName = $it['item_name'] ?? '';
 
@@ -498,7 +518,7 @@ class ConsignedMaterialController {
                             foreach ($bomParts as $bp) {
                                 $pNo = $bp['part_no'];
                                 $reqPerUnit = (float)$bp['req_qty'];
-                                $usedQty = $reqPerUnit * $itProduced;
+                                $usedQty = $reqPerUnit * $itConsumedBoards;
 
                                 if (!isset($partsMap[$pNo])) {
                                     $partsMap[$pNo] = [
@@ -553,7 +573,7 @@ class ConsignedMaterialController {
                         'company_name' => $first['company_name'] ?: '미지정',
                         'item_name'    => implode(', ', $itemNames),
                         'order_qty'    => $totalOrderQty,
-                        'good_qty'     => $totalProducedQty
+                        'good_qty'     => $totalOrderQty
                     ];
                 }
             }
