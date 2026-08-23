@@ -661,6 +661,45 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
 
 ---
 
+## 📝 2026-08-23 작업 이력 (작업자: Antigravity)
+
+### 1. BOM 엑셀 붙여넣기 매핑 UI 및 드롭다운 / 테이블 레이아웃 대혁신 (`frontend/admin.html`)
+- **드롭다운 항목 및 헤더 라벨 정돈**:
+  - 기존 "열 1", "열 2" 헤더 텍스트 라벨 삭제.
+  - unselected 매핑 옵션(`ignore`)에 남아있던 `▼` 기호 제거하여 미선택 시 깔끔한 빈 박스로 표시.
+  - 매핑 옵션 라벨 명칭 변경: `포인트 *` ➔ `포인트`.
+- **Ctrl 영역 복사 엑셀 파서 & 동적 컬럼 폭 확장**:
+  - 엑셀에서 Ctrl 키로 비연속 영역을 선택하여 복사한 경우 Plain Text(`text/plain`)의 탭 구분을 우회하고 HTML Clipboard(`text/html`) `<td>` 구조를 파싱(`bomPastedHtmlData`)하여 선택한 셀 데이터만 정확히 매핑.
+  - 선택한 드롭다운 아이템(`points`: 75px, `part_no`/`part_name`/`location`: 125px)에 맞춰 컬럼 너비 동적 확장 (`updateBomMapSelectStyle`).
+- **모달 박스 유동 폭 반응형 고도화**:
+  - `#bomModal` 모달 박스 스타일을 `max-width: 960px; width: 92vw; max-height: 92vh;`로 변경하여 가로 스크롤바 생성 원천 방지.
+
+### 2. BOM 모달 초기화 & 백엔드 저장 무결성 개선 (`backend/controllers/BomController.php`, `migrate.php`)
+- **BOM 저장 DB 오류 해소**:
+  - `INSERT INTO item` 및 `INSERT INTO bom_master` 쿼리에서 누락되었던 `created_at` 컬럼 삭제 및 `migrate.php` DDL 보완으로 SQL 1054 Unknown column 에러 원천 해결.
+- **BOM 등록 클릭 시 입력 영역 자동 초기화**:
+  - 등록된 BOM이 존재하는 품목이라도 `+ BOM 등록` 클릭 시 이전 붙여넣기 텍스트, 테이블 렌더링, 매핑 선택 상태가 깨끗하게 초기화된 새 폼으로 오픈.
+
+### 3. 피더 슬롯 배정기 & 파트 대치품(AVL) 클릭 이벤트 구문 오류 완벽 수정 (`frontend/admin.html`)
+- **원인 분석**:
+  - BOM 부품 목록의 `미설정`(피더 슬롯), 파트번호, `✏️`(수정), `🗑️`(삭제) 인라인 HTML `onclick` 속성에 `r.part_name` 또는 `r.location` 문자열을 직접 조립해 전달하던 구조에서, 부품명/위치에 따옴표(`"`, `'`)나 줄바꿈(`\n`)이 포함될 경우 JS SyntaxError가 발생하여 모달이 오픈되지 않던 문제.
+- **인덱스 기반 래퍼 함수 구조 전환**:
+  - `openFeederSlotPickerModalByIndex(index, bomId)`, `openUnifiedPartAlternateModalByIndex(index, bomId)`, `editSingleBomComponentByIndex(index, bomId)`, `deleteSingleBomComponentByIndex(index, bomId)` 구축.
+  - 인라인 구문에 문자열 파라미터를 넘기지 않고 배열 인덱스만 전달하여, 특수문자나 줄바꿈이 들어간 부품에서도 **피더 슬롯 비주얼 배정기 및 대치품(AVL) 모달이 100% 정상 작동**하도록 수정.
+
+### 4. 작업지시 관리 우측 패널 툴바 정리 & 라인 대시보드 자재 피킹 이동 연동 (`admin.html`, `dashboard.html`, `kitting.html`)
+- **작업지시 우측 상세 툴바 요소 정리 (`admin.html`)**:
+  - 작업지시 우측 상세 화면 상단 툴바에서 불필요한 `업체명`, `수주번호/WO번호`, `제품명`, `D-Day 뱃지`, `📋 BOM 부품` 버튼, `🗑️ 삭제` 버튼 제거.
+  - 필수 액션 버튼(`생산 보류`, `부족분 분할`, `수정`)만 우측 상단에 정돈 배치.
+- **라인 대시보드 ➔ 자재 피킹 화면(`kitting.html`) 단말기 직결 연동 (`dashboard.html`, `kitting.html`)**:
+  - 라인 대시보드(`dashboard.html`) 좌측 카드에서 `자재 피킹 & 피더 셋업` 버튼 클릭 시 자재 피킹 전용 단말기 화면(`https://mes.memyself.shop/kitting.html`)으로 즉시 이동.
+  - `?wo_id=...` URL 파라미터를 넘겨 `kitting.html` 진입과 동시에 해당 작업지시가 자동 선택/로드되도록 연결.
+
+### 5. GitHub Remote (`origin/main`) 푸시 및 CI/CD 배포 완료
+- 수정 내역을 Git 커밋 후 GitHub 저장소(`origin/main`)로 즉시 푸시 완료하여 프로덕션 자동 배포 적용.
+
+---
+
 ## 🚀 향후 로드맵 (Next Milestones)
 1. **모바일 반응형 POP 단말기 UI 고도화**:
    - 현장 작업자용 태블릿 및 모바일 바코드 스캔 전용 경량화 POP 모듈 추가.
@@ -668,6 +707,7 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
    - SMT 1호 라인 외 2호, 3호 라인 병렬 관제 및 라인 간 부하 분산 KPI 분석 고도화.
 3. **스마트 팩토리 이상 감지 머신러닝(AI/ML) 모델 연동**:
    - Node-RED 설비 물리 센서 데이터를 시계열 DB(InfluxDB)와 연계하여 리플로우 오븐 온도 이상 및 마운터 노즐 막힘 사전 예측 AI 알고리즘 도입.
+
 
 
 
