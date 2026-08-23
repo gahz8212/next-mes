@@ -794,7 +794,7 @@ function updateCeoMachine(processId, status, barcode, pDataObj) {
         } else if (isProductDefect) {
             defectTag.innerHTML = `<span class="defect-badge-highlight">⚠️ PCB #${pcbNum} 불량(셀 #${failedCell})</span>`;
         } else {
-            defectTag.innerHTML = `<span class="pass-badge-chip">PCB #${pcbNum}</span>`;
+            defectTag.innerHTML = '';
         }
     }
 

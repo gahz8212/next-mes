@@ -697,7 +697,7 @@ function updateMachine(processId, status, barcode, pDataObj) {
         } else if (isProductDefect) {
             defectTag.innerHTML = `<span class="defect-badge-highlight" title="[불량] PCB #${pcbNum}번 기판 셀 #${failedCell} 불량 감지">⚠️ PCB #${pcbNum} 불량(셀 #${failedCell})</span>`;
         } else {
-            defectTag.innerHTML = `<span class="pass-badge-chip">PCB #${pcbNum}</span>`;
+            defectTag.innerHTML = '';
         }
     }
 
