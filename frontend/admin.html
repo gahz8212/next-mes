@@ -3044,8 +3044,8 @@
                                 <thead>
                                     <tr>
                                         <th style="width:20%; padding:6px 6px; text-align:left;">업체명</th>
-                                        <th style="width:17%; padding:6px 4px; text-align:center;">발생공정</th>
-                                        <th style="width:19%; padding:6px 4px 6px 20px; text-align:left;">기판 번호</th>
+                                        <th style="width:16%; padding:6px 4px; text-align:center;">발생공정</th>
+                                        <th style="width:16%; padding:6px 6px; text-align:center;">기판 번호</th>
                                         <th style="padding:6px 6px; text-align:left;">제품명</th>
                                         <th class="defect-col-date-standalone" style="width:16%; padding:6px 4px; text-align:center;">발생일</th>
                                     </tr>
@@ -7052,9 +7052,9 @@ async function deleteCompany(id, name) {
                     <td style="padding:6px 4px; text-align:center; white-space:nowrap;">
                         <span class="status-badge status-progress" style="padding:2px 6px; font-size:11px;">${escHtml(r.process_name)}</span>
                     </td>
-                    <!-- 3. 기판 번호 (001, 002 형식) -->
-                    <td style="padding:6px 4px 6px 20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escHtml(r.barcode)} (클릭하여 자재 역추적)">
-                        <code style="font-size:12.5px; font-family:'JetBrains Mono',monospace; padding:2px 8px; border-radius:4px; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-weight:800; cursor:pointer;">${escHtml(displaySeq)} 🔍</code>
+                    <!-- 3. 기판 번호 (001, 002 단독 표기, 말줄임표 제거) -->
+                    <td style="padding:6px 6px; text-align:center; white-space:nowrap;" title="${escHtml(r.barcode)} (클릭하여 자재 역추적)">
+                        <code style="font-size:12.5px; font-family:'JetBrains Mono',monospace; padding:2px 8px; border-radius:4px; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-weight:800; cursor:pointer;">${escHtml(displaySeq)}</code>
                     </td>
                     <!-- 4. 제품명 (15인치에서는 아래 2행에 발생일 표시) -->
                     <td style="padding:6px 6px; min-width:0;">
