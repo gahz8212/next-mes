@@ -68,9 +68,11 @@ try {
     $addColumnDirect('company', 'address', 'VARCHAR(255) DEFAULT NULL COMMENT "주소"');
     $addColumnDirect('company', 'bom_mapping', 'TEXT DEFAULT NULL COMMENT "BOM 컬럼 매핑 JSON"');
 
-    // 7. bom_master 테이블 컬럼
+    // 7. bom_master 및 item 테이블 컬럼
     $addColumnDirect('bom_master', 'item_id', 'INT DEFAULT NULL COMMENT "연결 품목 ID"');
     $addColumnDirect('bom_master', 'version', 'VARCHAR(20) DEFAULT "v1.0" COMMENT "BOM 버전"');
+    $addColumnDirect('bom_master', 'created_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT "생성일시"');
+    $addColumnDirect('item', 'created_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT "생성일시"');
 
     // 8. 신규 테이블 생성: consigned_return_master
     $pdo->exec("

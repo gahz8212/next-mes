@@ -5191,6 +5191,23 @@ const ALL_PAGE_TITLES = {
         document.getElementById('bomTableContainer').style.display = 'block';
     }
 
+    function updateBomMapSelectStyle(sel) {
+        if (!sel) return;
+        if (sel.value === 'ignore') {
+            sel.style.background = 'rgba(30, 41, 59, 0.8)';
+            sel.style.color = '#94a3b8';
+            sel.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+            sel.style.textAlign = 'center';
+            sel.style.fontWeight = '600';
+        } else {
+            sel.style.background = '#1e40af';
+            sel.style.color = '#ffffff';
+            sel.style.borderColor = '#3b82f6';
+            sel.style.textAlign = 'left';
+            sel.style.fontWeight = '700';
+        }
+    }
+
     function renderBOMTable(isExisting = false) {
         if (!bomParsedData || bomParsedData.length === 0) return;
         const numCols = Math.max(...bomParsedData.map(r => r.length));
@@ -5203,15 +5220,14 @@ const ALL_PAGE_TITLES = {
 
         for (let i = 0; i < numCols; i++) {
             headRow.innerHTML += `
-                <th>
-                    <div style="font-size:11px; color:#93c5fd; margin-bottom:4px;">열 ${i + 1}</div>
-                    <select class="bom-map-select" data-col="${i}" style="background:#1e293b; color:#ffffff; font-size:12.5px; font-weight:600; padding:6px 8px; width:100%;">
-                        <option value="ignore">무시</option>
-                        <option value="part_no">파트번호 *</option>
-                        <option value="part_name">파트명 / 규격</option>
-                        <option value="points">포인트 *</option>
-                        <option value="provide_qty">제공수량</option>
-                        <option value="location">실장 위치</option>
+                <th style="padding:6px;">
+                    <select class="bom-map-select" data-col="${i}" onchange="updateBomMapSelectStyle(this)" style="background:rgba(30,41,59,0.8); color:#94a3b8; font-size:12.5px; font-weight:600; padding:6px 8px; width:100%; border:1px solid rgba(255,255,255,0.15); border-radius:4px; text-align:center; cursor:pointer;">
+                        <option value="ignore" style="background:#0f172a; color:#94a3b8;">▼</option>
+                        <option value="part_no" style="background:#0f172a; color:#ffffff;">파트번호 *</option>
+                        <option value="part_name" style="background:#0f172a; color:#ffffff;">파트명 / 규격</option>
+                        <option value="points" style="background:#0f172a; color:#ffffff;">포인트 *</option>
+                        <option value="provide_qty" style="background:#0f172a; color:#ffffff;">제공수량</option>
+                        <option value="location" style="background:#0f172a; color:#ffffff;">실장 위치</option>
                     </select>
                 </th>`;
         }
@@ -5231,6 +5247,7 @@ const ALL_PAGE_TITLES = {
             } else {
                 selects[i].value = 'ignore';
             }
+            updateBomMapSelectStyle(selects[i]);
         }
 
         const startIdx = includeFirstRow ? 0 : 1;

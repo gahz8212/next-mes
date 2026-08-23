@@ -138,8 +138,8 @@ class BomController {
                         $item_id = (int)$itemRow['id'];
                     } else {
                         $insIt = $pdo->prepare("
-                            INSERT INTO item (company_id, item_code, item_name, unit, description, created_at) 
-                            VALUES (?, ?, ?, 'EA', '작업지시 BOM 연계 자동 생성 품목', NOW())
+                            INSERT INTO item (company_id, item_code, item_name, unit, description) 
+                            VALUES (?, ?, ?, 'EA', '작업지시 BOM 연계 자동 생성 품목')
                         ");
                         $insIt->execute([$cId ?: null, $iCode ?: null, $iName]);
                         $item_id = (int)$pdo->lastInsertId();
@@ -162,7 +162,7 @@ class BomController {
                 // 기존 부품 내역 삭제 후 재등록
                 $pdo->prepare("DELETE FROM bom_detail WHERE bom_id = ?")->execute([$bom_id]);
             } else {
-                $stmtBm = $pdo->prepare("INSERT INTO bom_master (product_id, item_id, version, created_at) VALUES (?, ?, ?, NOW())");
+                $stmtBm = $pdo->prepare("INSERT INTO bom_master (product_id, item_id, version) VALUES (?, ?, ?)");
                 $stmtBm->execute([$product_id, $item_id, $version]);
                 $bom_id = (int)$pdo->lastInsertId();
             }
