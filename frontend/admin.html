@@ -2376,52 +2376,117 @@
         .consigned-subview {
             flex: 1 1 auto;
             min-height: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: row !important;
+            gap: 16px;
+            padding: 0 32px 24px;
+            overflow: hidden !important;
+            box-sizing: border-box;
+        }
+        .consigned-left-panel {
             display: flex;
             flex-direction: column;
-            overflow: hidden;
-            padding: 0 32px 24px;
-        }
-        .consigned-filter-bar {
+            height: 100%;
+            min-height: 0;
+            max-height: 100%;
             flex-shrink: 0;
-            margin-bottom: 12px;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            overflow: hidden !important;
+            box-sizing: border-box;
         }
-        .consigned-scroll-body {
+        #consigned-stock-detail-panel,
+        #consigned-rcv-detail-panel,
+        #consigned-rec-detail-panel,
+        #consigned-ret-detail-panel {
+            flex: 1 1 auto;
+            min-width: 0;
+            min-height: 0;
+            height: 100%;
+            max-height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            overflow: hidden !important;
+            box-sizing: border-box;
+        }
+        #consigned-stock-list-container,
+        #consigned-rcv-order-list,
+        #consigned-rec-order-list,
+        #consigned-ret-order-list {
             flex: 1 1 auto;
             min-height: 0;
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding-right: 6px;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            box-sizing: border-box;
         }
-        .consigned-scroll-body::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+        #consigned-stock-detail-panel .detail-table-wrap,
+        #consigned-rcv-detail-panel .detail-table-wrap,
+        #consigned-rec-detail-panel .detail-table-wrap,
+        #consigned-ret-detail-panel .detail-table-wrap {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto !important;
+            overflow-x: auto !important;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .consigned-scroll-body::-webkit-scrollbar-track {
+        /* Custom scrollbars for left list and right table containers */
+        #consigned-stock-list-container::-webkit-scrollbar,
+        #consigned-rcv-order-list::-webkit-scrollbar,
+        #consigned-rec-order-list::-webkit-scrollbar,
+        #consigned-ret-order-list::-webkit-scrollbar,
+        #consigned-stock-detail-panel .detail-table-wrap::-webkit-scrollbar,
+        #consigned-rcv-detail-panel .detail-table-wrap::-webkit-scrollbar,
+        #consigned-rec-detail-panel .detail-table-wrap::-webkit-scrollbar,
+        #consigned-ret-detail-panel .detail-table-wrap::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        #consigned-stock-list-container::-webkit-scrollbar-track,
+        #consigned-rcv-order-list::-webkit-scrollbar-track,
+        #consigned-rec-order-list::-webkit-scrollbar-track,
+        #consigned-ret-order-list::-webkit-scrollbar-track,
+        #consigned-stock-detail-panel .detail-table-wrap::-webkit-scrollbar-track,
+        #consigned-rcv-detail-panel .detail-table-wrap::-webkit-scrollbar-track,
+        #consigned-rec-detail-panel .detail-table-wrap::-webkit-scrollbar-track,
+        #consigned-ret-detail-panel .detail-table-wrap::-webkit-scrollbar-track {
             background: rgba(15, 23, 42, 0.4);
-            border-radius: 4px;
+            border-radius: 3px;
         }
-        .consigned-scroll-body::-webkit-scrollbar-thumb {
+        #consigned-stock-list-container::-webkit-scrollbar-thumb,
+        #consigned-rcv-order-list::-webkit-scrollbar-thumb,
+        #consigned-rec-order-list::-webkit-scrollbar-thumb,
+        #consigned-ret-order-list::-webkit-scrollbar-thumb,
+        #consigned-stock-detail-panel .detail-table-wrap::-webkit-scrollbar-thumb,
+        #consigned-rcv-detail-panel .detail-table-wrap::-webkit-scrollbar-thumb,
+        #consigned-rec-detail-panel .detail-table-wrap::-webkit-scrollbar-thumb,
+        #consigned-ret-detail-panel .detail-table-wrap::-webkit-scrollbar-thumb {
             background: rgba(71, 85, 105, 0.6);
-            border-radius: 4px;
+            border-radius: 3px;
         }
-        .consigned-scroll-body::-webkit-scrollbar-thumb:hover {
+        #consigned-stock-list-container::-webkit-scrollbar-thumb:hover,
+        #consigned-rcv-order-list::-webkit-scrollbar-thumb:hover,
+        #consigned-rec-order-list::-webkit-scrollbar-thumb:hover,
+        #consigned-ret-order-list::-webkit-scrollbar-thumb:hover,
+        #consigned-stock-detail-panel .detail-table-wrap::-webkit-scrollbar-thumb:hover,
+        #consigned-rcv-detail-panel .detail-table-wrap::-webkit-scrollbar-thumb:hover,
+        #consigned-rec-detail-panel .detail-table-wrap::-webkit-scrollbar-thumb:hover,
+        #consigned-ret-detail-panel .detail-table-wrap::-webkit-scrollbar-thumb:hover {
             background: rgba(100, 116, 139, 0.9);
         }
         .consigned-card-table-wrap {
             max-height: 380px;
             overflow-y: auto;
             overflow-x: hidden;
-        }
-        .consigned-card-table-wrap::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        .consigned-card-table-wrap::-webkit-scrollbar-track {
-            background: rgba(15, 23, 42, 0.3);
-        }
-        .consigned-card-table-wrap::-webkit-scrollbar-thumb {
-            background: rgba(71, 85, 105, 0.5);
-            border-radius: 3px;
         }
         .consigned-card-table-wrap thead th {
             position: sticky;
@@ -3197,34 +3262,11 @@
                 </div>
 
                 <!-- 2. SUB-VIEW 1: 사급 재고 수불 2분할 뷰 -->
-                <div id="consigned-subview-stock" class="consigned-subview" style="flex:1 1 auto; min-height:0; display:flex; flex-direction:row !important; gap:16px; padding:0 32px 24px; overflow:hidden;">
-                    <!-- 좌측: 수주 / 업체별 사급 풀 목록 (380px) -->
-                    <div class="consigned-left-panel" style="width:380px; min-width:320px; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
-                        <div style="padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:8px; background:rgba(15,23,42,0.6);">
-                            <div style="display:flex; gap:8px;">
-                                <select id="consigned-stock-company-filter" class="filter-select" style="flex:1; padding:6px 10px; font-size:12px;" onchange="loadConsignedStocks()">
-                                    <option value="">🏢 전체 거래처</option>
-                                </select>
-                                <button class="topbar-action-btn" style="padding:6px 10px; font-size:12px;" onclick="loadConsignedStocks()">🔄</button>
-                            </div>
-                            <input class="data-search" id="consigned-stock-search" type="search" placeholder="부품번호, 부품명, 수주번호 검색…" style="width:100%; padding:6px 10px; font-size:12.5px;" oninput="filterConsignedStockList()">
-                        </div>
-                        <div id="consigned-stock-list-container" style="flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:6px;">
-                            <!-- Rendered by renderConsignedStockMasterList() -->
-                        </div>
-                    </div>
-
-                    <!-- 우측: 선택된 수주/업체의 부품별 상세 수불 대장 (독립 스크롤) -->
-                    <div id="consigned-stock-detail-panel" style="flex:1; min-width:0; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
-                        <!-- Rendered by renderConsignedStockDetail() -->
-                    </div>
-                </div>
-
-                <!-- SUB-VIEW 2: 수주 BOM 입고 2분할 뷰 -->
-                <div id="consigned-subview-receive" class="consigned-subview" style="display:none; flex:1 1 auto; min-height:0; flex-direction:row !important; gap:16px; padding:0 32px 24px; overflow:hidden;">
+                <!-- 2. SUB-VIEW 1: 수주 BOM 입고 2분할 뷰 (기본 활성) -->
+                <div id="consigned-subview-receive" class="consigned-subview" style="flex:1 1 auto; min-height:0; display:flex; flex-direction:row !important; gap:16px; padding:0 32px 24px; overflow:hidden;">
                     <!-- 좌측: 입고 대상 수주 목록 (360px) -->
-                    <div class="consigned-left-panel" style="width:360px; min-width:300px; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
-                        <div style="padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:8px; background:rgba(15,23,42,0.6);">
+                    <div class="consigned-left-panel" style="width:360px; min-width:300px; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden; height:100%; min-height:0;">
+                        <div style="padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:8px; background:rgba(15,23,42,0.6); flex-shrink:0;">
                             <div style="display:flex; gap:8px;">
                                 <select id="consigned-rcv-company-filter" class="filter-select" style="flex:1; padding:6px 10px; font-size:12px;" onchange="filterConsignedReceiveOrders()">
                                     <option value="">🏢 전체 거래처</option>
@@ -3233,22 +3275,22 @@
                             </div>
                             <input class="data-search" id="consigned-rcv-search" type="search" placeholder="수주번호, 거래처, 제품명 검색…" style="width:100%; padding:6px 10px; font-size:12.5px;" oninput="filterConsignedReceiveOrders()">
                         </div>
-                        <div id="consigned-rcv-order-list" style="flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:6px;">
+                        <div id="consigned-rcv-order-list" style="flex:1 1 auto; min-height:0; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:6px;">
                             <!-- Rendered by renderConsignedReceiveOrderList() -->
                         </div>
                     </div>
 
                     <!-- 우측: 선택된 수주의 BOM 부품 입고 명세 및 일괄 저장 패널 (독립 스크롤) -->
-                    <div id="consigned-rcv-detail-panel" style="flex:1; min-width:0; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
+                    <div id="consigned-rcv-detail-panel" style="flex:1; min-width:0; min-height:0; height:100%; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
                         <!-- Rendered by renderConsignedReceiveDetail() -->
                     </div>
                 </div>
 
-                <!-- SUB-VIEW 3: 사급 반납 정산 2분할 뷰 -->
+                <!-- SUB-VIEW 2: 사급 반납 정산 2분할 뷰 -->
                 <div id="consigned-subview-reconcile" class="consigned-subview" style="display:none; flex:1 1 auto; min-height:0; flex-direction:row !important; gap:16px; padding:0 32px 24px; overflow:hidden;">
                     <!-- 좌측: 정산 대상 수주 목록 (360px) -->
-                    <div class="consigned-left-panel" style="width:360px; min-width:300px; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
-                        <div style="padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:8px; background:rgba(15,23,42,0.6);">
+                    <div class="consigned-left-panel" style="width:360px; min-width:300px; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden; height:100%; min-height:0;">
+                        <div style="padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:8px; background:rgba(15,23,42,0.6); flex-shrink:0;">
                             <div style="display:flex; gap:8px;">
                                 <select id="consigned-rec-company-filter" class="filter-select" style="flex:1; padding:6px 10px; font-size:12px;" onchange="filterConsignedReconcileOrders()">
                                     <option value="">🏢 전체 거래처</option>
@@ -3257,23 +3299,23 @@
                             </div>
                             <input class="data-search" id="consigned-rec-search" type="search" placeholder="수주번호, 거래처, 제품명 검색…" style="width:100%; padding:6px 10px; font-size:12.5px;" oninput="filterConsignedReconcileOrders()">
                         </div>
-                        <div id="consigned-rec-order-list" style="flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:6px;">
+                        <div id="consigned-rec-order-list" style="flex:1 1 auto; min-height:0; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:6px;">
                             <!-- Rendered by renderConsignedReconcileOrderList() -->
                         </div>
                     </div>
 
                     <!-- 우측: 선택된 수주의 사급 정산 & 반납 명세서 작성 패널 (독립 스크롤) -->
-                    <div id="consigned-rec-detail-panel" style="flex:1; min-width:0; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
+                    <div id="consigned-rec-detail-panel" style="flex:1; min-width:0; min-height:0; height:100%; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
                         <!-- Rendered by renderConsignedReconcileDetail() -->
                     </div>
                 </div>
 
-                <!-- SUB-VIEW 4: 반납 완료 명세서 이력 (2분할 프리미엄 뷰) -->
+                <!-- SUB-VIEW 3: 반납 완료 명세서 이력 (2분할 프리미엄 뷰) -->
                 <div id="consigned-subview-returns" class="consigned-subview" style="display:none; flex:1 1 auto; min-height:0; flex-direction:row !important; gap:16px; padding:0 32px 24px; overflow:hidden;">
                     <!-- Left: Return Receipts List Panel (360px) -->
-                    <div class="consigned-left-panel" style="width:360px; min-width:360px; max-width:360px; display:flex; flex-direction:column; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden; height:100%;">
+                    <div class="consigned-left-panel" style="width:360px; min-width:360px; max-width:360px; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden; height:100%; min-height:0;">
                         <!-- Top Filter Strip -->
-                        <div style="padding:12px; background:rgba(30,41,59,0.7); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:8px;">
+                        <div style="padding:12px; background:rgba(15,23,42,0.6); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:8px; flex-shrink:0;">
                             <div style="display:flex; gap:6px; align-items:center;">
                                 <select id="consigned-ret-company-filter" class="filter-select" style="flex:1; padding:6px 10px; font-size:12px;" onchange="filterConsignedReturnList()">
                                     <option value="">🏢 전체 거래처</option>
@@ -3284,17 +3326,41 @@
                         </div>
 
                         <!-- Card List Area -->
-                        <div id="consigned-ret-order-list" style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px;">
+                        <div id="consigned-ret-order-list" style="flex:1 1 auto; min-height:0; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px;">
                             <!-- Rendered by renderConsignedReturnOrderList() -->
                         </div>
                     </div>
 
                     <!-- Right: Return Receipt Detail & Parts Reconciliation Grid (Flex 1) -->
-                    <div id="consigned-ret-detail-panel" style="flex:1; display:flex; flex-direction:column; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden; height:100%;">
+                    <div id="consigned-ret-detail-panel" style="flex:1; min-width:0; min-height:0; height:100%; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
                         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#94a3b8; font-size:13px;">
                             <div style="font-size:36px; margin-bottom:10px;">📜</div>
                             좌측에서 조회할 반납 명세서를 선택하세요.
                         </div>
+                    </div>
+                </div>
+
+                <!-- SUB-VIEW 4: 사급 재고 수불 2분할 뷰 -->
+                <div id="consigned-subview-stock" class="consigned-subview" style="display:none; flex:1 1 auto; min-height:0; flex-direction:row !important; gap:16px; padding:0 32px 24px; overflow:hidden;">
+                    <!-- 좌측: 수주 / 업체별 사급 풀 목록 (380px) -->
+                    <div class="consigned-left-panel" style="width:380px; min-width:320px; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden; height:100%; min-height:0;">
+                        <div style="padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:8px; background:rgba(15,23,42,0.6); flex-shrink:0;">
+                            <div style="display:flex; gap:8px;">
+                                <select id="consigned-stock-company-filter" class="filter-select" style="flex:1; padding:6px 10px; font-size:12px;" onchange="loadConsignedStocks()">
+                                    <option value="">🏢 전체 거래처</option>
+                                </select>
+                                <button class="topbar-action-btn" style="padding:6px 10px; font-size:12px;" onclick="loadConsignedStocks()">🔄</button>
+                            </div>
+                            <input class="data-search" id="consigned-stock-search" type="search" placeholder="부품번호, 부품명, 수주번호 검색…" style="width:100%; padding:6px 10px; font-size:12.5px;" oninput="filterConsignedStockList()">
+                        </div>
+                        <div id="consigned-stock-list-container" style="flex:1 1 auto; min-height:0; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:6px;">
+                            <!-- Rendered by renderConsignedStockMasterList() -->
+                        </div>
+                    </div>
+
+                    <!-- 우측: 선택된 수주/업체의 부품별 상세 수불 대장 (독립 스크롤) -->
+                    <div id="consigned-stock-detail-panel" style="flex:1; min-width:0; min-height:0; height:100%; display:flex; flex-direction:column; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
+                        <!-- Rendered by renderConsignedStockDetail() -->
                     </div>
                 </div>
             </div><!-- /page-consigned-material -->
@@ -9106,7 +9172,7 @@ function renderConsignedStockDetail() {
 
     panel.innerHTML = `
         <!-- Detail Table Area (가운데 집중형 균형 배치) -->
-        <div class="detail-table-wrap" style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;">
+        <div class="detail-table-wrap" style="flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:auto;">
             <table class="detail-balanced-table" style="table-layout:fixed; width:100%; border-collapse:separate; border-spacing:0; margin:0;">
                 <thead>
                     <tr>
@@ -9324,7 +9390,7 @@ function renderConsignedReceiveDetail(orderInfo, parts = []) {
 
     panel.innerHTML = `
         <!-- Detail Header Toolbar -->
-        <div style="padding:10px 16px; background:rgba(15,23,42,0.85); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div style="padding:10px 16px; background:rgba(15,23,42,0.85); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:8px; flex-shrink:0;">
             <!-- 스마트 툴바 액션 버튼군 (우측 정렬) -->
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-left:auto;">
                 <!-- 1. 자동 채우기 (선명한 골드 컬러) -->
@@ -9345,7 +9411,7 @@ function renderConsignedReceiveDetail(orderInfo, parts = []) {
         </div>
 
         <!-- BOM Parts Receive Table Area (가운데 집중형 균형 배치) -->
-        <div class="detail-table-wrap" style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;">
+        <div class="detail-table-wrap" style="flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:auto;">
             <table class="detail-balanced-table" style="table-layout:fixed; width:100%; border-collapse:separate; border-spacing:0; margin:0;">
                 <thead>
                     <tr>
@@ -9978,7 +10044,7 @@ function renderConsignedReconcileDetail(orderInfo, producedQty, parts, existingR
 
     panel.innerHTML = `
         <!-- Detail Header Toolbar (우측 정렬: 반납 명세서 발행 버튼) -->
-        <div style="padding:10px 16px; background:rgba(15,23,42,0.85); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div style="padding:10px 16px; background:rgba(15,23,42,0.85); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:8px; flex-shrink:0;">
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-left:auto;">
                 ${isAlreadyReturned ? `
                     <button type="button" disabled style="height:32px; padding:0 16px; font-size:12.5px; font-weight:800; background:#334155; color:#94a3b8; border:1px solid #475569; border-radius:6px; cursor:not-allowed; display:inline-flex; align-items:center; gap:6px; opacity:0.85;" title="이미 반납 명세서가 발행된 수주입니다.">
@@ -9993,7 +10059,7 @@ function renderConsignedReconcileDetail(orderInfo, producedQty, parts, existingR
         </div>
 
         <!-- Parts Reconciliation Table (가운데 집중형 균형 배치) -->
-        <div class="detail-table-wrap" style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;">
+        <div class="detail-table-wrap" style="flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:auto;">
             <table class="detail-balanced-table" style="table-layout:fixed; width:100%; border-collapse:separate; border-spacing:0; margin:0;">
                 <thead>
                     <tr>
@@ -10481,7 +10547,7 @@ function renderConsignedReturnDetail(master, details = []) {
 
     panel.innerHTML = `
         <!-- Top Detail Toolbar (우측 정렬: 인쇄 버튼) -->
-        <div style="padding:10px 16px; background:rgba(15,23,42,0.85); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div style="padding:10px 16px; background:rgba(15,23,42,0.85); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:8px; flex-shrink:0;">
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-left:auto;">
                 <button type="button" style="height:32px; padding:0 16px; font-size:12.5px; font-weight:800; background:#0284c7; color:#ffffff; border:1px solid #0369a1; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(2,132,199,0.3); transition:all 0.15s ease;" onclick="openConsignedReturnPrintModal(${master.id})">
                     🖨️ 인쇄
@@ -10490,7 +10556,7 @@ function renderConsignedReturnDetail(master, details = []) {
         </div>
 
         <!-- Parts Reconciliation Grid Table Area (가운데 집중형 균형 배치) -->
-        <div class="detail-table-wrap" style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;">
+        <div class="detail-table-wrap" style="flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:auto;">
             <table class="detail-balanced-table" style="table-layout:fixed; width:100%; border-collapse:separate; border-spacing:0; margin:0;">
                 <thead>
                     <tr>
