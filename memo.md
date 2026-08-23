@@ -698,6 +698,31 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
 ### 5. GitHub Remote (`origin/main`) 푸시 및 CI/CD 배포 완료
 - 수정 내역을 Git 커밋 후 GitHub 저장소(`origin/main`)로 즉시 푸시 완료하여 프로덕션 자동 배포 적용.
 
+### 6. 불량현황 역추적(Lot Traceability) 고도화 & UI 단순화 (`frontend/admin.html`)
+- **발생이력 테이블 표기 단순화 및 말줄임표(...) 제거**:
+  - `발생공정`과 `기판번호` 컬럼에서 불필요한 뱃지(배경색, 테두리) 디자인을 전면 제거하고 군더더기 없는 일반 텍스트로 단순화.
+  - 기판 번호를 `001`, `002`, `024` 등 3자리 일련번호로 통일하고, 돋보기 아이콘(`🔍`) 및 불균형 여백으로 인해 브라우저 CSS `text-overflow: ellipsis`로 잘리던 현상을 완벽 제거.
+- **불량 기판 역추적 & 자재 릴 검증 팝업 상단 메타 정보 3열 2행 개편**:
+  - 불필요한 `BOM 부품 품번`, `장착 슬롯 수`를 제거하고 핵심 6개 항목(불량 기판 번호, 투입 PCB 기판 번호 범위, 작업지시, 수주업체/제품명, 불량 검출 공정, 검사 시각)으로 균형 배치.
+- **자재 릴 바코드 클릭 시 투입 PCB 번호 범위(`001 ~ 030`) 실시간 하이라이트 동기화**:
+  - 하단 실장 투입된 자재 릴(Reel) 목록에서 특정 릴을 클릭하면, 상단 `투입된 PCB 기판 번호 범위`가 `001 ~ 030`으로 즉시 연동되며 네온 블루 펄스 애니메이션 적용.
+  - 품번 내 줄바꿈(`\n`)이나 슬래시(`/`) 등 특수문자가 포함된 부품(C-05, TR-01 슬롯)에서 발생하던 인라인 JS 문법 오류(`SyntaxError`)를 `selectTraceSlotReel(idx)` 인덱스 참조 방식으로 전면 개선하여 100% 정상 작동 보장.
+
+### 7. 자재 피킹(`kitting.html`) 실시간 실장 및 소요 동기화
+- `get_kpi.php` 호출 시 백엔드 `DashboardController.php`의 `autoTickConveyorPipeline()`이 자동 연동되도록 개선.
+- 1.2초 주기로 `input_qty`, `actual_qty`에 비례하여 릴 잔량 차감 및 실시간 `(-소요량)` / `[⚡실장중]` 펄스 뱃지 표출.
+
+### 8. Antigravity 스킬(Skills) 및 토큰 최적화(Caveman Mode) 정리
+- **슬래시 커맨드 (Slash Commands)**:
+  - `/plan`: 사전 변경 계획 및 UI 포맷 브리핑 후 승인 하에 실행.
+  - `/grill-me`: 모호한 요구사항을 사전에 인터뷰/질문하여 사용자 의도 100% 일치.
+  - `/goal`: 장시간 집중 작업 완수 모드.
+- **스킬 (Skills)**:
+  - 시스템 내장 경로(`~/.gemini/antigravity-cli/builtin/skills/`): `antigravity_guide`, `agy-customizations`, `generative_ui` 등.
+  - 프로젝트 커스텀 경로(`.agent/skills/`): 비즈니스/SMT 공정 전용 룰 패키지 등록 가능.
+- **원시인 모드 (Caveman Prompting)**:
+  - 출력 토큰(Token) 절약 및 지연 시간 최소화를 위해 미사여구와 불필요한 설명을 생략하고 극도로 압축된 키워드로만 소통하는 프롬프트 기법 (기본 내장되어 있지 않으며 커스텀 룰/스킬로 정의하여 사용).
+
 ---
 
 ## 🚀 향후 로드맵 (Next Milestones)
@@ -707,6 +732,7 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
    - SMT 1호 라인 외 2호, 3호 라인 병렬 관제 및 라인 간 부하 분산 KPI 분석 고도화.
 3. **스마트 팩토리 이상 감지 머신러닝(AI/ML) 모델 연동**:
    - Node-RED 설비 물리 센서 데이터를 시계열 DB(InfluxDB)와 연계하여 리플로우 오븐 온도 이상 및 마운터 노즐 막힘 사전 예측 AI 알고리즘 도입.
+
 
 
 
