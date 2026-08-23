@@ -410,9 +410,9 @@
                 if (isVerified) {
                     card.onclick = () => quickSpliceSlot(slot.slot_no, slot.part_no);
                     if (isCriticalLow) {
-                        card.title = `[Slot #${slot.slot_no}] 자재 소진 임박 — 카드 클릭 시 신규 릴이 스캔/연결되어 잔량이 즉시 100%로 리필됩니다!`;
+                        card.title = `[#${slot.slot_no}] 자재 소진 임박 — 카드 클릭 시 신규 릴이 스캔/연결되어 잔량이 즉시 100%로 리필됩니다!`;
                     } else {
-                        card.title = `[Slot #${slot.slot_no}] 카드 클릭 시 신규 릴 스플라이싱 리필 (100% 충전)`;
+                        card.title = `[#${slot.slot_no}] 카드 클릭 시 신규 릴 스플라이싱 리필 (100% 충전)`;
                     }
                 }
 
@@ -423,7 +423,7 @@
                     <!-- 1st Line: Slot Pill, Points Pill (좌측) & Live Remaining Qty (우측) -->
                     <div class="feeder-line-main" style="display:flex; justify-content:space-between; align-items:center;">
                         <div class="feeder-left-group" style="display:flex; align-items:center; gap:5px;">
-                            <span class="slot-pill">Slot #${slot.slot_no}</span>
+                            <span class="slot-pill">#${slot.slot_no}</span>
                             <span class="points-pill">${points}P</span>
                         </div>
                         <div class="live-qty-wrap" style="flex-shrink:0;">
@@ -596,7 +596,7 @@
                     const text = document.getElementById('feedbackText');
                     if (banner && text) {
                         banner.className = 'feedback-banner success';
-                        text.innerText = `[스플라이싱 리필 완료] Slot #${slotNo} [${partNo}] 신규 표준 릴(${autoNewReel}, ${standardFullPack.toLocaleString()} EA)이 연결되어 잔량이 100%로 완충되었습니다!`;
+                        text.innerText = `[스플라이싱 리필 완료] #${slotNo} [${partNo}] 신규 표준 릴(${autoNewReel}, ${standardFullPack.toLocaleString()} EA)이 연결되어 잔량이 100%로 완충되었습니다!`;
                     }
 
                     await loadKittingData(currentWoId, slotNo);
@@ -697,7 +697,7 @@
 
         function openSpliceModal(slotNo, partNo, currentReel) {
             currentSpliceSlotNo = slotNo;
-            document.getElementById('spliceSlotLabel').innerText = `Slot #${slotNo}`;
+            document.getElementById('spliceSlotLabel').innerText = `#${slotNo}`;
             document.getElementById('splicePartLabel').innerText = partNo;
             document.getElementById('spliceOldReelLabel').innerText = currentReel || '(미장착)';
             
@@ -792,7 +792,7 @@
                 <div class="splice-info-box">
                     <div class="splice-info-row">
                         <span class="splice-label">대상 슬롯</span>
-                        <span id="spliceSlotLabel" class="splice-val-slot">Slot #1</span>
+                        <span id="spliceSlotLabel" class="splice-val-slot">#1</span>
                     </div>
                     <div class="splice-info-row">
                         <span class="splice-label">BOM 필요 부품</span>
