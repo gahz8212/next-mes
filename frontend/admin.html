@@ -3993,7 +3993,7 @@
                 </div>
             </div>
 
-            <button class="btn-submit" style="margin-top:14px;" onclick="saveBOM()">BOM 저장 및 입고 처리</button>
+            <button class="btn-submit" style="margin-top:14px;" onclick="saveBOM()">BOM 저장</button>
         </div>
     </div>
 </div>
@@ -5292,7 +5292,6 @@ const ALL_PAGE_TITLES = {
                         <option value="part_no" style="background:#0f172a; color:#ffffff;">파트번호 *</option>
                         <option value="part_name" style="background:#0f172a; color:#ffffff;">파트명 / 규격</option>
                         <option value="points" style="background:#0f172a; color:#ffffff;">포인트</option>
-                        <option value="provide_qty" style="background:#0f172a; color:#ffffff;">입고</option>
                         <option value="location" style="background:#0f172a; color:#ffffff;">실장 위치</option>
                     </select>
                 </th>`;
@@ -5365,8 +5364,6 @@ const ALL_PAGE_TITLES = {
             const pName = mapping.part_name !== undefined ? (row[mapping.part_name] || '').trim() : pNo;
             const rawPointsStr = pointsCol !== undefined ? String(row[pointsCol] || '').trim() : '';
             const pointsVal = rawPointsStr !== '' ? Math.round(parseFloat(rawPointsStr.replace(/,/g, ''))) : 0;
-            const rawProvStr = mapping.provide_qty !== undefined ? String(row[mapping.provide_qty] || '').trim() : '';
-            const provQtyVal = (rawProvStr !== '' && !isNaN(parseFloat(rawProvStr.replace(/,/g, '')))) ? Math.round(parseFloat(rawProvStr.replace(/,/g, ''))) : null;
             const loc = mapping.location !== undefined ? (row[mapping.location] || '').trim().replace(/[\r\n]+/g, ' ') : '';
             const rowNum = i + 1;
 
@@ -5384,13 +5381,12 @@ const ALL_PAGE_TITLES = {
                     part_name: pName || pNo,
                     points: pointsVal,
                     req_qty: pointsVal,
-                    provide_qty: provQtyVal && provQtyVal > 0 ? provQtyVal : null,
                     location: loc
                 });
             }
         }
 
-        // 하나라도 포인트(소요수량)가 누락되어 있으면 저장/입고 차단
+        // 하나라도 포인트(소요수량)가 누락되어 있으면 저장 차단
         if (missingQtyRows.length > 0) {
             let warnMsg = `🚨 [BOM 저장 불가: 포인트(PCB 소요수량) 누락]\n\n`;
             warnMsg += `총 ${missingQtyRows.length}건의 부품에 포인트(PCB 1장당 소요수량)가 입력되지 않았거나 0 이하입니다:\n\n`;
@@ -5398,7 +5394,7 @@ const ALL_PAGE_TITLES = {
             if (missingQtyRows.length > 8) {
                 warnMsg += `\n... 외 ${missingQtyRows.length - 8}건`;
             }
-            warnMsg += `\n\n모든 부품에 1 이상의 포인트(소요수량)가 빠짐없이 입력되어야 BOM 저장 및 사급 입고 처리가 가능합니다. 열(Column) 매핑 및 엑셀 데이터를 다시 확인해 주세요.`;
+            warnMsg += `\n\n모든 부품에 1 이상의 포인트(소요수량)가 빠짐없이 입력되어야 BOM 저장이 가능합니다. 열(Column) 매핑 및 엑셀 데이터를 다시 확인해 주세요.`;
             alert(warnMsg);
             return;
         }
@@ -5412,9 +5408,8 @@ const ALL_PAGE_TITLES = {
         const item_id = document.getElementById('bom_item_id').value;
         const company_id = document.getElementById('bom_company_id').value;
         const edit_bom_id = document.getElementById('bom_edit_bom_id').value || null;
-        const auto_inbound_cb = document.getElementById('bom-auto-inbound') ? document.getElementById('bom-auto-inbound').checked : true;
+        const auto_inbound = document.getElementById('bom-auto-inbound') ? document.getElementById('bom-auto-inbound').checked : false;
         const mappingArray = Array.from(selects).map(s => s.value);
-        const auto_inbound = auto_inbound_cb || mappingArray.includes('provide_qty');
 
         // 수정 모드인 경우 (기존 특정 버전 덮어쓰기 저장)
         if (edit_bom_id) {
