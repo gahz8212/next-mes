@@ -6192,7 +6192,7 @@ async function deleteCompany(id, name) {
                                             ${isNc ? '<span style="background:#f97316; color:#fff; font-size:10px; font-weight:800; padding:1px 4px; border-radius:3px; flex-shrink:0;">NC</span>' : ''}
                                             <code style="color:${isNc ? '#fb923c' : '#38bdf8'}; font-weight:800; font-size:12.5px; font-family:'JetBrains Mono',monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; text-decoration:underline; text-underline-offset:2px;" 
                                                   title="클릭하여 [${escHtml(r.part_no)}] 대치품(AVL) 조회 및 등록" 
-                                                  onclick="event.stopPropagation(); openUnifiedPartAlternateModal(${bomId}, '${escHtml(r.part_no)}', '${escHtml(r.part_name || r.part_no)}', '${escHtml(r.location || '')}')">
+                                                  onclick="event.stopPropagation(); openUnifiedPartAlternateModalByIndex(${i}, ${bomId})">
                                                 ${escHtml(r.part_no)}
                                             </code>
                                         </div>
@@ -6227,8 +6227,8 @@ async function deleteCompany(id, name) {
                                                 ? `<button type="button" style="background:none; border:none; padding:2px; font-size:13px; cursor:pointer; line-height:1; display:inline-flex; align-items:center;" title="정상 실장으로 복원" onclick="event.stopPropagation(); toggleBomComponentNc(${r.detail_id || 0}, ${bomId})">↩️</button>`
                                                 : `<button type="button" style="background:none; border:none; padding:2px; font-size:13px; cursor:pointer; line-height:1; display:inline-flex; align-items:center;" title="NC(미실장) 처리" onclick="event.stopPropagation(); toggleBomComponentNc(${r.detail_id || 0}, ${bomId})">🚫</button>`
                                             }
-                                            <button type="button" style="background:none; border:none; padding:2px; font-size:13px; cursor:pointer; line-height:1; display:inline-flex; align-items:center;" title="부품 수정" onclick="event.stopPropagation(); editSingleBomComponent(${r.detail_id || 0}, ${bomId}, '${escHtml(r.part_no)}', '${escHtml(r.part_name || r.part_no)}', ${r.req_qty}, '${escHtml(r.location || '')}', '${escHtml(r.feeder_slot || '')}')">✏️</button>
-                                            <button type="button" style="background:none; border:none; padding:2px; font-size:13px; cursor:pointer; line-height:1; display:inline-flex; align-items:center;" title="부품 삭제" onclick="event.stopPropagation(); deleteSingleBomComponent(${r.detail_id || 0}, ${bomId}, '${escHtml(r.part_no)}')">🗑️</button>
+                                            <button type="button" style="background:none; border:none; padding:2px; font-size:13px; cursor:pointer; line-height:1; display:inline-flex; align-items:center;" title="부품 수정" onclick="event.stopPropagation(); editSingleBomComponentByIndex(${i}, ${bomId})">✏️</button>
+                                            <button type="button" style="background:none; border:none; padding:2px; font-size:13px; cursor:pointer; line-height:1; display:inline-flex; align-items:center;" title="부품 삭제" onclick="event.stopPropagation(); deleteSingleBomComponentByIndex(${i}, ${bomId})">🗑️</button>
                                         </div>
                                     </td>
                                 </tr>
@@ -6652,6 +6652,25 @@ async function deleteCompany(id, name) {
 
     async function editBomFeederSlot(detailId, bomId, currentSlot, partNo, location = '', partName = '') {
         openFeederSlotPickerModal(detailId, bomId, currentSlot, partNo, location, partName);
+    }
+
+    function openUnifiedPartAlternateModalByIndex(index, bomId) {
+        if (!window.currentBomDetailsList || !window.currentBomDetailsList[index]) return;
+        const r = window.currentBomDetailsList[index];
+        openUnifiedPartAlternateModal(bomId, r.part_no || '', r.part_name || r.part_no || '', r.location || '');
+    }
+
+    function editSingleBomComponentByIndex(index, bomId) {
+        if (!window.currentBomDetailsList || !window.currentBomDetailsList[index]) return;
+        const r = window.currentBomDetailsList[index];
+        const pts = parseFloat(r.points !== undefined && r.points !== null ? r.points : (r.req_qty || 1));
+        editSingleBomComponent(r.detail_id || 0, bomId, r.part_no || '', r.part_name || r.part_no || '', pts, r.location || '', r.feeder_slot || '');
+    }
+
+    function deleteSingleBomComponentByIndex(index, bomId) {
+        if (!window.currentBomDetailsList || !window.currentBomDetailsList[index]) return;
+        const r = window.currentBomDetailsList[index];
+        deleteSingleBomComponent(r.detail_id || 0, bomId, r.part_no || '');
     }
 
     function openUnifiedPartAlternateModal(bomId, partNo, partName, location = '') {
