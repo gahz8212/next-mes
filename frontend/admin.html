@@ -7137,16 +7137,27 @@ async function deleteCompany(id, name) {
     }
 
     // ── 불량 기판 역추적 & 자재 릴 검증 (Lot Traceability) ──
+    let currentTraceWoId = '';
+    let currentTraceTargetQty = 30;
+    let currentTracePcbBarcode = '';
+
     async function openDefectTraceModal(barcode, woId, companyName, itemName, processName, createdAt) {
         const modal = document.getElementById('defectTraceModal');
         if (!modal) return;
 
-        document.getElementById('traceModalPcbBarcode').innerText = barcode || '—';
+        currentTracePcbBarcode = barcode || '—';
+        document.getElementById('traceModalPcbBarcode').innerText = currentTracePcbBarcode;
         document.getElementById('traceModalWoId').innerText = woId || '—';
         document.getElementById('traceModalCompany').innerText = companyName || '—';
         document.getElementById('traceModalItem').innerText = itemName || '—';
         document.getElementById('traceModalProcess').innerText = processName || '—';
         document.getElementById('traceModalDate').innerText = createdAt || '—';
+
+        const forwardBox = document.getElementById('forwardTraceDetailBox');
+        if (forwardBox) {
+            forwardBox.style.display = 'none';
+            forwardBox.innerHTML = '';
+        }
 
         const tbody = document.getElementById('traceModalReelsTbody');
         tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:#94a3b8;">자재 릴 및 피더 셋업 이력을 조회하는 중...</td></tr>`;
@@ -7158,11 +7169,13 @@ async function deleteCompany(id, name) {
                 const lastDash = barcode.lastIndexOf('-');
                 if (lastDash > 0) woId = barcode.substring(0, lastDash);
             }
+            currentTraceWoId = woId || '';
 
             const res = await fetch(`../backend/api/get_feeder_setup.php?wo_id=${encodeURIComponent(woId)}`);
             const json = await res.json();
 
             if (json.status === 'success' && json.data && json.data.slots && json.data.slots.length > 0) {
+                currentTraceTargetQty = json.data.target_qty || 30;
                 tbody.innerHTML = json.data.slots.map(s => {
                     const isVerified = (s.status === 'VERIFIED');
                     const reelBarcode = s.reel_barcode || s.scanned_reel || (isVerified ? `REEL-${s.part_no}-A01` : '(미장착)');
@@ -7175,8 +7188,9 @@ async function deleteCompany(id, name) {
                                 ${s.part_name && s.part_name !== s.part_no ? `<div style="font-size:11px; color:#cbd5e1; margin-top:2px;">${escHtml(s.part_name)}</div>` : ''}
                             </td>
                             <td>
-                                <code style="background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.5); color:#38bdf8; padding:3px 8px; border-radius:4px; font-size:12px; font-family:'JetBrains Mono',monospace; font-weight:700; display:inline-block;">
-                                    ${escHtml(reelBarcode)}
+                                <code style="background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.5); color:#38bdf8; padding:3px 8px; border-radius:4px; font-size:12px; font-family:'JetBrains Mono',monospace; font-weight:700; display:inline-flex; align-items:center; gap:5px; cursor:pointer;" onclick="showForwardTraceForReel('${escHtml(reelBarcode)}', '${escHtml(s.part_no)}', '${escHtml(s.slot_no)}')" title="클릭 시 이 릴이 투입된 전체 PCB 기판 번호 범위(#0001 ~ #끝번호) 조회">
+                                    <span>${escHtml(reelBarcode)}</span>
+                                    <span style="font-size:10.5px; opacity:0.85;">🔍</span>
                                 </code>
                             </td>
                             <td style="text-align:center; font-family:'JetBrains Mono',monospace; color:#fcd34d; font-weight:800; font-size:12.5px;">${points}P</td>
@@ -7194,6 +7208,50 @@ async function deleteCompany(id, name) {
         } catch (e) {
             tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:#f87171;">자재 이력 조회 실패: ${escHtml(e.message)}</td></tr>`;
         }
+    }
+
+    // ── 정방향 확산 추적: 릴 바코드 클릭 시 투입된 PCB 시작번호~끝번호 범위 표시 ──
+    function showForwardTraceForReel(reelBarcode, partNo, slotNo) {
+        const box = document.getElementById('forwardTraceDetailBox');
+        if (!box) return;
+
+        const targetQty = currentTraceTargetQty || 30;
+        const startSeq = '0001';
+        const endSeq = String(targetQty).padStart(4, '0');
+        const startBarcode = `${currentTraceWoId}-${startSeq}`;
+        const endBarcode = `${currentTraceWoId}-${endSeq}`;
+
+        box.style.display = 'block';
+        box.innerHTML = `
+            <div style="background:linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.9) 100%); border:1.5px solid rgba(56,189,248,0.6); border-radius:8px; padding:14px 16px; margin-top:12px; box-shadow:0 8px 24px rgba(0,0,0,0.5);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:16px;">🎯</span>
+                        <span style="font-size:13.5px; font-weight:800; color:#38bdf8;">[정방향 확산 추적] 릴(${escHtml(reelBarcode)}) ➔ 투입된 PCB 기판 번호 범위</span>
+                    </div>
+                    <button type="button" class="card-btn" style="padding:2px 8px; font-size:11px; color:#cbd5e1; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); cursor:pointer;" onclick="document.getElementById('forwardTraceDetailBox').style.display='none'">✕ 닫기</button>
+                </div>
+                
+                <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; font-size:12px; margin-bottom:10px;">
+                    <div style="background:rgba(15,23,42,0.6); padding:8px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
+                        <div style="font-size:10.5px; color:#94a3b8;">장착 슬롯 / 부품 품번</div>
+                        <div style="font-weight:800; color:#f8fafc; margin-top:2px;">#${escHtml(slotNo)} (${escHtml(partNo)})</div>
+                    </div>
+                    <div style="background:rgba(15,23,42,0.6); padding:8px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
+                        <div style="font-size:10.5px; color:#94a3b8;">투입된 PCB 기판 번호 범위</div>
+                        <div style="font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace; margin-top:2px;">#${startSeq} ~ #${endSeq} (총 ${targetQty} EA)</div>
+                    </div>
+                    <div style="background:rgba(15,23,42,0.6); padding:8px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
+                        <div style="font-size:10.5px; color:#94a3b8;">전체 시리얼 바코드 범위</div>
+                        <div style="font-weight:700; color:#fcd34d; font-family:'JetBrains Mono',monospace; font-size:11px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${startBarcode} ~ ${endBarcode}">${startBarcode} ~ ...-${endSeq}</div>
+                    </div>
+                </div>
+
+                <div style="font-size:11.5px; color:#cbd5e1; background:rgba(56,189,248,0.08); border-left:3px solid #38bdf8; padding:6px 10px; border-radius:0 4px 4px 0;">
+                    💡 <strong>품질 보류(HOLD) & 리콜 가이드</strong>: 본 자재 릴(${escHtml(reelBarcode)})에 부품 결함이 의심될 경우, 동일 릴이 장착되어 실장된 <strong>총 ${targetQty}장의 PCB 기판(#${startSeq} ~ #${endSeq})</strong> 전체를 즉시 전수 선별 검사하거나 출하 보류 조치할 수 있습니다.
+                </div>
+            </div>
+        `;
     }
 
     // ════════════════════════════════════════════════
@@ -14579,13 +14637,13 @@ document.addEventListener('DOMContentLoaded', () => {
             .trace-modal-table tbody tr:hover td { background-color: rgba(56, 189, 248, 0.16) !important; color: #ffffff !important; }
             .trace-modal-table tbody td { background: transparent !important; padding: 9px 10px; color: #f1f5f9 !important; border-bottom: 1px solid rgba(255,255,255,0.05); }
         </style>
-        <div style="max-height:48vh; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:8px; margin-bottom:16px;">
+        <div style="max-height:48vh; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:8px; margin-bottom:14px;">
             <table class="trace-modal-table">
                 <thead>
                     <tr>
                         <th style="width:70px; text-align:center;">슬롯</th>
                         <th>BOM 소요 품번 / 부품명</th>
-                        <th>장착된 자재 릴 바코드</th>
+                        <th>장착된 자재 릴 바코드 (클릭 시 PCB 범위 추적)</th>
                         <th style="width:65px; text-align:center;">개소수</th>
                         <th style="width:100px; text-align:center;">피더 상태</th>
                     </tr>
@@ -14595,6 +14653,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 </tbody>
             </table>
         </div>
+
+        <!-- 3. 자재 릴 클릭 시 활성화되는 정방향 PCB 시리얼 범위 추적 카드 -->
+        <div id="forwardTraceDetailBox" style="display:none; margin-bottom:16px;"></div>
 
         <!-- 하단 액션 버튼 -->
         <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px;">
