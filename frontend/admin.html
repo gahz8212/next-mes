@@ -3045,7 +3045,7 @@
                                     <tr>
                                         <th style="width:20%; padding:6px 6px; text-align:left;">업체명</th>
                                         <th style="width:17%; padding:6px 4px; text-align:center;">발생공정</th>
-                                        <th style="width:19%; padding:6px 4px 6px 20px; text-align:left;">바코드</th>
+                                        <th style="width:19%; padding:6px 4px 6px 20px; text-align:left;">기판 번호</th>
                                         <th style="padding:6px 6px; text-align:left;">제품명</th>
                                         <th class="defect-col-date-standalone" style="width:16%; padding:6px 4px; text-align:center;">발생일</th>
                                     </tr>
@@ -7048,9 +7048,9 @@ async function deleteCompany(id, name) {
                     <td style="padding:6px 4px; text-align:center; white-space:nowrap;">
                         <span class="status-badge status-progress" style="padding:2px 6px; font-size:11px;">${escHtml(r.process_name)}</span>
                     </td>
-                    <!-- 3. 바코드 (우측 20px 여백 확보, 클릭 유도 강조) -->
-                    <td style="padding:6px 4px 6px 20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escHtml(r.barcode)} (클릭하여 자재 추적)">
-                        <code style="font-size:12px; padding:2px 6px; border-radius:4px; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-weight:700; cursor:pointer;">${escHtml(seq ? '#' + seq : r.barcode)} 🔍</code>
+                    <!-- 3. 기판 번호 (우측 20px 여백 확보, 클릭 유도 강조) -->
+                    <td style="padding:6px 4px 6px 20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escHtml(r.barcode)} (클릭하여 자재 역추적)">
+                        <code style="font-size:12px; padding:2px 6px; border-radius:4px; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-weight:700; cursor:pointer;">${escHtml(seq ? 'PCB #' + seq : r.barcode)} 🔍</code>
                     </td>
                     <!-- 4. 제품명 (15인치에서는 아래 2행에 발생일 표시) -->
                     <td style="padding:6px 6px; min-width:0;">
@@ -7137,27 +7137,29 @@ async function deleteCompany(id, name) {
     }
 
     // ── 불량 기판 역추적 & 자재 릴 검증 (Lot Traceability) ──
-    let currentTraceWoId = '';
-    let currentTraceTargetQty = 30;
-    let currentTracePcbBarcode = '';
-
     async function openDefectTraceModal(barcode, woId, companyName, itemName, processName, createdAt) {
         const modal = document.getElementById('defectTraceModal');
         if (!modal) return;
 
-        currentTracePcbBarcode = barcode || '—';
-        document.getElementById('traceModalPcbBarcode').innerText = currentTracePcbBarcode;
+        let seq = barcode || '';
+        if (woId && barcode && barcode.startsWith(woId)) {
+            seq = barcode.substring(woId.length).replace(/^[-_]/, '');
+        } else if (barcode && barcode.includes('-')) {
+            const parts = barcode.split('-');
+            seq = parts[parts.length - 1];
+        }
+
+        const pcbDisplay = seq ? `PCB #${seq}` : (barcode || '—');
+        document.getElementById('traceModalPcbBarcode').innerText = pcbDisplay;
+        document.getElementById('traceModalPcbBarcode').title = barcode || '';
+        document.getElementById('traceModalPcbRange').innerText = '조회 중...';
         document.getElementById('traceModalWoId').innerText = woId || '—';
         document.getElementById('traceModalCompany').innerText = companyName || '—';
         document.getElementById('traceModalItem').innerText = itemName || '—';
+        document.getElementById('traceModalSlotsCount').innerText = '—';
+        document.getElementById('traceModalPartList').innerText = '—';
         document.getElementById('traceModalProcess').innerText = processName || '—';
         document.getElementById('traceModalDate').innerText = createdAt || '—';
-
-        const forwardBox = document.getElementById('forwardTraceDetailBox');
-        if (forwardBox) {
-            forwardBox.style.display = 'none';
-            forwardBox.innerHTML = '';
-        }
 
         const tbody = document.getElementById('traceModalReelsTbody');
         tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:#94a3b8;">자재 릴 및 피더 셋업 이력을 조회하는 중...</td></tr>`;
@@ -7169,89 +7171,67 @@ async function deleteCompany(id, name) {
                 const lastDash = barcode.lastIndexOf('-');
                 if (lastDash > 0) woId = barcode.substring(0, lastDash);
             }
-            currentTraceWoId = woId || '';
 
             const res = await fetch(`../backend/api/get_feeder_setup.php?wo_id=${encodeURIComponent(woId)}`);
             const json = await res.json();
 
-            if (json.status === 'success' && json.data && json.data.slots && json.data.slots.length > 0) {
-                currentTraceTargetQty = json.data.target_qty || 30;
-                tbody.innerHTML = json.data.slots.map(s => {
-                    const isVerified = (s.status === 'VERIFIED');
-                    const reelBarcode = s.reel_barcode || s.scanned_reel || (isVerified ? `REEL-${s.part_no}-A01` : '(미장착)');
-                    const points = s.points !== undefined && s.points !== null ? s.points : s.req_qty;
-                    return `
-                        <tr>
-                            <td style="text-align:center; font-family:'JetBrains Mono',monospace; font-weight:800; color:#38bdf8; font-size:13px;">#${escHtml(s.slot_no)}</td>
-                            <td style="font-weight:700; color:#f8fafc;">
-                                <div style="font-size:12.5px; font-family:'JetBrains Mono',monospace; color:#ffffff;">${escHtml(s.part_no)}</div>
-                                ${s.part_name && s.part_name !== s.part_no ? `<div style="font-size:11px; color:#cbd5e1; margin-top:2px;">${escHtml(s.part_name)}</div>` : ''}
-                            </td>
-                            <td>
-                                <code style="background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.5); color:#38bdf8; padding:3px 8px; border-radius:4px; font-size:12px; font-family:'JetBrains Mono',monospace; font-weight:700; display:inline-flex; align-items:center; gap:5px; cursor:pointer;" onclick="showForwardTraceForReel('${escHtml(reelBarcode)}', '${escHtml(s.part_no)}', '${escHtml(s.slot_no)}')" title="클릭 시 이 릴이 투입된 전체 PCB 기판 번호 범위(#0001 ~ #끝번호) 조회">
-                                    <span>${escHtml(reelBarcode)}</span>
-                                    <span style="font-size:10.5px; opacity:0.85;">🔍</span>
-                                </code>
-                            </td>
-                            <td style="text-align:center; font-family:'JetBrains Mono',monospace; color:#fcd34d; font-weight:800; font-size:12.5px;">${points}P</td>
-                            <td style="text-align:center;">
-                                <span style="display:inline-block; font-size:11px; font-weight:800; padding:2.5px 8px; border-radius:4px; ${isVerified ? 'background:rgba(16,185,129,0.22); color:#6ee7b7; border:1px solid rgba(16,185,129,0.5);' : 'background:rgba(148,163,184,0.18); color:#cbd5e1; border:1px solid rgba(148,163,184,0.35);'}">
-                                    ${isVerified ? '✅ 검증완료' : '⏳ 미검증'}
-                                </span>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
+            if (json.status === 'success' && json.data) {
+                const targetQty = json.data.target_qty || 30;
+                const startSeq = '0001';
+                const endSeq = String(targetQty).padStart(4, '0');
+                document.getElementById('traceModalPcbRange').innerText = `#${startSeq} ~ #${endSeq} (${targetQty} EA)`;
+                document.getElementById('traceModalPcbRange').title = `${woId}-${startSeq} ~ ${woId}-${endSeq}`;
+
+                const slots = json.data.slots || [];
+                const totalSlots = slots.length;
+                const verifiedSlots = slots.filter(s => s.status === 'VERIFIED').length;
+                document.getElementById('traceModalSlotsCount').innerText = `총 ${totalSlots}개 슬롯 (${verifiedSlots}/${totalSlots} 셋업)`;
+
+                const partNos = [...new Set(slots.map(s => s.part_no).filter(Boolean))];
+                const partSummary = partNos.length > 0
+                    ? (partNos.length <= 2 ? partNos.join(', ') : `${partNos[0]}, ${partNos[1]} 외 ${partNos.length - 2}종`)
+                    : '—';
+                const partEl = document.getElementById('traceModalPartList');
+                if (partEl) {
+                    partEl.innerText = partSummary;
+                    partEl.title = partNos.join(', ');
+                }
+
+                if (slots.length > 0) {
+                    tbody.innerHTML = slots.map(s => {
+                        const isVerified = (s.status === 'VERIFIED');
+                        const reelBarcode = s.reel_barcode || s.scanned_reel || (isVerified ? `REEL-${s.part_no}-A01` : '(미장착)');
+                        const points = s.points !== undefined && s.points !== null ? s.points : s.req_qty;
+                        return `
+                            <tr>
+                                <td style="text-align:center; font-family:'JetBrains Mono',monospace; font-weight:800; color:#38bdf8; font-size:13px;">#${escHtml(s.slot_no)}</td>
+                                <td style="font-weight:700; color:#f8fafc;">
+                                    <div style="font-size:12.5px; font-family:'JetBrains Mono',monospace; color:#ffffff;">${escHtml(s.part_no)}</div>
+                                    ${s.part_name && s.part_name !== s.part_no ? `<div style="font-size:11px; color:#cbd5e1; margin-top:2px;">${escHtml(s.part_name)}</div>` : ''}
+                                </td>
+                                <td>
+                                    <code style="background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.5); color:#38bdf8; padding:3px 8px; border-radius:4px; font-size:12px; font-family:'JetBrains Mono',monospace; font-weight:700; display:inline-block;">
+                                        ${escHtml(reelBarcode)}
+                                    </code>
+                                </td>
+                                <td style="text-align:center; font-family:'JetBrains Mono',monospace; color:#fcd34d; font-weight:800; font-size:12.5px;">${points}P</td>
+                                <td style="text-align:center;">
+                                    <span style="display:inline-block; font-size:11px; font-weight:800; padding:2.5px 8px; border-radius:4px; ${isVerified ? 'background:rgba(16,185,129,0.22); color:#6ee7b7; border:1px solid rgba(16,185,129,0.5);' : 'background:rgba(148,163,184,0.18); color:#cbd5e1; border:1px solid rgba(148,163,184,0.35);'}">
+                                        ${isVerified ? '✅ 검증완료' : '⏳ 미검증'}
+                                    </span>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:#94a3b8;">해당 작업지시의 피더 자재 릴 등록 이력이 없습니다.</td></tr>`;
+                }
             } else {
                 tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:#94a3b8;">해당 작업지시의 피더 자재 릴 등록 이력이 없습니다.</td></tr>`;
             }
         } catch (e) {
             tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:#f87171;">자재 이력 조회 실패: ${escHtml(e.message)}</td></tr>`;
         }
-    }
-
-    // ── 정방향 확산 추적: 릴 바코드 클릭 시 투입된 PCB 시작번호~끝번호 범위 표시 ──
-    function showForwardTraceForReel(reelBarcode, partNo, slotNo) {
-        const box = document.getElementById('forwardTraceDetailBox');
-        if (!box) return;
-
-        const targetQty = currentTraceTargetQty || 30;
-        const startSeq = '0001';
-        const endSeq = String(targetQty).padStart(4, '0');
-        const startBarcode = `${currentTraceWoId}-${startSeq}`;
-        const endBarcode = `${currentTraceWoId}-${endSeq}`;
-
-        box.style.display = 'block';
-        box.innerHTML = `
-            <div style="background:linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.9) 100%); border:1.5px solid rgba(56,189,248,0.6); border-radius:8px; padding:14px 16px; margin-top:12px; box-shadow:0 8px 24px rgba(0,0,0,0.5);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:16px;">🎯</span>
-                        <span style="font-size:13.5px; font-weight:800; color:#38bdf8;">[정방향 확산 추적] 릴(${escHtml(reelBarcode)}) ➔ 투입된 PCB 기판 번호 범위</span>
-                    </div>
-                    <button type="button" class="card-btn" style="padding:2px 8px; font-size:11px; color:#cbd5e1; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); cursor:pointer;" onclick="document.getElementById('forwardTraceDetailBox').style.display='none'">✕ 닫기</button>
-                </div>
-                
-                <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; font-size:12px; margin-bottom:10px;">
-                    <div style="background:rgba(15,23,42,0.6); padding:8px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
-                        <div style="font-size:10.5px; color:#94a3b8;">장착 슬롯 / 부품 품번</div>
-                        <div style="font-weight:800; color:#f8fafc; margin-top:2px;">#${escHtml(slotNo)} (${escHtml(partNo)})</div>
-                    </div>
-                    <div style="background:rgba(15,23,42,0.6); padding:8px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
-                        <div style="font-size:10.5px; color:#94a3b8;">투입된 PCB 기판 번호 범위</div>
-                        <div style="font-weight:800; color:#38bdf8; font-family:'JetBrains Mono',monospace; margin-top:2px;">#${startSeq} ~ #${endSeq} (총 ${targetQty} EA)</div>
-                    </div>
-                    <div style="background:rgba(15,23,42,0.6); padding:8px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
-                        <div style="font-size:10.5px; color:#94a3b8;">전체 시리얼 바코드 범위</div>
-                        <div style="font-weight:700; color:#fcd34d; font-family:'JetBrains Mono',monospace; font-size:11px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${startBarcode} ~ ${endBarcode}">${startBarcode} ~ ...-${endSeq}</div>
-                    </div>
-                </div>
-
-                <div style="font-size:11.5px; color:#cbd5e1; background:rgba(56,189,248,0.08); border-left:3px solid #38bdf8; padding:6px 10px; border-radius:0 4px 4px 0;">
-                    💡 <strong>품질 보류(HOLD) & 리콜 가이드</strong>: 본 자재 릴(${escHtml(reelBarcode)})에 부품 결함이 의심될 경우, 동일 릴이 장착되어 실장된 <strong>총 ${targetQty}장의 PCB 기판(#${startSeq} ~ #${endSeq})</strong> 전체를 즉시 전수 선별 검사하거나 출하 보류 조치할 수 있습니다.
-                </div>
-            </div>
-        `;
     }
 
     // ════════════════════════════════════════════════
@@ -14600,29 +14580,41 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="modal-close" onclick="closeModal('defectTraceModal')">✕</button>
         </div>
 
-        <!-- 1. 기판 및 불량 발생 메타 정보 (고정 상단) -->
-        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 14px; margin-bottom:12px; flex-shrink:0;">
+        <!-- 1. 기판 및 불량 발생 메타 정보 (고정 상단: 기판번호, 범위, 작업지시, 업체/제품, 장착슬롯, 부품품번, 불량공정, 검사시각) -->
+        <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px 10px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 14px; margin-bottom:12px; flex-shrink:0;">
             <div>
-                <div style="font-size:11px; color:#94a3b8; font-weight:600;">불량 PCB 바코드</div>
+                <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">불량 기판 번호 (PCB)</div>
                 <div id="traceModalPcbBarcode" style="font-size:13.5px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#38bdf8; margin-top:2px;">—</div>
             </div>
             <div>
-                <div style="font-size:11px; color:#94a3b8; font-weight:600;">작업지시 (WO ID)</div>
-                <div id="traceModalWoId" style="font-size:13.5px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#f8fafc; margin-top:2px;">—</div>
+                <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">투입된 PCB 기판 번호 범위</div>
+                <div id="traceModalPcbRange" style="font-size:13px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#38bdf8; margin-top:2px;">—</div>
             </div>
             <div>
-                <div style="font-size:11px; color:#94a3b8; font-weight:600;">수주업체 / 제품명</div>
-                <div style="font-size:13px; font-weight:700; color:#f8fafc; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">작업지시 (WO ID)</div>
+                <div id="traceModalWoId" style="font-size:12.5px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#f8fafc; margin-top:2px;">—</div>
+            </div>
+            <div>
+                <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">수주업체 / 제품명</div>
+                <div style="font-size:12px; font-weight:700; color:#f8fafc; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                     <span id="traceModalCompany">—</span> / <span id="traceModalItem" style="color:#cbd5e1;">—</span>
                 </div>
             </div>
             <div>
-                <div style="font-size:11px; color:#94a3b8; font-weight:600;">불량 검출 공정</div>
-                <div id="traceModalProcess" style="font-size:13px; font-weight:800; color:#f87171; margin-top:2px;">—</div>
+                <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">장착 슬롯 수</div>
+                <div id="traceModalSlotsCount" style="font-size:12.5px; font-weight:800; color:#fcd34d; font-family:'JetBrains Mono',monospace; margin-top:2px;">—</div>
             </div>
-            <div style="grid-column:span 2;">
-                <div style="font-size:11px; color:#94a3b8; font-weight:600;">검사 시각</div>
-                <div id="traceModalDate" style="font-size:12.5px; font-family:'JetBrains Mono',monospace; color:#cbd5e1; margin-top:2px;">—</div>
+            <div>
+                <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">BOM 부품 품번</div>
+                <div id="traceModalPartList" style="font-size:12px; font-weight:700; color:#cbd5e1; font-family:'JetBrains Mono',monospace; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="—">—</div>
+            </div>
+            <div>
+                <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">불량 검출 공정</div>
+                <div id="traceModalProcess" style="font-size:12.5px; font-weight:800; color:#f87171; margin-top:2px;">—</div>
+            </div>
+            <div>
+                <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">검사 시각</div>
+                <div id="traceModalDate" style="font-size:11.5px; font-family:'JetBrains Mono',monospace; color:#cbd5e1; margin-top:2px;">—</div>
             </div>
         </div>
 
@@ -14635,14 +14627,14 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <style>
             .trace-table-scroll-wrap {
-                max-height: 215px;
+                max-height: 250px;
                 min-height: 140px;
                 overflow-y: auto;
                 overflow-x: hidden;
                 border: 1px solid rgba(255, 255, 255, 0.1);
                 border-radius: 8px;
                 background: #0f172a;
-                margin-bottom: 10px;
+                margin-bottom: 12px;
                 flex-shrink: 0;
             }
             .trace-table-scroll-wrap::-webkit-scrollbar {
@@ -14672,7 +14664,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tr>
                         <th style="width:70px; text-align:center;">슬롯</th>
                         <th>BOM 소요 품번 / 부품명</th>
-                        <th>장착된 자재 릴 바코드 (클릭 시 PCB 범위 추적)</th>
+                        <th>장착된 자재 릴 바코드 (Reel Barcode)</th>
                         <th style="width:65px; text-align:center;">개소수</th>
                         <th style="width:100px; text-align:center;">피더 상태</th>
                     </tr>
@@ -14682,9 +14674,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </tbody>
             </table>
         </div>
-
-        <!-- 3. 자재 릴 클릭 시 활성화되는 정방향 PCB 시리얼 범위 추적 카드 -->
-        <div id="forwardTraceDetailBox" style="display:none; margin-bottom:12px; flex-shrink:0;"></div>
 
         <!-- 하단 액션 버튼 (고정 하단) -->
         <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px; margin-top:auto; flex-shrink:0;">
