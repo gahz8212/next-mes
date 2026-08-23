@@ -461,13 +461,22 @@ class ConsignedMaterialController {
                         ) as good_qty,
                         COALESCE(
                             (SELECT SUM(CASE 
-                                WHEN bm.status IN ('DEFECT','FAIL') 
-                                     OR EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = bm.barcode AND bh.result_status = 'FAIL')
+                                WHEN (bm.status IN ('DEFECT','FAIL') OR EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = bm.barcode AND bh.result_status = 'FAIL'))
+                                     AND EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = bm.barcode AND bh.process_name IN ('MOUNTER','MOUNTER_1','MOUNTER_2','REFLOW','DIP_AOI','WAVE','ICT','COATING','FCT'))
                                 THEN 1 ELSE 0 END)
                              FROM barcode_master bm JOIN work_order wo ON bm.wo_id = wo.wo_id
                              WHERE wo.wo_id = soi.wo_id OR wo.parent_wo_id = soi.wo_id),
                             0
-                        ) as fail_qty,
+                        ) as mounted_fail_qty,
+                        COALESCE(
+                            (SELECT SUM(CASE 
+                                WHEN (bm.status IN ('DEFECT','FAIL') OR EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = bm.barcode AND bh.result_status = 'FAIL'))
+                                     AND NOT EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = bm.barcode AND bh.process_name IN ('MOUNTER','MOUNTER_1','MOUNTER_2','REFLOW','DIP_AOI','WAVE','ICT','COATING','FCT'))
+                                THEN 1 ELSE 0 END)
+                             FROM barcode_master bm JOIN work_order wo ON bm.wo_id = wo.wo_id
+                             WHERE wo.wo_id = soi.wo_id OR wo.parent_wo_id = soi.wo_id),
+                            0
+                        ) as premount_fail_qty,
                         (SELECT bm.bom_id FROM bom_master bm 
                          WHERE bm.product_id = soi.item_name 
                             OR bm.product_id = soi.item_code
@@ -493,14 +502,17 @@ class ConsignedMaterialController {
 
                     $partsMap = [];
                     foreach ($orderItems as $it) {
-                        $itOrderQty     = (float)($it['order_qty'] ?? 0);
-                        $itGoodQty      = (float)($it['good_qty'] ?? 0);
-                        $itFailQty      = (float)($it['fail_qty'] ?? 0);
-                        $itProcessedQty = (float)($it['processed_qty'] ?? 0);
+                        $itOrderQty        = (float)($it['order_qty'] ?? 0);
+                        $itGoodQty         = (float)($it['good_qty'] ?? 0);
+                        $itMountedFailQty  = (float)($it['mounted_fail_qty'] ?? 0);
+                        $itPremountFailQty = (float)($it['premount_fail_qty'] ?? 0);
+                        $itProcessedQty    = (float)($it['processed_qty'] ?? 0);
 
-                        // 양품 100% 충족 기준 총 실소요량 (기존 투입 가공분 + 불량에 따른 추가 재작업/보충 생산분)
-                        $neededMakeUp = max(0, $itOrderQty - $itGoodQty);
-                        $itConsumedBoards = ($itProcessedQty > 0) ? ($itProcessedQty + $neededMakeUp) : $itOrderQty;
+                        // 공정별 정밀 자재 소요량 계산:
+                        // - 레이저/SPI 등 부품 실장 전(Pre-mount) 불량은 부품 소모가 0이므로 소요량에서 제외
+                        // - 마운터 실장 이후(Mounted) 불량은 실장된 부품이 동반 손실되므로 실소모량에 포함
+                        // - 목표 100% 양품을 채우기 위해 필요한 총 부품 소요 기판 수 = 목표수량 + 실장 후 불량수량
+                        $itConsumedBoards = ($itProcessedQty > 0) ? ($itOrderQty + $itMountedFailQty) : $itOrderQty;
                         $totalProducedQty += $itOrderQty;
                         $itBomId = (int)($it['bom_id'] ?? 0);
                         $itName = $it['item_name'] ?? '';
