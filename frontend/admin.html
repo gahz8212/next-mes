@@ -3678,13 +3678,6 @@
                             <div class="page-title-text">📊 종합 KPI 분석 대시보드</div>
                             <div class="page-desc">공장 가동 현황, 수율 추이, 납기준수율 등 핵심 성과 지표를 실시간 분석합니다.</div>
                         </div>
-                        <div style="display:flex; gap:8px; align-items:center;">
-                            <select class="filter-select" id="kpi-period-select" onchange="loadKpiAnalytics()" style="padding:7px 12px;">
-                                <option value="7">최근 7일</option>
-                                <option value="14" selected>최근 14일</option>
-                                <option value="30">최근 30일</option>
-                            </select>
-                        </div>
                     </div>
 
                     <!-- Main KPI strip -->
@@ -3717,7 +3710,14 @@
                                 <div class="col-dot blue"></div>
                                 일별 생산량 및 수율 추이
                             </div>
-                            <button class="topbar-action-btn" onclick="loadKpiAnalytics()" style="padding:4px 10px; font-size:12px;">🔄 새로고침</button>
+                            <div style="display:flex; gap:6px; align-items:center;">
+                                <button class="topbar-action-btn" onclick="loadKpiAnalytics()" style="padding:4px 10px; font-size:12px;">🔄 새로고침</button>
+                                <select class="filter-select" id="kpi-period-select" onchange="loadKpiAnalytics()" style="padding:4px 8px; font-size:12px;">
+                                    <option value="7">최근 7일</option>
+                                    <option value="14" selected>최근 14일</option>
+                                    <option value="30">최근 30일</option>
+                                </select>
+                            </div>
                         </div>
                         <div style="padding:16px; overflow-y:auto; flex:1;" id="kpi-trend-container">
                             <div class="empty-msg">데이터를 불러오는 중…</div>
