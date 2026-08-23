@@ -11025,13 +11025,13 @@ let selectedShipmentId = null;
 let completedWorkOrdersList = [];
 
 function initShipmentDates() {
-    const today = new Date().toISOString().slice(0,10);
     const start = new Date(); start.setDate(start.getDate() - 30);
+    const end = new Date(); end.setDate(end.getDate() + 30); // 미래 납품일자 포함 (+30일)
     const fmt = d => d.toISOString().slice(0,10);
     const sEl = document.getElementById('ship-start');
     const eEl = document.getElementById('ship-end');
     if (sEl && !sEl.value) sEl.value = fmt(start);
-    if (eEl && !eEl.value) eEl.value = today;
+    if (eEl && !eEl.value) eEl.value = fmt(end);
 }
 
 async function loadShipments() {
@@ -11068,10 +11068,10 @@ async function loadCompletedWorkOrders() {
             const completed = json.data.completed || [];
             const ready = json.data.ready || [];
             
-            // 생산 완료된 작업지시 (status === 'DONE' 또는 SMT_DONE 또는 실적 충족)
+            // 생산 완료 또는 납품일 지정 또는 실적 충족 작업지시
             completedWorkOrdersList = [
                 ...completed,
-                ...ready.filter(w => w.status === 'SMT_DONE' || (w.target_qty > 0 && w.good_qty >= w.target_qty))
+                ...ready.filter(w => w.status === 'DONE' || w.status === 'COMPLETED' || w.status === 'SMT_DONE' || w.delivery_date || (w.target_qty > 0 && w.good_qty >= w.target_qty))
             ];
 
             if (countBadge) countBadge.textContent = `${completedWorkOrdersList.length}건`;
@@ -11086,16 +11086,17 @@ async function loadCompletedWorkOrders() {
                 const itemName = wo.item_name || wo.product_name || '완제품 PBA';
                 const qty = parseInt(wo.target_qty || 0).toLocaleString();
                 const dueDate = wo.due_date || '-';
+                const deliveryDate = wo.delivery_date ? `납품일: ${wo.delivery_date}` : `납기: ${dueDate}`;
                 const isShipped = parseInt(wo.shipped) === 1;
                 const badgeHtml = isShipped
                     ? `<span class="status-badge" style="background:rgba(59,130,246,0.2); color:#93c5fd; font-weight:800; font-size:11px;">📦 출하 완료됨</span>`
-                    : `<span class="status-badge" style="background:rgba(52,211,153,0.25); color:#34d399; font-weight:800; font-size:11px;">✅ 생산 완료 (출하대기)</span>`;
+                    : `<span class="status-badge" style="background:rgba(52,211,153,0.25); color:#34d399; font-weight:800; font-size:11px;">✅ 출하 대기</span>`;
 
                 return `
                     <div style="flex:0 0 auto; min-width:270px; max-width:320px; background:rgba(30,41,59,0.9); border:1px solid ${isShipped ? 'rgba(59,130,246,0.3)' : 'rgba(52,211,153,0.45)'}; border-radius:6px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; box-shadow:0 4px 12px rgba(0,0,0,0.25);">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             ${badgeHtml}
-                            <span style="font-size:11px; color:#94a3b8; font-family:'JetBrains Mono',monospace;">납기: ${dueDate}</span>
+                            <span style="font-size:11px; color:#38bdf8; font-family:'JetBrains Mono',monospace; font-weight:700;">📅 ${deliveryDate}</span>
                         </div>
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top:2px;">
                             <div>
@@ -11513,9 +11514,10 @@ function onShipmentWOSelectChange() {
             document.getElementById('sh-inp-company').value = String(found.company_id);
         }
         const today = new Date().toISOString().slice(0,10);
-        document.getElementById('sh-inp-date').value = today;
-        const todayStr = today.replace(/-/g,'');
-        document.getElementById('sh-inp-invoice').value = `INV-${todayStr}-${found.wo_id.slice(-4)}`;
+        const targetDate = found.delivery_date || today;
+        document.getElementById('sh-inp-date').value = targetDate;
+        const dateStr = targetDate.replace(/-/g,'');
+        document.getElementById('sh-inp-invoice').value = `INV-${dateStr}-${found.wo_id.slice(-4)}`;
         document.getElementById('sh-inp-note').value = `${found.item_name || ''} 생산 완료 납품 출하`;
     }
 }

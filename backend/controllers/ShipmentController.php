@@ -8,16 +8,41 @@ class ShipmentController {
     public static function getShipments(): void {
         try {
             $pdo = Database::getConnection();
+
+            // 1. 자동 동기화: 납품일(delivery_date)이 지정되었거나 완료된 작업지시 중 shipment에 누락된 건 자동 등록
+            $pdo->query("
+                INSERT INTO shipment (wo_id, ship_qty, ship_date, company_id, status)
+                SELECT w.wo_id, 
+                       w.target_qty, 
+                       COALESCE(w.delivery_date, DATE(w.completed_at), CURDATE()), 
+                       w.company_id, 
+                       'PENDING'
+                FROM work_order w
+                WHERE (w.delivery_date IS NOT NULL OR w.status IN ('DONE', 'COMPLETED') OR w.completed_at IS NOT NULL)
+                  AND NOT EXISTS (SELECT 1 FROM shipment s WHERE s.wo_id = w.wo_id)
+            ");
+
+            // 2. 납품일 변경 동기화: work_order의 delivery_date가 변경된 경우 shipment 출하 예정일 자동 동기화
+            $pdo->query("
+                UPDATE shipment s
+                JOIN work_order w ON s.wo_id = w.wo_id
+                SET s.ship_date = w.delivery_date,
+                    s.company_id = COALESCE(s.company_id, w.company_id)
+                WHERE w.delivery_date IS NOT NULL 
+                  AND s.status = 'PENDING' 
+                  AND (s.ship_date != w.delivery_date OR s.ship_date IS NULL)
+            ");
+
             $startDate = Request::query('start_date', date('Y-m-d', strtotime('-30 days')));
-            $endDate   = Request::query('end_date', date('Y-m-d'));
+            $endDate   = Request::query('end_date', date('Y-m-d', strtotime('+30 days')));
             $status    = trim(Request::query('status', ''));
 
             // Summary
             $summarySql = "SELECT COUNT(*) as total, COALESCE(SUM(ship_qty), 0) as total_qty,
               SUM(CASE WHEN status='SHIPPED' THEN 1 ELSE 0 END) as shipped_count,
               SUM(CASE WHEN status='PENDING' THEN 1 ELSE 0 END) as pending_count
-            FROM shipment
-            WHERE DATE(ship_date) BETWEEN :start AND :end";
+            FROM shipment s
+            WHERE (s.ship_date IS NULL OR DATE(s.ship_date) BETWEEN :start AND :end)";
 
             $stmtSum = $pdo->prepare($summarySql);
             $stmtSum->execute([
@@ -33,17 +58,31 @@ class ShipmentController {
                 'pending_count' => (int)($summaryData['pending_count'] ?? 0),
             ];
 
-            // Records
-            $recordsSql = "SELECT s.*, w.target_qty, COALESCE(c.name, '거래처') as company_name, 
-              COALESCE(i.item_name, pm.product_name, s.wo_id) as item_name,
-              (SELECT COALESCE(SUM(b.status!='WAIT'), 0) FROM barcode_master b WHERE b.wo_id=s.wo_id) as processed_qty
+            // Records (견고한 5중 품목명 및 거래처명 폴백 조인)
+            $recordsSql = "SELECT s.*, 
+              w.target_qty, 
+              w.due_date,
+              w.delivery_date,
+              w.status as wo_status,
+              COALESCE(c.name, (SELECT c2.name FROM company c2 WHERE c2.id = w.company_id), '거래처') as company_name, 
+              COALESCE(
+                  (SELECT soi.item_name FROM sales_order_item soi WHERE soi.wo_id = s.wo_id LIMIT 1),
+                  (SELECT soi.item_name FROM sales_order_item soi WHERE soi.wo_id = w.parent_wo_id LIMIT 1),
+                  (SELECT so.item_name FROM sales_order so WHERE so.wo_id = s.wo_id LIMIT 1),
+                  (SELECT so.item_name FROM sales_order so WHERE so.wo_id = w.parent_wo_id LIMIT 1),
+                  (SELECT i.item_name FROM item i JOIN bom_master bm ON bm.item_id = i.id WHERE bm.bom_id = w.bom_id LIMIT 1),
+                  (SELECT i.item_name FROM item i WHERE i.id = bm.item_id LIMIT 1),
+                  pm.product_name, 
+                  '완제품 PBA'
+              ) as item_name,
+              (SELECT COALESCE(SUM(b.status!='WAIT'), 0) FROM barcode_master b WHERE b.wo_id=s.wo_id) as processed_qty,
+              (SELECT COALESCE(SUM(CASE WHEN b.status IN ('BOTTOM_DONE','TEST_PASS','SHIPPING','DONE') THEN 1 ELSE 0 END), 0) FROM barcode_master b WHERE b.wo_id=s.wo_id) as good_qty
             FROM shipment s
             LEFT JOIN work_order w ON s.wo_id = w.wo_id
             LEFT JOIN bom_master bm ON w.bom_id = bm.bom_id
-            LEFT JOIN item i ON bm.item_id = i.id
             LEFT JOIN product_master pm ON bm.product_id = pm.product_id
             LEFT JOIN company c ON COALESCE(s.company_id, w.company_id) = c.id
-            WHERE DATE(s.ship_date) BETWEEN :start AND :end";
+            WHERE (s.ship_date IS NULL OR DATE(s.ship_date) BETWEEN :start AND :end)";
 
             $recParams = [
                 ':start' => $startDate,
@@ -54,7 +93,7 @@ class ShipmentController {
                 $recordsSql .= " AND s.status = :status";
                 $recParams[':status'] = $status;
             }
-            $recordsSql .= " ORDER BY s.ship_date DESC";
+            $recordsSql .= " ORDER BY (CASE WHEN s.status = 'PENDING' THEN 1 ELSE 2 END) ASC, s.ship_date DESC, s.id DESC";
 
             $stmtRec = $pdo->prepare($recordsSql);
             $stmtRec->execute($recParams);

@@ -107,7 +107,7 @@ class WorkOrderController {
             ");
             $stmt = $pdo->query("
                 SELECT
-                    w.wo_id, w.target_qty, w.due_date, w.status, w.bom_id, w.company_id,
+                    w.wo_id, w.target_qty, w.due_date, w.delivery_date, w.status, w.bom_id, w.company_id,
                     w.completed_at, w.shipped, w.shipped_at, w.remark, w.parent_wo_id,
                     c.name as company_name, c.bom_mapping,
                     COALESCE(
@@ -152,7 +152,7 @@ class WorkOrderController {
                 FROM work_order w
                 LEFT JOIN company c ON w.company_id = c.id
                 LEFT JOIN barcode_master b ON w.wo_id = b.wo_id
-                GROUP BY w.wo_id, w.target_qty, w.due_date, w.status, w.bom_id, w.company_id,
+                GROUP BY w.wo_id, w.target_qty, w.due_date, w.delivery_date, w.status, w.bom_id, w.company_id,
                          w.completed_at, w.shipped, w.shipped_at, w.remark, w.parent_wo_id, c.name, c.bom_mapping
                 ORDER BY (CASE WHEN w.status = 'HOLD' THEN 1 ELSE 0 END) ASC,
                          order_created_at DESC,
@@ -178,6 +178,7 @@ class WorkOrderController {
                 $wo['good_qty']      = (int)$wo['good_qty'];
                 $wo['fail_qty']      = (int)$wo['fail_qty'];
                 $wo['dip_qty']       = (int)$wo['dip_qty'];
+                $wo['delivery_date'] = $wo['delivery_date'] ?? null;
                 $wo['remark']        = $wo['remark'] ?? '';
                 if (empty($wo['parent_wo_id'])) {
                     if (preg_match('/^(.*)-(?:B|S\d+)$/', $wo['wo_id'], $m)) {
