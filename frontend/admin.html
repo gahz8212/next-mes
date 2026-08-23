@@ -6637,6 +6637,7 @@ async function deleteCompany(id, name) {
     }
 
     function openFeederSlotPickerModal(detailId, bomId, currentSlot, partNo, location = '', partName = '') {
+        const curr = (currentSlot || '').trim().toUpperCase();
         fspState.detailId = detailId;
         fspState.bomId = bomId;
         fspState.partNo = partNo;
