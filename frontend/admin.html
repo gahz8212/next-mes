@@ -7035,6 +7035,10 @@ async function deleteCompany(id, name) {
                     const parts = r.barcode.split('-');
                     seq = parts[parts.length - 1];
                 }
+                let displaySeq = seq;
+                if (!isNaN(parseInt(seq, 10))) {
+                    displaySeq = String(parseInt(seq, 10)).padStart(3, '0');
+                }
                 const dateOnly = r.created_at ? r.created_at.slice(0, 10) : '-';
                 const itemName = r.item_name || '—';
 
@@ -7048,9 +7052,9 @@ async function deleteCompany(id, name) {
                     <td style="padding:6px 4px; text-align:center; white-space:nowrap;">
                         <span class="status-badge status-progress" style="padding:2px 6px; font-size:11px;">${escHtml(r.process_name)}</span>
                     </td>
-                    <!-- 3. 기판 번호 (우측 20px 여백 확보, 클릭 유도 강조) -->
+                    <!-- 3. 기판 번호 (001, 002 형식) -->
                     <td style="padding:6px 4px 6px 20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escHtml(r.barcode)} (클릭하여 자재 역추적)">
-                        <code style="font-size:12px; padding:2px 6px; border-radius:4px; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-weight:700; cursor:pointer;">${escHtml(seq ? 'PCB #' + seq : r.barcode)} 🔍</code>
+                        <code style="font-size:12.5px; font-family:'JetBrains Mono',monospace; padding:2px 8px; border-radius:4px; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-weight:800; cursor:pointer;">${escHtml(displaySeq)} 🔍</code>
                     </td>
                     <!-- 4. 제품명 (15인치에서는 아래 2행에 발생일 표시) -->
                     <td style="padding:6px 6px; min-width:0;">
@@ -7137,6 +7141,9 @@ async function deleteCompany(id, name) {
     }
 
     // ── 불량 기판 역추적 & 자재 릴 검증 (Lot Traceability) ──
+    let currentTraceSlotsData = [];
+    let currentTraceTargetQty = 30;
+
     async function openDefectTraceModal(barcode, woId, companyName, itemName, processName, createdAt) {
         const modal = document.getElementById('defectTraceModal');
         if (!modal) return;
@@ -7148,11 +7155,14 @@ async function deleteCompany(id, name) {
             const parts = barcode.split('-');
             seq = parts[parts.length - 1];
         }
+        let displaySeq = seq;
+        if (!isNaN(parseInt(seq, 10))) {
+            displaySeq = String(parseInt(seq, 10)).padStart(3, '0');
+        }
 
-        const pcbDisplay = seq ? `PCB #${seq}` : (barcode || '—');
-        document.getElementById('traceModalPcbBarcode').innerText = pcbDisplay;
+        document.getElementById('traceModalPcbBarcode').innerText = displaySeq;
         document.getElementById('traceModalPcbBarcode').title = barcode || '';
-        document.getElementById('traceModalPcbRange').innerText = '조회 중...';
+        document.getElementById('traceModalPcbRange').innerText = '001 ~ 030';
         document.getElementById('traceModalWoId').innerText = woId || '—';
         document.getElementById('traceModalCompany').innerText = companyName || '—';
         document.getElementById('traceModalItem').innerText = itemName || '—';
@@ -7176,13 +7186,14 @@ async function deleteCompany(id, name) {
             const json = await res.json();
 
             if (json.status === 'success' && json.data) {
-                const targetQty = json.data.target_qty || 30;
-                const startSeq = '0001';
-                const endSeq = String(targetQty).padStart(4, '0');
-                document.getElementById('traceModalPcbRange').innerText = `#${startSeq} ~ #${endSeq} (${targetQty} EA)`;
-                document.getElementById('traceModalPcbRange').title = `${woId}-${startSeq} ~ ${woId}-${endSeq}`;
+                currentTraceTargetQty = json.data.target_qty || 30;
+                const startSeq = '001';
+                const endSeq = String(currentTraceTargetQty).padStart(3, '0');
+                document.getElementById('traceModalPcbRange').innerText = `${startSeq} ~ ${endSeq}`;
+                document.getElementById('traceModalPcbRange').title = `${woId}-${startSeq} ~ ${woId}-${endSeq} (총 ${currentTraceTargetQty} EA)`;
 
                 const slots = json.data.slots || [];
+                currentTraceSlotsData = slots;
                 const totalSlots = slots.length;
                 const verifiedSlots = slots.filter(s => s.status === 'VERIFIED').length;
                 document.getElementById('traceModalSlotsCount').innerText = `총 ${totalSlots}개 슬롯 (${verifiedSlots}/${totalSlots} 셋업)`;
@@ -7198,20 +7209,21 @@ async function deleteCompany(id, name) {
                 }
 
                 if (slots.length > 0) {
-                    tbody.innerHTML = slots.map(s => {
+                    tbody.innerHTML = slots.map((s, idx) => {
                         const isVerified = (s.status === 'VERIFIED');
                         const reelBarcode = s.reel_barcode || s.scanned_reel || (isVerified ? `REEL-${s.part_no}-A01` : '(미장착)');
                         const points = s.points !== undefined && s.points !== null ? s.points : s.req_qty;
                         return `
-                            <tr>
+                            <tr style="cursor:pointer;" onclick="selectTraceSlotReel(${idx}, '${escHtml(reelBarcode)}', '${escHtml(s.slot_no)}', '${escHtml(s.part_no)}')" title="클릭 시 상단에 투입 PCB 번호 범위(${startSeq}~${endSeq}) 연동">
                                 <td style="text-align:center; font-family:'JetBrains Mono',monospace; font-weight:800; color:#38bdf8; font-size:13px;">#${escHtml(s.slot_no)}</td>
                                 <td style="font-weight:700; color:#f8fafc;">
                                     <div style="font-size:12.5px; font-family:'JetBrains Mono',monospace; color:#ffffff;">${escHtml(s.part_no)}</div>
                                     ${s.part_name && s.part_name !== s.part_no ? `<div style="font-size:11px; color:#cbd5e1; margin-top:2px;">${escHtml(s.part_name)}</div>` : ''}
                                 </td>
                                 <td>
-                                    <code style="background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.5); color:#38bdf8; padding:3px 8px; border-radius:4px; font-size:12px; font-family:'JetBrains Mono',monospace; font-weight:700; display:inline-block;">
-                                        ${escHtml(reelBarcode)}
+                                    <code style="background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.5); color:#38bdf8; padding:3px 8px; border-radius:4px; font-size:12px; font-family:'JetBrains Mono',monospace; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
+                                        <span>${escHtml(reelBarcode)}</span>
+                                        <span style="font-size:10px; opacity:0.8;">🔗</span>
                                     </code>
                                 </td>
                                 <td style="text-align:center; font-family:'JetBrains Mono',monospace; color:#fcd34d; font-weight:800; font-size:12.5px;">${points}P</td>
@@ -7231,6 +7243,47 @@ async function deleteCompany(id, name) {
             }
         } catch (e) {
             tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:#f87171;">자재 이력 조회 실패: ${escHtml(e.message)}</td></tr>`;
+        }
+    }
+
+    // ── 자재 릴 행 클릭 시 상단 메타 정보(슬롯/품번/투입 PCB 범위 001~030) 하이라이트 동기화 ──
+    function selectTraceSlotReel(index, reelBarcode, slotNo, partNo) {
+        const rows = document.querySelectorAll('#traceModalReelsTbody tr');
+        rows.forEach((r, idx) => {
+            if (idx === index) {
+                r.style.background = 'rgba(56, 189, 248, 0.22)';
+                r.style.outline = '1px solid #38bdf8';
+            } else {
+                r.style.background = 'transparent';
+                r.style.outline = 'none';
+            }
+        });
+
+        const targetQty = currentTraceTargetQty || 30;
+        const startSeq = '001';
+        const endSeq = String(targetQty).padStart(3, '0');
+        const rangeText = `${startSeq} ~ ${endSeq}`;
+
+        const rangeEl = document.getElementById('traceModalPcbRange');
+        if (rangeEl) {
+            rangeEl.innerText = rangeText;
+            rangeEl.style.transition = 'all 0.2s ease';
+            rangeEl.style.color = '#38bdf8';
+            rangeEl.style.transform = 'scale(1.08)';
+            setTimeout(() => {
+                if (rangeEl) rangeEl.style.transform = 'scale(1.0)';
+            }, 250);
+        }
+
+        const slotEl = document.getElementById('traceModalSlotsCount');
+        if (slotEl) {
+            slotEl.innerText = `슬롯 #${slotNo}`;
+        }
+
+        const partEl = document.getElementById('traceModalPartList');
+        if (partEl) {
+            partEl.innerText = partNo;
+            partEl.title = partNo;
         }
     }
 
