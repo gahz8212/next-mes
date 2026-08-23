@@ -7166,8 +7166,6 @@ async function deleteCompany(id, name) {
         document.getElementById('traceModalWoId').innerText = woId || '—';
         document.getElementById('traceModalCompany').innerText = companyName || '—';
         document.getElementById('traceModalItem').innerText = itemName || '—';
-        document.getElementById('traceModalSlotsCount').innerText = '—';
-        document.getElementById('traceModalPartList').innerText = '—';
         document.getElementById('traceModalProcess').innerText = processName || '—';
         document.getElementById('traceModalDate').innerText = createdAt || '—';
 
@@ -7194,19 +7192,6 @@ async function deleteCompany(id, name) {
 
                 const slots = json.data.slots || [];
                 currentTraceSlotsData = slots;
-                const totalSlots = slots.length;
-                const verifiedSlots = slots.filter(s => s.status === 'VERIFIED').length;
-                document.getElementById('traceModalSlotsCount').innerText = `총 ${totalSlots}개 슬롯 (${verifiedSlots}/${totalSlots} 셋업)`;
-
-                const partNos = [...new Set(slots.map(s => s.part_no).filter(Boolean))];
-                const partSummary = partNos.length > 0
-                    ? (partNos.length <= 2 ? partNos.join(', ') : `${partNos[0]}, ${partNos[1]} 외 ${partNos.length - 2}종`)
-                    : '—';
-                const partEl = document.getElementById('traceModalPartList');
-                if (partEl) {
-                    partEl.innerText = partSummary;
-                    partEl.title = partNos.join(', ');
-                }
 
                 if (slots.length > 0) {
                     tbody.innerHTML = slots.map((s, idx) => {
@@ -7246,7 +7231,7 @@ async function deleteCompany(id, name) {
         }
     }
 
-    // ── 자재 릴 행 클릭 시 상단 메타 정보(슬롯/품번/투입 PCB 범위 001~030) 하이라이트 동기화 ──
+    // ── 자재 릴 행 클릭 시 상단 메타 정보(투입 PCB 범위 001~030) 하이라이트 동기화 ──
     function selectTraceSlotReel(index, reelBarcode, slotNo, partNo) {
         const rows = document.querySelectorAll('#traceModalReelsTbody tr');
         rows.forEach((r, idx) => {
@@ -7273,17 +7258,6 @@ async function deleteCompany(id, name) {
             setTimeout(() => {
                 if (rangeEl) rangeEl.style.transform = 'scale(1.0)';
             }, 250);
-        }
-
-        const slotEl = document.getElementById('traceModalSlotsCount');
-        if (slotEl) {
-            slotEl.innerText = `슬롯 #${slotNo}`;
-        }
-
-        const partEl = document.getElementById('traceModalPartList');
-        if (partEl) {
-            partEl.innerText = partNo;
-            partEl.title = partNo;
         }
     }
 
@@ -14633,41 +14607,33 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="modal-close" onclick="closeModal('defectTraceModal')">✕</button>
         </div>
 
-        <!-- 1. 기판 및 불량 발생 메타 정보 (고정 상단: 기판번호, 범위, 작업지시, 업체/제품, 장착슬롯, 부품품번, 불량공정, 검사시각) -->
-        <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px 10px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 14px; margin-bottom:12px; flex-shrink:0;">
+        <!-- 1. 기판 및 불량 발생 메타 정보 (고정 상단: 3열 균형 배치) -->
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px 14px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px 16px; margin-bottom:14px; flex-shrink:0;">
             <div>
-                <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">불량 기판 번호 (PCB)</div>
-                <div id="traceModalPcbBarcode" style="font-size:13.5px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#38bdf8; margin-top:2px;">—</div>
+                <div style="font-size:11px; color:#94a3b8; font-weight:600;">불량 기판 번호 (PCB)</div>
+                <div id="traceModalPcbBarcode" style="font-size:14px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#38bdf8; margin-top:3px;">—</div>
             </div>
             <div>
-                <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">투입된 PCB 기판 번호 범위</div>
-                <div id="traceModalPcbRange" style="font-size:13px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#38bdf8; margin-top:2px;">—</div>
+                <div style="font-size:11px; color:#94a3b8; font-weight:600;">투입된 PCB 기판 번호 범위</div>
+                <div id="traceModalPcbRange" style="font-size:14px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#38bdf8; margin-top:3px;">—</div>
             </div>
             <div>
-                <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">작업지시 (WO ID)</div>
-                <div id="traceModalWoId" style="font-size:12.5px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#f8fafc; margin-top:2px;">—</div>
+                <div style="font-size:11px; color:#94a3b8; font-weight:600;">작업지시 (WO ID)</div>
+                <div id="traceModalWoId" style="font-size:13px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#f8fafc; margin-top:3px;">—</div>
             </div>
             <div>
-                <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">수주업체 / 제품명</div>
-                <div style="font-size:12px; font-weight:700; color:#f8fafc; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                <div style="font-size:11px; color:#94a3b8; font-weight:600;">수주업체 / 제품명</div>
+                <div style="font-size:13px; font-weight:700; color:#f8fafc; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                     <span id="traceModalCompany">—</span> / <span id="traceModalItem" style="color:#cbd5e1;">—</span>
                 </div>
             </div>
             <div>
-                <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">장착 슬롯 수</div>
-                <div id="traceModalSlotsCount" style="font-size:12.5px; font-weight:800; color:#fcd34d; font-family:'JetBrains Mono',monospace; margin-top:2px;">—</div>
+                <div style="font-size:11px; color:#94a3b8; font-weight:600;">불량 검출 공정</div>
+                <div id="traceModalProcess" style="font-size:13px; font-weight:800; color:#f87171; margin-top:3px;">—</div>
             </div>
             <div>
-                <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">BOM 부품 품번</div>
-                <div id="traceModalPartList" style="font-size:12px; font-weight:700; color:#cbd5e1; font-family:'JetBrains Mono',monospace; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="—">—</div>
-            </div>
-            <div>
-                <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">불량 검출 공정</div>
-                <div id="traceModalProcess" style="font-size:12.5px; font-weight:800; color:#f87171; margin-top:2px;">—</div>
-            </div>
-            <div>
-                <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">검사 시각</div>
-                <div id="traceModalDate" style="font-size:11.5px; font-family:'JetBrains Mono',monospace; color:#cbd5e1; margin-top:2px;">—</div>
+                <div style="font-size:11px; color:#94a3b8; font-weight:600;">검사 시각</div>
+                <div id="traceModalDate" style="font-size:12px; font-family:'JetBrains Mono',monospace; color:#cbd5e1; margin-top:3px;">—</div>
             </div>
         </div>
 
