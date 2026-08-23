@@ -393,6 +393,48 @@ function setupAutoHideHeader() {
 }
 window.setupAutoHideHeader = setupAutoHideHeader;
 
+/**
+ * 모든 인풋박스 및 텍스트에리어 포커스 시 기존 입력값 전체 선택 (새로 입력/삭제 편의성)
+ */
+(function setupGlobalInputAutoSelect() {
+    let mousedownEl = null;
+
+    document.addEventListener('mousedown', (e) => {
+        const el = e.target;
+        if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+            mousedownEl = (document.activeElement === el) ? el : null;
+        }
+    }, true);
+
+    document.addEventListener('focusin', (e) => {
+        const el = e.target;
+        if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+            const type = (el.getAttribute('type') || el.type || '').toLowerCase();
+            if (['button', 'submit', 'reset', 'checkbox', 'radio', 'file', 'color', 'range', 'hidden'].includes(type)) return;
+            setTimeout(() => {
+                if (document.activeElement === el && typeof el.select === 'function') {
+                    el.select();
+                }
+            }, 10);
+        }
+    }, true);
+
+    document.addEventListener('mouseup', (e) => {
+        const el = e.target;
+        if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+            const type = (el.getAttribute('type') || el.type || '').toLowerCase();
+            if (['button', 'submit', 'reset', 'checkbox', 'radio', 'file', 'color', 'range', 'hidden'].includes(type)) return;
+            if (mousedownEl !== el) {
+                setTimeout(() => {
+                    if (document.activeElement === el && typeof el.select === 'function') {
+                        el.select();
+                    }
+                }, 10);
+            }
+        }
+    }, true);
+})();
+
 // 자동 실행 (DOMContentLoaded)
 document.addEventListener('DOMContentLoaded', () => {
     const headerEl = document.querySelector('.mes-unified-header');

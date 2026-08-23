@@ -57,6 +57,23 @@ class ConsignedMaterialController {
     public static function getStockList(): void {
         try {
             $pdo = Database::getConnection();
+
+            // Auto-heal existing material_inout records where company_id is NULL
+            try {
+                $pdo->query("
+                    UPDATE material_inout m
+                    JOIN sales_order so ON m.order_no = so.order_no
+                    SET m.company_id = so.company_id
+                    WHERE m.company_id IS NULL AND m.order_no IS NOT NULL AND m.order_no != ''
+                ");
+                $pdo->query("
+                    UPDATE material_inout m
+                    JOIN work_order wo ON m.wo_id = wo.wo_id
+                    SET m.company_id = wo.company_id
+                    WHERE m.company_id IS NULL AND m.wo_id IS NOT NULL AND m.wo_id != ''
+                ");
+            } catch (\Throwable $e) {}
+
             $companyId = Request::query('company_id');
             $orderNo   = trim(Request::query('order_no', ''));
             $search    = trim(Request::query('search', ''));
@@ -65,7 +82,7 @@ class ConsignedMaterialController {
             $params = [];
 
             if (!empty($companyId)) {
-                $where[] = "m.company_id = :company_id";
+                $where[] = "COALESCE(m.company_id, so.company_id, wo.company_id) = :company_id";
                 $params[':company_id'] = (int)$companyId;
             }
             if (!empty($orderNo)) {
@@ -73,7 +90,7 @@ class ConsignedMaterialController {
                 $params[':order_no'] = $orderNo;
             }
             if (!empty($search)) {
-                $where[] = "(m.part_no LIKE :search OR m.part_name LIKE :search OR m.order_no LIKE :search OR c.name LIKE :search)";
+                $where[] = "(m.part_no LIKE :search OR m.part_name LIKE :search OR m.order_no LIKE :search OR c.name LIKE :search OR so_c.name LIKE :search)";
                 $params[':search'] = '%' . $search . '%';
             }
 
@@ -83,8 +100,8 @@ class ConsignedMaterialController {
                 SELECT
                     m.part_no,
                     MAX(m.part_name) as part_name,
-                    m.company_id,
-                    COALESCE(c.name, '미지정 거래처') as company_name,
+                    COALESCE(m.company_id, so.company_id, wo.company_id) as company_id,
+                    COALESCE(c.name, so_c.name, wo_c.name, '기타 거래처') as company_name,
                     COALESCE(NULLIF(m.order_no, ''), '공용 자재(Pool)') as order_no,
                     COALESCE(
                         (SELECT GROUP_CONCAT(DISTINCT item_name SEPARATOR ', ') FROM sales_order_item WHERE order_no = m.order_no),
@@ -108,9 +125,16 @@ class ConsignedMaterialController {
                     MAX(m.created_at) as last_inout_at
                 FROM material_inout m
                 LEFT JOIN company c ON m.company_id = c.id
+                LEFT JOIN sales_order so ON m.order_no = so.order_no
+                LEFT JOIN company so_c ON so.company_id = so_c.id
+                LEFT JOIN work_order wo ON m.wo_id = wo.wo_id
+                LEFT JOIN company wo_c ON wo.company_id = wo_c.id
                 {$whereClause}
-                GROUP BY m.part_no, m.company_id, c.name, m.order_no
-                ORDER BY c.name ASC, m.order_no ASC, m.part_no ASC
+                GROUP BY m.part_no, 
+                         COALESCE(m.company_id, so.company_id, wo.company_id), 
+                         COALESCE(c.name, so_c.name, wo_c.name, '기타 거래처'), 
+                         COALESCE(NULLIF(m.order_no, ''), '공용 자재(Pool)')
+                ORDER BY company_name ASC, order_no ASC, m.part_no ASC
             ";
 
             $stmt = $pdo->prepare($sql);
@@ -602,6 +626,21 @@ class ConsignedMaterialController {
 
             if (empty($details) || !is_array($details)) {
                 Response::error("반납할 부품 정산 내역이 없습니다.");
+            }
+
+            // Auto-resolve company_id if not explicitly provided
+            if (!$companyId && !empty($orderNo)) {
+                $stmtC = $pdo->prepare("SELECT company_id FROM sales_order WHERE order_no = ? LIMIT 1");
+                $stmtC->execute([$orderNo]);
+                $cId = (int)$stmtC->fetchColumn();
+                if ($cId > 0) {
+                    $companyId = $cId;
+                } else {
+                    $stmtC2 = $pdo->prepare("SELECT so.company_id FROM sales_order_item soi JOIN sales_order so ON soi.order_no = so.order_no WHERE soi.order_no = ? LIMIT 1");
+                    $stmtC2->execute([$orderNo]);
+                    $cId2 = (int)$stmtC2->fetchColumn();
+                    if ($cId2 > 0) $companyId = $cId2;
+                }
             }
 
             // Prevent duplicate return statement issuance for the same order

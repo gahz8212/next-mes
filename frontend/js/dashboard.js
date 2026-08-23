@@ -244,7 +244,11 @@ async function initKPI() {
             if (elActual) elActual.innerText = totalCount;
             if (elGood)   elGood.innerText   = goodCount;
             if (elFail)   elFail.innerText   = failCount;
-            if (elYield)  elYield.innerText  = d.yield_rate || '100.0%';
+            if (elYield) {
+                elYield.innerText  = d.yield_rate || '100.0%';
+                const yNum = parseFloat(d.yield_rate || '100');
+                elYield.className = 'kpi-val ' + (yNum >= 95 ? 'good' : (yNum >= 80 ? 'warn' : 'danger'));
+            }
         }
     } catch(e) {
         console.error('KPI 동기화 실패:', e);

@@ -11,8 +11,13 @@ class DashboardController {
 
             $woStmt = $pdo->query("
                 SELECT wo.wo_id, wo.target_qty,
-                       (SELECT COUNT(*) FROM barcode_master WHERE wo_id = wo.wo_id AND status = 'TEST_PASS') as pass_qty,
-                       (SELECT COUNT(*) FROM barcode_master WHERE wo_id = wo.wo_id AND status = 'TEST_FAIL') as fail_qty
+                       (SELECT COUNT(*) FROM barcode_master bm WHERE bm.wo_id = wo.wo_id 
+                        AND bm.status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING', 'DONE')
+                        AND NOT EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = bm.barcode AND bh.result_status = 'FAIL')
+                       ) as pass_qty,
+                       (SELECT COUNT(*) FROM barcode_master bm WHERE bm.wo_id = wo.wo_id 
+                        AND (bm.status IN ('DEFECT', 'FAIL') OR EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = bm.barcode AND bh.result_status = 'FAIL'))
+                       ) as fail_qty
                 FROM line_status ls
                 JOIN work_order wo ON ls.current_wo_id = wo.wo_id
                 WHERE ls.line_id = 'LINE_01'
@@ -81,8 +86,14 @@ class DashboardController {
                         wo.wo_id,
                         wo.target_qty,
                         wo.status,
-                        COALESCE(SUM(CASE WHEN bm.status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING', 'DONE') THEN 1 ELSE 0 END), 0) as good_qty,
-                        COALESCE(SUM(CASE WHEN bm.status IN ('DEFECT', 'FAIL') THEN 1 ELSE 0 END), 0) as fail_qty
+                        COALESCE(SUM(CASE 
+                            WHEN bm.status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING', 'DONE') 
+                                 AND NOT EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = bm.barcode AND bh.result_status = 'FAIL')
+                            THEN 1 ELSE 0 END), 0) as good_qty,
+                        COALESCE(SUM(CASE 
+                            WHEN bm.status IN ('DEFECT', 'FAIL') 
+                                 OR EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = bm.barcode AND bh.result_status = 'FAIL')
+                            THEN 1 ELSE 0 END), 0) as fail_qty
                     FROM work_order wo
                     LEFT JOIN barcode_master bm ON wo.wo_id = bm.wo_id
                     WHERE wo.wo_id = ?
@@ -95,8 +106,14 @@ class DashboardController {
                         wo.wo_id,
                         wo.target_qty,
                         wo.status,
-                        COALESCE(SUM(CASE WHEN bm.status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING', 'DONE') THEN 1 ELSE 0 END), 0) as good_qty,
-                        COALESCE(SUM(CASE WHEN bm.status IN ('DEFECT', 'FAIL') THEN 1 ELSE 0 END), 0) as fail_qty
+                        COALESCE(SUM(CASE 
+                            WHEN bm.status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING', 'DONE') 
+                                 AND NOT EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = bm.barcode AND bh.result_status = 'FAIL')
+                            THEN 1 ELSE 0 END), 0) as good_qty,
+                        COALESCE(SUM(CASE 
+                            WHEN bm.status IN ('DEFECT', 'FAIL') 
+                                 OR EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = bm.barcode AND bh.result_status = 'FAIL')
+                            THEN 1 ELSE 0 END), 0) as fail_qty
                     FROM work_order wo
                     LEFT JOIN barcode_master bm ON wo.wo_id = bm.wo_id
                     WHERE wo.status IN ('IN_PROGRESS', 'SMT_DONE', 'DIP_IN_PROGRESS')
@@ -447,13 +464,21 @@ class DashboardController {
                     ");
                     $stmtHist->execute([$barcode, $proc, $isFail ? 'FAIL' : 'PASS', json_encode($pdata, JSON_UNESCAPED_UNICODE)]);
 
+                    // 불량 여부 확인 (이전 공정 실패 이력 또는 현재 공정 실패)
+                    $chkFail = $pdo->prepare("SELECT 1 FROM barcode_history WHERE barcode = ? AND result_status = 'FAIL' LIMIT 1");
+                    $chkFail->execute([$barcode]);
+                    $hasFailed = (bool)$chkFail->fetchColumn() || $isFail;
+
                     // 마지막 공정(REFLOW 또는 FCT)을 통과한 기판은 최종 양품(또는 불량) 완료 상태로 전이
                     if ($pIdx === 4) {
-                        $nextBmStatus = $isFail ? 'DEFECT' : ($mode === 'SMT' ? 'TEST_PASS' : 'SHIPPING');
+                        $nextBmStatus = $hasFailed ? 'DEFECT' : ($mode === 'SMT' ? 'TEST_PASS' : 'SHIPPING');
                         $pdo->prepare("UPDATE barcode_master SET status = ? WHERE barcode = ?")->execute([$nextBmStatus, $barcode]);
                     } else {
-                        // 공정 진행 중인 기판 상태
-                        $pdo->prepare("UPDATE barcode_master SET status = 'IN_PROCESS' WHERE barcode = ? AND status = 'WAIT'")->execute([$barcode]);
+                        if ($hasFailed) {
+                            $pdo->prepare("UPDATE barcode_master SET status = 'DEFECT' WHERE barcode = ?")->execute([$barcode]);
+                        } else {
+                            $pdo->prepare("UPDATE barcode_master SET status = 'IN_PROCESS' WHERE barcode = ? AND status = 'WAIT'")->execute([$barcode]);
+                        }
                     }
                 } else {
                     // 현재 슬롯에 기판이 없는 경우 (대기/IDLE 텔레메트리 기록)

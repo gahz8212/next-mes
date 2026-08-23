@@ -1213,11 +1213,11 @@
         .modal-box {
             background: #1a2744;
             border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 14px;
-            padding: 28px;
+            border-radius: 12px;
+            padding: 16px 22px;
             width: 480px;
             max-width: 95vw;
-            max-height: 90vh;
+            max-height: 94vh;
             overflow-y: auto;
             box-shadow: 0 24px 64px rgba(0,0,0,0.5);
             animation: modalIn 0.18s ease;
@@ -1267,14 +1267,15 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 22px;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
         }
-        .modal-title { font-size: 17px; font-weight: 800; color: #e2e8f0; }
+        .modal-title { font-size: 15.5px; font-weight: 800; color: #e2e8f0; }
         .modal-close {
             background: none;
             border: none;
             color: var(--text-muted);
-            font-size: 20px;
+            font-size: 18px;
             cursor: pointer;
             line-height: 1;
             padding: 2px;
@@ -1283,23 +1284,23 @@
         .modal-close:hover { color: #f87171; }
 
         /* Form inside modal */
-        .form-group { margin-bottom: 16px; }
+        .form-group { margin-bottom: 8px; }
         .form-label {
             display: block;
-            font-size: 12.5px;
+            font-size: 11.5px;
             font-weight: 600;
             color: var(--text-dim);
-            margin-bottom: 6px;
+            margin-bottom: 3px;
             letter-spacing: 0.02em;
         }
         .form-control {
             width: 100%;
-            padding: 10px 14px;
+            padding: 6px 10px;
             background: #ffffff !important;
             border: 1.5px solid #cbd5e1 !important;
             border-radius: var(--radius-sm);
             color: #111827 !important;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600 !important;
             font-family: inherit;
             transition: border-color 0.15s, box-shadow 0.15s;
@@ -1328,15 +1329,17 @@
             font-weight: 600 !important;
             border: 1px solid rgba(255, 255, 255, 0.18) !important;
             cursor: pointer;
+            padding: 5px 8px !important;
+            font-size: 12.5px !important;
         }
         select.form-control option,
         .filter-select option,
         select option {
             background-color: #0f172a !important;
             color: #ffffff !important;
-            font-size: 13.5px !important;
+            font-size: 12.5px !important;
             font-weight: 600 !important;
-            padding: 10px 12px !important;
+            padding: 6px 10px !important;
         }
         select.form-control option:hover,
         select.form-control option:checked,
@@ -2310,48 +2313,49 @@
             background: rgba(255, 255, 255, 0.03) !important;
         }
 
-        /* ── Compact styling for Order Modal to avoid scrollbars ── */
-        #orderModal .modal-box {
-            padding: 16px 24px;
+        /* ── Compact styling for All Modals to prevent vertical scrollbars ── */
+        .modal-overlay .modal-box {
+            padding: 14px 20px !important;
+            max-height: 94vh !important;
         }
-        #orderModal .modal-header {
-            margin-bottom: 12px;
+        .modal-overlay .modal-header {
+            margin-bottom: 8px !important;
+            padding-bottom: 6px !important;
         }
-        #orderModal .form-group {
-            margin-bottom: 10px;
+        .modal-overlay .modal-title {
+            font-size: 15px !important;
         }
-        #orderModal .form-label {
-            margin-bottom: 4px;
+        .modal-overlay .form-group {
+            margin-bottom: 6px !important;
         }
-        #orderModal .form-control {
-            padding: 8px 12px;
-            font-size: 13.5px;
+        .modal-overlay .form-label {
+            margin-bottom: 2px !important;
+            font-size: 11.5px !important;
         }
-        #orderModal .btn-submit {
-            margin-top: 4px;
-            padding: 10px;
+        .modal-overlay .form-control {
+            padding: 5px 9px !important;
+            font-size: 12.5px !important;
+            min-height: 30px !important;
+            height: auto !important;
         }
-
-        /* ── Compact styling for WO Modal to avoid scrollbars ── */
-        #woModal .modal-box {
-            padding: 16px 24px;
+        .modal-overlay textarea.form-control {
+            min-height: 42px !important;
+            padding: 5px 9px !important;
         }
-        #woModal .modal-header {
-            margin-bottom: 12px;
+        .modal-overlay .btn-submit,
+        .modal-overlay .btn-cancel {
+            margin-top: 6px !important;
+            padding: 7px 14px !important;
+            font-size: 13px !important;
+            height: 36px !important;
         }
-        #woModal .form-group {
-            margin-bottom: 10px;
+        .modal-overlay .data-table th,
+        .modal-overlay .data-table td {
+            padding: 4px 8px !important;
+            font-size: 12px !important;
         }
-        #woModal .form-label {
-            margin-bottom: 4px;
-        }
-        #woModal .form-control {
-            padding: 8px 12px;
-            font-size: 13.5px;
-        }
-        #woModal .btn-submit {
-            margin-top: 4px;
-            padding: 10px;
+        .modal-overlay [style*="grid-template-columns"] {
+            gap: 8px !important;
         }
 
         /* ── Consigned Material (사급 자재) Layout & Scrolling ── */
@@ -4525,10 +4529,11 @@ const ALL_PAGE_TITLES = {
         const totalPct = Math.min(100, Math.round((smtPct * 0.5) + (dipPct * 0.5)));
 
         const currentQty = isDone ? targetQty : (isDipProgress ? dipQty : smtQty);
-        const goodQty = parseInt(wo.good_qty || (isDone ? targetQty : (isDipProgress ? dipQty : smtQty)));
+        const goodQty = parseInt(wo.good_qty || 0);
         const failQty = parseInt(wo.fail_qty || 0);
+        const actualProduced = goodQty + failQty;
         const totalProcessed = isDone ? targetQty : (isDipProgress ? dipQty : smtQty);
-        const yieldRate = totalProcessed > 0 ? ((goodQty / totalProcessed) * 100).toFixed(1) : '100.0';
+        const yieldRate = actualProduced > 0 ? ((goodQty / actualProduced) * 100).toFixed(1) : (totalProcessed > 0 ? '100.0' : '100.0');
 
         const ddayBadge = renderDDay(wo.dday, isDone);
 
@@ -7962,10 +7967,11 @@ async function deleteCompany(id, name) {
         const totalPct = Math.min(100, Math.round((smtPct * 0.5) + (dipPct * 0.5)));
 
         const currentQty = isDone ? targetQty : (isDipProgress ? dipQty : smtQty);
-        const goodQty = parseInt(o.good_qty || (isDone ? targetQty : (isDipProgress ? dipQty : smtQty)));
+        const goodQty = parseInt(o.good_qty || 0);
         const failQty = parseInt(o.fail_qty || 0);
+        const actualProduced = goodQty + failQty;
         const totalProcessed = isDone ? targetQty : (isDipProgress ? dipQty : smtQty);
-        const yieldRate = totalProcessed > 0 ? ((goodQty / totalProcessed) * 100).toFixed(1) : '100.0';
+        const yieldRate = actualProduced > 0 ? ((goodQty / actualProduced) * 100).toFixed(1) : (totalProcessed > 0 ? '100.0' : '100.0');
         const today = new Date().toISOString().slice(0, 10);
         const targetDateStr = (isDone && o.delivery_date) ? o.delivery_date : o.due_date;
         const dday = targetDateStr ? Math.round((new Date(targetDateStr) - new Date(today)) / 86400000) : null;
@@ -8948,26 +8954,35 @@ async function loadConsignedStocks() {
             // 공용 사급 풀 제외 (수주 기반 사급 자재만 관리)
             if (!item.order_no || item.order_no === '공용 자재(Pool)' || item.order_no === 'POOL') return;
             const orderKey = item.order_no;
-            const key = `${item.company_name}__${orderKey}`;
+            const compName = (item.company_name && item.company_name !== '미지정 거래처' && item.company_name !== '기타 거래처') ? item.company_name : '';
+            const key = orderKey;
 
             if (!consignedStockGroups[key]) {
                 consignedStockGroups[key] = {
                     key: key,
-                    company_name: item.company_name,
+                    company_name: compName || item.company_name || '거래처',
                     order_no: item.order_no,
                     project_name: item.project_name || '사급 자재',
                     items_summary: item.items_summary || [],
                     company_id: item.company_id,
                     itemsMap: {}
                 };
+            } else {
+                if (compName && (consignedStockGroups[key].company_name === '미지정 거래처' || consignedStockGroups[key].company_name === '기타 거래처' || consignedStockGroups[key].company_name === '거래처')) {
+                    consignedStockGroups[key].company_name = compName;
+                }
+                if (item.company_id && !consignedStockGroups[key].company_id) {
+                    consignedStockGroups[key].company_id = item.company_id;
+                }
             }
             
             if (!consignedStockGroups[key].itemsMap[item.part_no]) {
                 consignedStockGroups[key].itemsMap[item.part_no] = { ...item };
             } else {
-                consignedStockGroups[key].itemsMap[item.part_no].total_in += item.total_in;
-                consignedStockGroups[key].itemsMap[item.part_no].total_out += item.total_out;
-                consignedStockGroups[key].itemsMap[item.part_no].current_stock += item.current_stock;
+                consignedStockGroups[key].itemsMap[item.part_no].total_in += (parseFloat(item.total_in) || 0);
+                consignedStockGroups[key].itemsMap[item.part_no].total_out += (parseFloat(item.total_out) || 0);
+                consignedStockGroups[key].itemsMap[item.part_no].current_stock = 
+                    consignedStockGroups[key].itemsMap[item.part_no].total_in - consignedStockGroups[key].itemsMap[item.part_no].total_out;
             }
         });
 
@@ -13810,11 +13825,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <!-- ════════ MODAL: 수주 (PO) 등록/수정 (복수 품목 지원) ════════ -->
 <div class="modal-overlay" id="orderModal">
-    <div class="modal-box" style="max-width:780px; width:92vw; max-height:92vh; overflow-y:auto; padding:22px 24px;">
-        <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; margin-bottom:16px;">
+    <div class="modal-box" style="max-width:780px; width:92vw; max-height:94vh; overflow-y:auto; padding:12px 18px;">
+        <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:6px; margin-bottom:8px;">
             <div>
-                <div class="modal-title" id="ord-modal-title" style="font-size:17px; font-weight:800; color:#fff;">📑 수주 (PO) 등록</div>
-                <div style="font-size:12px; color:#94a3b8; margin-top:2px;">발주 고객사와 수주 번호 1건에 여러 품목을 묶어 등록합니다. (수주번호 자동 채번)</div>
+                <div class="modal-title" id="ord-modal-title" style="font-size:15px; font-weight:800; color:#fff;">📑 수주 (PO) 등록</div>
+                <div style="font-size:11px; color:#94a3b8; margin-top:1px;">발주 고객사와 수주 번호 1건에 여러 품목을 묶어 등록합니다.</div>
             </div>
             <button class="modal-close" onclick="closeModal('orderModal')">✕</button>
         </div>
@@ -13822,7 +13837,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <input type="hidden" id="ord-id">
         
         <!-- Order Master Header Grid -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:12px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:6px;">
             <div class="form-group" style="margin-bottom:0;">
                 <label class="form-label">발주 고객사 (원청사) <span style="color:#f87171;">*</span></label>
                 <select id="ord-inp-company" class="form-control" onchange="onOrderCompanyChange()">
@@ -13830,12 +13845,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 </select>
             </div>
             <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">수주 / 고객 발주번호 (PO No) <span style="font-size:11px; color:#60a5fa;">[자동 채번]</span></label>
+                <label class="form-label">수주 / 고객 발주번호 (PO No) <span style="font-size:10.5px; color:#60a5fa;">[자동 채번]</span></label>
                 <input type="text" id="ord-inp-orderno" class="form-control" placeholder="예: PO-20260818-001">
             </div>
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
             <div class="form-group" style="margin-bottom:0;">
                 <label class="form-label">수주일자 <span style="color:#f87171;">*</span></label>
                 <input type="date" id="ord-inp-date" class="form-control">
@@ -13847,25 +13862,25 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <!-- Multi-Item Lines Table Section -->
-        <div style="background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:14px 16px; margin-bottom:16px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                <div style="font-size:13.5px; font-weight:800; color:#38bdf8; display:flex; align-items:center; gap:6px;">
+        <div style="background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:8px 10px; margin-bottom:6px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <div style="font-size:12.5px; font-weight:800; color:#38bdf8; display:flex; align-items:center; gap:4px;">
                     <span>📦</span>
                     <span>수주 품목 목록 (복수 품목 등록)</span>
                 </div>
-                <button type="button" class="topbar-action-btn" style="padding:5px 12px; font-size:12px; font-weight:700; background:#2563eb;" onclick="addOrderModalItem()">+ 품목 추가</button>
+                <button type="button" class="topbar-action-btn" style="padding:3px 8px; font-size:11px; font-weight:700; background:#2563eb;" onclick="addOrderModalItem()">+ 품목 추가</button>
             </div>
 
             <div>
-                <table class="data-table" style="width:100%; margin:0; font-size:13px; table-layout:auto;">
+                <table class="data-table" style="width:100%; margin:0; font-size:12px; table-layout:auto;">
                     <thead>
                         <tr style="background:#1e293b;">
-                            <th style="width:36px; text-align:center;">No</th>
-                            <th style="min-width:180px;">품목명 (제품명 / 모델명) <span style="color:#f87171;">*</span></th>
-                            <th style="width:95px; text-align:right;">수량 (EA) <span style="color:#f87171;">*</span></th>
-                            <th style="width:110px; text-align:right;">단가 (원)</th>
-                            <th style="width:120px; text-align:right;">공급가액</th>
-                            <th style="width:40px; text-align:center;">삭제</th>
+                            <th style="width:32px; text-align:center; padding:4px 6px;">No</th>
+                            <th style="min-width:160px; padding:4px 6px;">품목명 (제품명 / 모델명) <span style="color:#f87171;">*</span></th>
+                            <th style="width:85px; text-align:right; padding:4px 6px;">수량 (EA) <span style="color:#f87171;">*</span></th>
+                            <th style="width:95px; text-align:right; padding:4px 6px;">단가 (원)</th>
+                            <th style="width:105px; text-align:right; padding:4px 6px;">공급가액</th>
+                            <th style="width:36px; text-align:center; padding:4px 6px;">삭제</th>
                         </tr>
                     </thead>
                     <tbody id="ord-items-tbody">
@@ -13873,10 +13888,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     </tbody>
                     <tfoot>
                         <tr style="background:rgba(30,41,59,0.8); font-weight:700;">
-                            <td colspan="2" style="text-align:right; color:#94a3b8; font-size:12.5px;" id="ord-summary-count">총 0개 품목</td>
-                            <td style="text-align:right; color:#6ee7b7; font-family:'JetBrains Mono',monospace; font-size:13px;" id="ord-summary-qty">0 EA</td>
-                            <td style="text-align:right; color:#94a3b8; font-size:12px;">합계</td>
-                            <td style="text-align:right; color:#34d399; font-size:13.5px; font-family:'JetBrains Mono',monospace;" id="ord-summary-amount">₩ 0</td>
+                            <td colspan="2" style="text-align:right; color:#94a3b8; font-size:11.5px; padding:4px 6px;" id="ord-summary-count">총 0개 품목</td>
+                            <td style="text-align:right; color:#6ee7b7; font-family:'JetBrains Mono',monospace; font-size:12px; padding:4px 6px;" id="ord-summary-qty">0 EA</td>
+                            <td style="text-align:right; color:#94a3b8; font-size:11px; padding:4px 6px;">합계</td>
+                            <td style="text-align:right; color:#34d399; font-size:12.5px; font-family:'JetBrains Mono',monospace; padding:4px 6px;" id="ord-summary-amount">₩ 0</td>
                             <td></td>
                         </tr>
                     </tfoot>
@@ -13884,15 +13899,15 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>
 
-        <div class="form-group" style="margin-bottom:18px;">
+        <div class="form-group" style="margin-bottom:6px;">
             <label class="form-label">특이사항 / 메모</label>
-            <textarea id="ord-inp-memo" class="form-control" rows="2" placeholder="요구 스펙, 납품 조건 등"></textarea>
+            <textarea id="ord-inp-memo" class="form-control" rows="1" placeholder="요구 스펙, 납품 조건 등" style="min-height:34px;"></textarea>
         </div>
 
         <!-- 2:3 Ratio Cancel and Save Buttons -->
-        <div style="display:grid; grid-template-columns: 2fr 3fr; gap: 12px; margin-top: 16px;">
-            <button type="button" class="btn-cancel" onclick="closeModal('orderModal')" style="width:100%; height:44px; font-size:14.5px; font-weight:700; background:rgba(255,255,255,0.06); color:#cbd5e1; border:1px solid rgba(255,255,255,0.12); border-radius:6px; cursor:pointer;">취소</button>
-            <button type="button" class="btn-submit" onclick="saveOrder()" style="width:100%; height:44px; font-size:15px; font-weight:800; background:#2563eb; color:#ffffff; border:none; border-radius:6px; cursor:pointer; margin:0; box-shadow:0 3px 10px rgba(37,99,235,0.4);">수주 저장</button>
+        <div style="display:grid; grid-template-columns: 2fr 3fr; gap: 8px; margin-top: 8px;">
+            <button type="button" class="btn-cancel" onclick="closeModal('orderModal')" style="width:100%; height:36px; font-size:13px; font-weight:700; background:rgba(255,255,255,0.06); color:#cbd5e1; border:1px solid rgba(255,255,255,0.12); border-radius:6px; cursor:pointer;">취소</button>
+            <button type="button" class="btn-submit" onclick="saveOrder()" style="width:100%; height:36px; font-size:13.5px; font-weight:800; background:#2563eb; color:#ffffff; border:none; border-radius:6px; cursor:pointer; margin:0; box-shadow:0 2px 8px rgba(37,99,235,0.4);">수주 저장</button>
         </div>
     </div>
 </div>
@@ -14199,11 +14214,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <!-- ════════ MODAL: 거래처 및 담당자 등록/수정 ════════ -->
 <div class="modal-overlay" id="companyManageModal">
-    <div class="modal-box" style="max-width:680px; width:92vw; max-height:90vh; overflow-y:auto; padding:22px 24px;">
-        <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; margin-bottom:16px;">
+    <div class="modal-box" style="max-width:680px; width:92vw; max-height:94vh; overflow-y:auto; padding:12px 18px;">
+        <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:6px; margin-bottom:8px;">
             <div>
-                <div class="modal-title" id="cm-modal-title" style="font-size:17px; font-weight:800; color:#fff;">🏢 거래처 등록</div>
-                <div style="font-size:12px; color:#94a3b8; margin-top:2px;">기업 기본 정보 및 소통할 주 담당자 연락처를 등록합니다.</div>
+                <div class="modal-title" id="cm-modal-title" style="font-size:15px; font-weight:800; color:#fff;">🏢 거래처 등록</div>
+                <div style="font-size:11px; color:#94a3b8; margin-top:1px;">기업 기본 정보 및 소통할 주 담당자 연락처를 등록합니다.</div>
             </div>
             <button class="modal-close" onclick="closeModal('companyManageModal')">✕</button>
         </div>
@@ -14211,16 +14226,16 @@ document.addEventListener('DOMContentLoaded', () => {
         <input type="hidden" id="cm-id">
 
         <!-- 1. 기업 기본 정보 섹션 -->
-        <div style="font-size:13px; font-weight:800; color:#38bdf8; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+        <div style="font-size:12px; font-weight:800; color:#38bdf8; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
             <span>🏢</span> 기업 기본 정보
         </div>
-        <div style="display:grid; grid-template-columns:1.5fr 1fr 1fr; gap:12px; margin-bottom:12px;">
+        <div style="display:grid; grid-template-columns:1.5fr 1fr 1fr; gap:6px; margin-bottom:6px;">
             <div class="form-group" style="margin-bottom:0;">
                 <label class="form-label">거래처명 (회사명) <span style="color:#f87171;">*</span></label>
                 <input type="text" id="cm-name" class="form-control" placeholder="예: LG전자">
             </div>
             <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">업체 식별코드 <span style="font-size:11px; color:#94a3b8;">(미입력 시 자동)</span></label>
+                <label class="form-label">업체 식별코드 <span style="font-size:10.5px; color:#94a3b8;">(자동)</span></label>
                 <input type="text" id="cm-code" class="form-control" placeholder="예: C1, C2">
             </div>
             <div class="form-group" style="margin-bottom:0;">
@@ -14233,7 +14248,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
             <div class="form-group" style="margin-bottom:0;">
                 <label class="form-label">사업자등록번호</label>
                 <input type="text" id="cm-bizno" class="form-control" placeholder="예: 107-86-16908">
@@ -14244,7 +14259,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
             <div class="form-group" style="margin-bottom:0;">
                 <label class="form-label">회사 대표 전화</label>
                 <input type="text" id="cm-tel" class="form-control" placeholder="예: 02-3777-1114">
@@ -14255,17 +14270,17 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>
 
-        <div class="form-group" style="margin-bottom:16px;">
+        <div class="form-group" style="margin-bottom:6px;">
             <label class="form-label">사업장 소재지 (주소)</label>
             <input type="text" id="cm-address" class="form-control" placeholder="예: 서울특별시 영등포구 여의대로 128">
         </div>
 
         <!-- 2. 주 담당자 정보 섹션 -->
-        <div style="background:rgba(30,41,59,0.7); border:1px solid rgba(59,130,246,0.3); border-radius:8px; padding:14px; margin-bottom:16px;">
-            <div style="font-size:13px; font-weight:800; color:#fbbf24; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+        <div style="background:rgba(30,41,59,0.7); border:1px solid rgba(59,130,246,0.3); border-radius:6px; padding:8px 10px; margin-bottom:6px;">
+            <div style="font-size:12px; font-weight:800; color:#fbbf24; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
                 <span>👤</span> 주 담당자 정보 (영업/품질/생산 소통)
             </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
                 <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">담당자 성명</label>
                     <input type="text" id="cm-mgr-name" class="form-control" placeholder="예: 김태형">
@@ -14275,7 +14290,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <input type="text" id="cm-mgr-dept" class="form-control" placeholder="예: 가전생산기술팀 / 수석">
                 </div>
             </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
                 <div class="form-group" style="margin-bottom:0;">
                     <label class="form-label">담당자 휴대폰 / 직통번호</label>
                     <input type="text" id="cm-mgr-phone" class="form-control" placeholder="예: 010-3847-9201">
@@ -14288,12 +14303,12 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <!-- 3. 메모 / 특이사항 -->
-        <div class="form-group" style="margin-bottom:18px;">
+        <div class="form-group" style="margin-bottom:8px;">
             <label class="form-label">거래처 특이사항 / 양산 품목 메모</label>
-            <textarea id="cm-memo" class="form-control" rows="2" placeholder="주요 양산 PBA 보드 사양, 품질 요구사항, 배송 특이사항 등"></textarea>
+            <textarea id="cm-memo" class="form-control" rows="1" placeholder="주요 양산 PBA 보드 사양, 품질 요구사항 등" style="min-height:34px;"></textarea>
         </div>
 
-        <button class="btn-submit" onclick="saveCompany()">💾 거래처 정보 저장</button>
+        <button class="btn-submit" onclick="saveCompany()" style="height:36px; font-size:13.5px; margin:0;">💾 거래처 정보 저장</button>
     </div>
 </div>
 

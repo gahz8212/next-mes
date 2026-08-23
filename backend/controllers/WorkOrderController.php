@@ -134,10 +134,21 @@ class WorkOrderController {
                         w.completed_at,
                         '2000-01-01 00:00:00'
                     ) as order_created_at,
-                    COALESCE(SUM(CASE WHEN b.status IN ('BOTTOM_DONE','TEST_PASS','SHIPPING','DONE','DEFECT','FAIL') THEN 1 ELSE 0 END), 0) as processed_qty,
-                    COALESCE(SUM(CASE WHEN b.status IN ('BOTTOM_DONE','TEST_PASS','SHIPPING') THEN 1 ELSE 0 END), 0) as good_qty,
-                    COALESCE(SUM(CASE WHEN b.status = 'FAIL' THEN 1 ELSE 0 END), 0) as fail_qty,
-                    COALESCE(SUM(CASE WHEN b.status IN ('SHIPPING','FAIL') THEN 1 ELSE 0 END), 0) as dip_qty
+                    COALESCE(SUM(CASE 
+                        WHEN b.status IN ('BOTTOM_DONE','TEST_PASS','SHIPPING','DONE','DEFECT','FAIL') 
+                             OR EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = b.barcode AND bh.result_status IN ('PASS','FAIL'))
+                        THEN 1 ELSE 0 END), 0) as processed_qty,
+                    COALESCE(SUM(CASE 
+                        WHEN b.status IN ('BOTTOM_DONE','TEST_PASS','SHIPPING','DONE') 
+                             AND NOT EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = b.barcode AND bh.result_status = 'FAIL')
+                        THEN 1 ELSE 0 END), 0) as good_qty,
+                    COALESCE(SUM(CASE 
+                        WHEN b.status IN ('DEFECT', 'FAIL') 
+                             OR EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = b.barcode AND bh.result_status = 'FAIL')
+                        THEN 1 ELSE 0 END), 0) as fail_qty,
+                    COALESCE(SUM(CASE 
+                        WHEN b.status IN ('SHIPPING','DONE') OR (b.status IN ('DEFECT','FAIL') AND EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = b.barcode AND bh.process_name IN ('DIP_AOI','WAVE','ICT','COATING','FCT')))
+                        THEN 1 ELSE 0 END), 0) as dip_qty
                 FROM work_order w
                 LEFT JOIN company c ON w.company_id = c.id
                 LEFT JOIN barcode_master b ON w.wo_id = b.wo_id
@@ -196,7 +207,7 @@ class WorkOrderController {
                         $today_done_count++;
                     }
                     $total_good   += $wo['good_qty'];
-                    $total_actual += $wo['processed_qty'];
+                    $total_actual += ($wo['good_qty'] + $wo['fail_qty']);
                 }
             }
             unset($wo);

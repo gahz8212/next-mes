@@ -75,34 +75,34 @@ class ProcessController {
                 $nextStatus = "";
 
                 // 3. 상태 전이
-                switch ($processName) {
-                    case 'LASER':
-                    case 'SPI':
-                        $nextStatus = 'IN_PROCESS';
-                        break;
-                    case 'MOUNTER':
-                    case 'MOUNTER_1':
-                    case 'MOUNTER_2':
-                        $nextStatus = 'TOP_DONE';
-                        break;
-                    case 'REFLOW':
-                        $nextStatus = 'BOTTOM_DONE';
-                        break;
-                    case 'DIP_AOI':
-                        $nextStatus = 'TEST_PASS';
-                        break;
-                    case 'WAVE':
-                    case 'ICT':
-                    case 'COATING':
-                    case 'FCT':
-                        $nextStatus = 'SHIPPING';
-                        break;
-                    default:
-                        continue 2;
-                }
-
-                if ($resultStatus === 'FAIL') {
-                    $nextStatus = 'FAIL';
+                if (($barcodeRow['status'] ?? '') === 'DEFECT' || ($barcodeRow['status'] ?? '') === 'FAIL' || $resultStatus === 'FAIL') {
+                    $nextStatus = 'DEFECT';
+                } else {
+                    switch ($processName) {
+                        case 'LASER':
+                        case 'SPI':
+                            $nextStatus = 'IN_PROCESS';
+                            break;
+                        case 'MOUNTER':
+                        case 'MOUNTER_1':
+                        case 'MOUNTER_2':
+                            $nextStatus = 'TOP_DONE';
+                            break;
+                        case 'REFLOW':
+                            $nextStatus = 'BOTTOM_DONE';
+                            break;
+                        case 'DIP_AOI':
+                            $nextStatus = 'TEST_PASS';
+                            break;
+                        case 'WAVE':
+                        case 'ICT':
+                        case 'COATING':
+                        case 'FCT':
+                            $nextStatus = 'SHIPPING';
+                            break;
+                        default:
+                            continue 2;
+                    }
                 }
 
                 // 4. 상태 업데이트
