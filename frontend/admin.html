@@ -5168,11 +5168,63 @@ const ALL_PAGE_TITLES = {
         return mapping;
     }
 
+    let bomPastedHtmlData = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const pasteArea = document.getElementById('bomPaste');
+        if (pasteArea) {
+            pasteArea.addEventListener('paste', (e) => {
+                const clipboardData = e.clipboardData || window.clipboardData;
+                if (!clipboardData) return;
+
+                const html = clipboardData.getData('text/html');
+                if (html && (html.includes('<table') || html.includes('<Table'))) {
+                    try {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const trs = doc.querySelectorAll('tr');
+                        if (trs.length > 0) {
+                            const tableData = [];
+                            trs.forEach(tr => {
+                                const cells = tr.querySelectorAll('td, th');
+                                if (cells.length > 0) {
+                                    const rowVals = [];
+                                    cells.forEach(td => rowVals.push(td.textContent.trim()));
+                                    if (rowVals.some(v => v !== '')) {
+                                        tableData.push(rowVals);
+                                    }
+                                }
+                            });
+                            if (tableData.length > 0) {
+                                bomPastedHtmlData = tableData;
+                            }
+                        }
+                    } catch (err) {
+                        bomPastedHtmlData = null;
+                    }
+                }
+            });
+
+            pasteArea.addEventListener('input', () => {
+                if (!pasteArea.value.trim()) {
+                    bomPastedHtmlData = null;
+                }
+            });
+        }
+    });
+
     function parseExcel(isExisting = false) {
         const raw = document.getElementById('bomPaste').value.trim();
-        if (!raw) return;
+        if (!raw) {
+            bomPastedHtmlData = null;
+            return;
+        }
 
-        bomParsedData = parseExcelText(raw);
+        if (bomPastedHtmlData && bomPastedHtmlData.length > 0) {
+            bomParsedData = bomPastedHtmlData;
+        } else {
+            bomParsedData = parseExcelText(raw);
+        }
         if (bomParsedData.length === 0) { alert('붙여넣은 데이터가 비어 있습니다.'); return; }
 
         const includeCb = document.getElementById('bom-include-first-row');
@@ -5222,7 +5274,7 @@ const ALL_PAGE_TITLES = {
             headRow.innerHTML += `
                 <th style="padding:6px;">
                     <select class="bom-map-select" data-col="${i}" onchange="updateBomMapSelectStyle(this)" style="background:rgba(30,41,59,0.8); color:#94a3b8; font-size:12.5px; font-weight:600; padding:6px 8px; width:100%; border:1px solid rgba(255,255,255,0.15); border-radius:4px; text-align:center; cursor:pointer;">
-                        <option value="ignore" style="background:#0f172a; color:#94a3b8;">▼</option>
+                        <option value="ignore" style="background:#0f172a; color:#94a3b8;"></option>
                         <option value="part_no" style="background:#0f172a; color:#ffffff;">파트번호 *</option>
                         <option value="part_name" style="background:#0f172a; color:#ffffff;">파트명 / 규격</option>
                         <option value="points" style="background:#0f172a; color:#ffffff;">포인트 *</option>
