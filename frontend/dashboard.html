@@ -833,17 +833,7 @@
 
         /* ── 피더 셋업 모달 로직 ── */
         async function openFeederModal(wo_id) {
-            currentModalWoId = wo_id;
-            document.getElementById('modalWoIdLabel').innerText = wo_id;
-            document.getElementById('scanFeedbackAlert').style.display = 'none';
-            document.getElementById('feederModalOverlay').classList.add('open');
-            
-            await loadFeederData(wo_id);
-
-            setTimeout(() => {
-                const input = document.getElementById('scanReelInput');
-                if (input) { input.value = ''; input.focus(); }
-            }, 100);
+            window.location.href = wo_id ? `kitting.html?wo_id=${encodeURIComponent(wo_id)}` : 'kitting.html';
         }
 
         function closeFeederModal() {

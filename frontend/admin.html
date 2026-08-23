@@ -4534,18 +4534,9 @@ const ALL_PAGE_TITLES = {
 
         panel.innerHTML = `
             <!-- 우측 상단 단일 툴바 -->
-            <div style="padding:10px 16px; background:rgba(15,23,42,0.85); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <span style="font-size:12px; font-weight:700; color:#93c5fd; background:rgba(59,130,246,0.2); padding:2px 8px; border-radius:4px;">${escHtml(wo.company_name || '미지정')}</span>
-                    <code style="font-size:14px; font-weight:800; color:#f8fafc; font-family:'JetBrains Mono',monospace; background:rgba(0,0,0,0.3); padding:2px 8px; border-radius:4px;">${escHtml(wo.wo_id)}</code>
-                    <span style="font-size:14px; font-weight:800; color:#ffffff;">${escHtml(wo.item_name || '—')}</span>
-                    ${ddayBadge}
-                </div>
-
+            <div style="padding:10px 16px; background:rgba(15,23,42,0.85); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:10px;">
                 <!-- 툴바 버튼 그룹 (우측 정렬) -->
                 <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-left:auto;">
-                    <button type="button" class="card-btn card-btn-bom" style="padding:5px 10px; font-size:12px; font-weight:700;" onclick="openBOMModal('${wo.wo_id}', '${wo.company_id}')">📋 BOM 부품</button>
-
                     ${!isDone ? `
                         ${isHold 
                             ? `<button type="button" class="card-btn" style="padding:5px 10px; font-size:12px; font-weight:700; background:#059669; color:#fff; border:none;" onclick="toggleWoHold('${wo.wo_id}', false)">▶️ 보류 해제</button>`
@@ -4553,7 +4544,6 @@ const ALL_PAGE_TITLES = {
                         }
                         <button type="button" class="card-btn" style="padding:5px 9px; font-size:12px; background:rgba(59,130,246,0.15); color:#93c5fd; border:1px solid rgba(59,130,246,0.35);" onclick="openSplitWoModal('${wo.wo_id}', ${wo.target_qty})">✂️ 부족분 분할</button>
                         <button type="button" class="card-btn card-btn-edit" style="padding:5px 9px; font-size:12px;" onclick="openEditWOModal('${wo.wo_id}', ${wo.target_qty}, '${wo.due_date||''}', ${wo.company_id || 'null'})">✏️ 수정</button>
-                        <button type="button" class="card-btn card-btn-del" style="padding:5px 9px; font-size:12px;" onclick="deleteWO('${wo.wo_id}', '${wo.parent_wo_id || ''}', ${wo.target_qty})">🗑️ 삭제</button>
                     ` : `
                         <button type="button" class="card-btn ${wo.shipped == 1 ? 'card-btn-shipped' : 'card-btn-ship'}" style="padding:5px 12px; font-size:12px; font-weight:700;" ${wo.shipped == 1 ? '' : `onclick="shipWO('${wo.wo_id}')"`}>
                             ${wo.shipped == 1 ? '✅ 납품 출하 완료' : '📦 납품 출하 처리'}

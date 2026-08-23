@@ -200,8 +200,15 @@
                         select.appendChild(opt);
                     });
 
-                    // 첫 번째 작업지시 자동 선택
-                    currentWoId = kittingWOs[0].wo_id;
+                    // URL Query Parameter ?wo_id=... 확인 후 우선 선택
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const paramWoId = urlParams.get('wo_id');
+                    if (paramWoId && kittingWOs.some(w => w.wo_id === paramWoId)) {
+                        select.value = paramWoId;
+                        currentWoId = paramWoId;
+                    } else {
+                        currentWoId = kittingWOs[0].wo_id;
+                    }
                     await loadKittingData(currentWoId);
                 } else {
                     select.innerHTML = '<option value="">피더 셋업이 필요한 작업지시가 없습니다.</option>';
