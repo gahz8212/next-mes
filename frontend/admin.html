@@ -6211,7 +6211,7 @@ async function deleteCompany(id, name) {
                                     <td style="text-align:center; padding:4px 4px 4px 2px; white-space:nowrap;">
                                         ${isNc 
                                             ? '<span style="color:#f97316; font-size:11px; font-weight:700;">미실장</span>' 
-                                            : `<button type="button" class="card-btn" style="background:${r.feeder_slot ? (String(r.feeder_slot).startsWith('TR') ? 'rgba(168,85,247,0.18)' : (String(r.feeder_slot).startsWith('O') ? 'rgba(245,158,11,0.18)' : 'rgba(56,189,248,0.18)')) : 'rgba(255,255,255,0.06)'}; color:${r.feeder_slot ? (String(r.feeder_slot).startsWith('TR') ? '#c084fc' : (String(r.feeder_slot).startsWith('O') ? '#fbbf24' : '#38bdf8')) : '#94a3b8'}; border:1px solid ${r.feeder_slot ? (String(r.feeder_slot).startsWith('TR') ? 'rgba(168,85,247,0.45)' : (String(r.feeder_slot).startsWith('O') ? 'rgba(245,158,11,0.45)' : 'rgba(56,189,248,0.45)')) : 'rgba(255,255,255,0.15)'}; padding:2px 6px; font-size:11px; font-weight:800; font-family:'JetBrains Mono',monospace; cursor:pointer;" title="${r.feeder_slot ? `현재 슬롯: ${escHtml(r.feeder_slot)} (클릭하여 변경)` : '피더 슬롯 미설정 (클릭하여 배정)'}" onclick="event.stopPropagation(); openFeederSlotPickerModal(${r.detail_id || 0}, ${bomId}, '${escHtml(r.feeder_slot || '')}', '${escHtml(r.part_no)}', '${escHtml(r.location || '')}', '${escHtml(r.part_name || '')}')">${r.feeder_slot ? '설정' : '미설정'}</button>`
+                                            : `<button type="button" class="card-btn" style="background:${r.feeder_slot ? (String(r.feeder_slot).startsWith('TR') ? 'rgba(168,85,247,0.18)' : (String(r.feeder_slot).startsWith('O') ? 'rgba(245,158,11,0.18)' : 'rgba(56,189,248,0.18)')) : 'rgba(255,255,255,0.06)'}; color:${r.feeder_slot ? (String(r.feeder_slot).startsWith('TR') ? '#c084fc' : (String(r.feeder_slot).startsWith('O') ? '#fbbf24' : '#38bdf8')) : '#94a3b8'}; border:1px solid ${r.feeder_slot ? (String(r.feeder_slot).startsWith('TR') ? 'rgba(168,85,247,0.45)' : (String(r.feeder_slot).startsWith('O') ? 'rgba(245,158,11,0.45)' : 'rgba(56,189,248,0.45)')) : 'rgba(255,255,255,0.15)'}; padding:2px 6px; font-size:11px; font-weight:800; font-family:'JetBrains Mono',monospace; cursor:pointer;" title="${r.feeder_slot ? `현재 슬롯: ${escHtml(r.feeder_slot)} (클릭하여 변경)` : '피더 슬롯 미설정 (클릭하여 배정)'}" onclick="event.stopPropagation(); openFeederSlotPickerModalByIndex(${i}, ${bomId})">${r.feeder_slot ? '설정' : '미설정'}</button>`
                                         }
                                     </td>
                                     <!-- 실장위치 (피더슬롯 우측 / 최대 3행까지 표시) -->
@@ -6332,6 +6332,12 @@ async function deleteCompany(id, name) {
         });
 
         return occupied;
+    }
+
+    function openFeederSlotPickerModalByIndex(index, bomId) {
+        if (!window.currentBomDetailsList || !window.currentBomDetailsList[index]) return;
+        const r = window.currentBomDetailsList[index];
+        openFeederSlotPickerModal(r.detail_id || 0, bomId, r.feeder_slot || '', r.part_no || '', r.location || '', r.part_name || '');
     }
 
     function openFeederSlotPickerModal(detailId, bomId, currentSlot, partNo, location = '', partName = '') {
