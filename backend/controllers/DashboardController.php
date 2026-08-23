@@ -56,6 +56,25 @@ class DashboardController {
             $pdo = Database::getConnection();
             $targetWoId = trim($_GET['wo_id'] ?? '');
 
+            // 활성 작업지시 확인 및 실시간 컨베이어 틱 실행
+            $activeStmt = $pdo->prepare("
+                SELECT wo_id, status, target_qty 
+                FROM work_order 
+                WHERE status IN ('IN_PROGRESS', 'DIP_IN_PROGRESS') 
+                " . ($targetWoId ? "AND wo_id = ?" : "") . "
+                ORDER BY due_date ASC
+                LIMIT 1
+            ");
+            if ($targetWoId) {
+                $activeStmt->execute([$targetWoId]);
+            } else {
+                $activeStmt->execute();
+            }
+            $activeWo = $activeStmt->fetch();
+            if ($activeWo) {
+                self::autoTickConveyorPipeline($pdo, $activeWo);
+            }
+
             if ($targetWoId) {
                 $stmt = $pdo->prepare("
                     SELECT
@@ -94,14 +113,21 @@ class DashboardController {
                 $total = $good + $fail;
                 $yield = $total > 0 ? number_format(($good / $total) * 100, 1) : '100.0';
 
+                // 투입 및 실장 진행 수량 집계 (LASER 투입 기준)
+                $stmtIn = $pdo->prepare("SELECT count(*) FROM barcode_history WHERE barcode LIKE ? AND process_name = 'LASER' AND result_status != 'IDLE'");
+                $stmtIn->execute([$data['wo_id'] . '-%']);
+                $inputQty = (int)$stmtIn->fetchColumn();
+
                 Response::json([
                     "status" => "success",
                     "data" => [
                         "wo_id"      => $data['wo_id'],
                         "target_qty" => (int)$data['target_qty'],
                         "actual_qty" => $total,
+                        "input_qty"  => $inputQty,
                         "good_qty"   => $good,
                         "fail_qty"   => $fail,
+                        "wo_status"  => $data['status'],
                         "yield_rate" => $yield . '%'
                     ]
                 ]);
@@ -112,8 +138,10 @@ class DashboardController {
                         "wo_id"      => null,
                         "target_qty" => 0,
                         "actual_qty" => 0,
+                        "input_qty"  => 0,
                         "good_qty"   => 0,
                         "fail_qty"   => 0,
+                        "wo_status"  => 'READY',
                         "yield_rate" => "100.0%"
                     ]
                 ]);

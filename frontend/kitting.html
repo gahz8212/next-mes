@@ -160,6 +160,7 @@
 
         let currentWoId = null;
         let currentFeederData = null;
+        let currentWoStatus = '';
         let simulatedProducedQty = 0; // 실시간 릴 잔량 시뮬레이션용 생산 수량
         let slotSpliceOffset = {}; // 슬롯별 스플라이싱 시점 오프셋
         let slotSpliceReelQty = {}; // 슬롯별 스플라이싱된 신규 릴의 실제 정규 포장 수량 (기본 4,000 EA)
@@ -239,6 +240,7 @@
                 }
 
                 currentFeederData = json.data;
+                await syncLiveProductionQty(); // 현재 생산 진행 수량 및 상태 즉시 동기화
                 renderKittingUI(json.data, highlightSlotNo);
             } catch (e) {
                 console.error("피더 데이터 로드 실패:", e);
@@ -360,6 +362,9 @@
                 const remainingQty = Math.max(0, activeReelCapacity - totalConsumed);
                 const remainPct = isVerified ? Math.min(100, Math.max(0, Math.round((remainingQty / activeReelCapacity) * 100))) : 0;
 
+                // 실시간 자삽 실장 가동 중 여부
+                const isMountingActive = (currentWoStatus === 'IN_PROGRESS' && simulatedProducedQty > 0 && isVerified);
+
                 // 소요량 충족 여부 판정 (현재 릴 용량 >= 이번 작업지시 총 소요량)
                 const isRequirementMet = (activeReelCapacity >= totalRequiredQty);
 
@@ -382,6 +387,9 @@
                 if (isTargetHighlight) {
                     cardClass += ' is-highlight';
                 }
+                if (isMountingActive) {
+                    cardClass += ' is-mounting';
+                }
                 if (isVerified) {
                     cardClass += ' is-clickable-card';
                 }
@@ -389,17 +397,18 @@
                     cardClass += ' card-critical-clickable';
                 }
 
-                // 2행 텍스트: 단일 자재 잔여 수량 표시 (수량만 표시)
+                // 2행 텍스트: 단일 자재 잔여 수량 표시 (수량 및 실시간 차감 표시)
                 let liveInfoHtml = `<span style="color:#94a3b8; font-size:10.5px; font-family:'JetBrains Mono',monospace;">${inboundQty > 0 ? `기입고: <b style="color:#38bdf8;">${inboundQty.toLocaleString()}</b> EA` : `소요: <b style="color:#f8fafc;">${totalRequiredQty.toLocaleString()}</b> EA`}</span>`;
                 if (isVerified) {
+                    const consumedText = totalConsumed > 0 ? ` <span style="font-size:9.5px; color:#38bdf8; font-weight:700;">(-${totalConsumed.toLocaleString()})</span>` : '';
                     if (isCriticalLow) {
                         if (isRequirementMet) {
-                            liveInfoHtml = `<span class="live-qty-info alert-state">수량: <b>${remainingQty.toLocaleString()}</b> EA <span style="font-size:9.5px; padding:1px 4px; border-radius:3px; background:rgba(52,211,153,0.2); color:#34d399; font-weight:700; margin-left:3px;">충족</span></span>`;
+                            liveInfoHtml = `<span class="live-qty-info alert-state">수량: <b>${remainingQty.toLocaleString()}</b> EA${consumedText} <span style="font-size:9.5px; padding:1px 4px; border-radius:3px; background:rgba(52,211,153,0.2); color:#34d399; font-weight:700; margin-left:3px;">충족</span></span>`;
                         } else {
-                            liveInfoHtml = `<span class="live-qty-info alert-state">수량: <b>${remainingQty.toLocaleString()}</b> EA <span style="font-size:9.5px; padding:1px 4px; border-radius:3px; background:rgba(239,68,68,0.25); color:#f87171; font-weight:700; margin-left:3px;">🚨 리필</span></span>`;
+                            liveInfoHtml = `<span class="live-qty-info alert-state">수량: <b>${remainingQty.toLocaleString()}</b> EA${consumedText} <span style="font-size:9.5px; padding:1px 4px; border-radius:3px; background:rgba(239,68,68,0.25); color:#f87171; font-weight:700; margin-left:3px;">🚨 리필</span></span>`;
                         }
                     } else {
-                        liveInfoHtml = `<span class="live-qty-info normal-state">수량: <b>${remainingQty.toLocaleString()}</b> EA</span>`;
+                        liveInfoHtml = `<span class="live-qty-info normal-state">수량: <b>${remainingQty.toLocaleString()}</b> EA${consumedText}</span>`;
                     }
                 }
 
@@ -425,6 +434,7 @@
                         <div class="feeder-left-group" style="display:flex; align-items:center; gap:5px;">
                             <span class="slot-pill">#${slot.slot_no}</span>
                             <span class="points-pill">${points}P</span>
+                            ${isMountingActive ? `<span class="mounting-chip-badge">⚡실장중</span>` : ''}
                         </div>
                         <div class="live-qty-wrap" style="flex-shrink:0;">
                             ${liveInfoHtml}
@@ -667,7 +677,7 @@
             }
         }
 
-        // 실시간 SMT 라인 생산 실적 동기화 (1.5초 주기 폴링, 현재 작업지시 기준)
+        // 실시간 SMT 라인 생산 실적 및 자재 소요 동기화 (1.2초 주기 폴링)
         async function syncLiveProductionQty() {
             if (!currentWoId) return;
             try {
@@ -675,11 +685,29 @@
                 const json = await res.json();
                 if (json.status === 'success' && json.data && json.data.wo_id === currentWoId) {
                     const serverActual = parseInt(json.data.actual_qty) || 0;
-                    // 실제 설비에서 생산이 진행되어 실적이 증가했을 때만 동기화
-                    if (serverActual > 0 && serverActual > simulatedProducedQty) {
-                        simulatedProducedQty = serverActual;
+                    const serverInput = parseInt(json.data.input_qty) || 0;
+                    const serverStatus = json.data.wo_status || '';
+                    const effectivePcb = Math.max(serverInput, serverActual);
+
+                    const hasChanged = (effectivePcb !== simulatedProducedQty || serverStatus !== currentWoStatus);
+                    if (hasChanged) {
+                        simulatedProducedQty = effectivePcb;
+                        currentWoStatus = serverStatus;
                         if (currentFeederData) {
                             renderKittingUI(currentFeederData);
+                        }
+
+                        // 가동 상태에 따른 피드백 배너 실시간 갱신
+                        const banner = document.getElementById('feedbackBanner');
+                        const text = document.getElementById('feedbackText');
+                        if (banner && text) {
+                            if (currentWoStatus === 'IN_PROGRESS' && simulatedProducedQty > 0) {
+                                banner.className = 'feedback-banner success';
+                                text.innerText = `⚡ [자삽 가공 진행 중] PCB #${simulatedProducedQty} 기판 실장 진행 중 — 각 피더의 부품 소요량이 실시간으로 차감되고 있습니다.`;
+                            } else if (currentWoStatus === 'SMT_DONE') {
+                                banner.className = 'feedback-banner success';
+                                text.innerText = `✅ [자삽 공정 완료] 총 ${currentFeederData ? currentFeederData.target_qty : simulatedProducedQty}EA 기판 실장 및 피더 소요 검증이 완료되었습니다.`;
+                            }
                         }
                     }
                 }
@@ -690,7 +718,7 @@
 
         // 초기화 및 실시간 동기화 루프 가동
         initWOList();
-        setInterval(syncLiveProductionQty, 1500);
+        setInterval(syncLiveProductionQty, 1200);
 
         /* ── 자재 스플라이싱(Splicing) 모달 및 검증 로직 ── */
         let currentSpliceSlotNo = null;
