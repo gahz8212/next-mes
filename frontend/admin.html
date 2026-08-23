@@ -14588,8 +14588,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <!-- ════════ MODAL: 불량 기판 자재 릴 역추적 (Lot Traceability) ════════ -->
 <div class="modal-overlay" id="defectTraceModal" style="z-index:9999;">
-    <div class="modal-box wide" style="max-width:880px; background:#0f172a; border:1px solid rgba(56,189,248,0.4); border-radius:12px; padding:22px 24px; box-shadow:0 24px 64px rgba(0,0,0,0.7);">
-        <div class="modal-header" style="margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
+    <div class="modal-box wide" style="max-width:880px; max-height:90vh; display:flex; flex-direction:column; background:#0f172a; border:1px solid rgba(56,189,248,0.4); border-radius:12px; padding:22px 24px; box-shadow:0 24px 64px rgba(0,0,0,0.7); overflow:hidden;">
+        <div class="modal-header" style="margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; flex-shrink:0;">
             <div style="display:flex; align-items:center; gap:10px;">
                 <span style="font-size:22px;">🔍</span>
                 <div>
@@ -14600,8 +14600,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="modal-close" onclick="closeModal('defectTraceModal')">✕</button>
         </div>
 
-        <!-- 1. 기판 및 불량 발생 메타 정보 -->
-        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px 16px; margin-bottom:16px;">
+        <!-- 1. 기판 및 불량 발생 메타 정보 (고정 상단) -->
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 14px; margin-bottom:12px; flex-shrink:0;">
             <div>
                 <div style="font-size:11px; color:#94a3b8; font-weight:600;">불량 PCB 바코드</div>
                 <div id="traceModalPcbBarcode" style="font-size:13.5px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#38bdf8; margin-top:2px;">—</div>
@@ -14626,18 +14626,47 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>
 
-        <!-- 2. 연계 피더 슬롯 및 자재 릴 목록 테이블 -->
-        <div style="font-size:13px; font-weight:800; color:#93c5fd; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-            <span>📦</span> <span>실장 투입된 자재 릴(Reel) 및 피더 슬롯 목록</span>
+        <!-- 2. 연계 피더 슬롯 및 자재 릴 목록 테이블 (자재 목록만 독립 상하 스크롤) -->
+        <div style="font-size:13px; font-weight:800; color:#93c5fd; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span>📦</span> <span>실장 투입된 자재 릴(Reel) 및 피더 슬롯 목록</span>
+            </div>
+            <span style="font-size:11px; color:#94a3b8; font-weight:normal;">(목록 상하 스크롤 지원 ↕)</span>
         </div>
         <style>
+            .trace-table-scroll-wrap {
+                max-height: 215px;
+                min-height: 140px;
+                overflow-y: auto;
+                overflow-x: hidden;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                background: #0f172a;
+                margin-bottom: 10px;
+                flex-shrink: 0;
+            }
+            .trace-table-scroll-wrap::-webkit-scrollbar {
+                width: 6px;
+            }
+            .trace-table-scroll-wrap::-webkit-scrollbar-track {
+                background: rgba(15, 23, 42, 0.8);
+                border-radius: 4px;
+            }
+            .trace-table-scroll-wrap::-webkit-scrollbar-thumb {
+                background: rgba(56, 189, 248, 0.4);
+                border-radius: 4px;
+            }
+            .trace-table-scroll-wrap::-webkit-scrollbar-thumb:hover {
+                background: rgba(56, 189, 248, 0.7);
+            }
             .trace-modal-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-            .trace-modal-table thead th { background: #1e293b !important; color: #94a3b8 !important; padding: 9px 10px; font-size: 11.5px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); }
+            .trace-modal-table thead { position: sticky; top: 0; z-index: 2; }
+            .trace-modal-table thead th { background: #1e293b !important; color: #94a3b8 !important; padding: 9px 10px; font-size: 11.5px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.12); }
             .trace-modal-table tbody tr { background: #0f172a !important; border-bottom: 1px solid rgba(255,255,255,0.06); transition: background-color 0.15s ease; }
             .trace-modal-table tbody tr:hover td { background-color: rgba(56, 189, 248, 0.16) !important; color: #ffffff !important; }
             .trace-modal-table tbody td { background: transparent !important; padding: 9px 10px; color: #f1f5f9 !important; border-bottom: 1px solid rgba(255,255,255,0.05); }
         </style>
-        <div style="max-height:48vh; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:8px; margin-bottom:14px;">
+        <div class="trace-table-scroll-wrap">
             <table class="trace-modal-table">
                 <thead>
                     <tr>
@@ -14655,10 +14684,10 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <!-- 3. 자재 릴 클릭 시 활성화되는 정방향 PCB 시리얼 범위 추적 카드 -->
-        <div id="forwardTraceDetailBox" style="display:none; margin-bottom:16px;"></div>
+        <div id="forwardTraceDetailBox" style="display:none; margin-bottom:12px; flex-shrink:0;"></div>
 
-        <!-- 하단 액션 버튼 -->
-        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.08); padding-top:14px;">
+        <!-- 하단 액션 버튼 (고정 하단) -->
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px; margin-top:auto; flex-shrink:0;">
             <div style="font-size:11.5px; color:#94a3b8;">
                 💡 릴 바코드는 피더 셋업 시 바코드 건으로 스캔 검증된 고유 식별 번호입니다.
             </div>
