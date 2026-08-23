@@ -661,6 +661,64 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
 
 ---
 
+### 11. UI/UX 디테일 고도화, 대시보드 불량/수율 통계 정상화, 사급 정산 도메인 로직 고도화 (작업일: 2026-08-23 / 작업자: Antigravity)
+
+#### 1) 전역 인풋 포커스 자동 전체선택 (Auto-Select on Focus) & 동적 인풋 최적화
+- **공통 네비게이션 엔진 연동 (`header.js`)**:
+  - `setupGlobalInputAutoSelect` 핸들러를 구현하여 `focusin`, `click`, `mouseup` 시점에 `trySelect`를 실행.
+  - 마우스 클릭 및 `Tab` 키 포커스 시 인풋박스 내 기존 텍스트/숫자가 자동으로 전체 선택되어, 즉시 타이핑하여 덮어쓰거나 한 번에 삭제 가능.
+- **수주 등록 모달 동적 렌더링 인풋 다이렉트 핸들러 보강 (`admin.html`)**:
+  - 품목 테이블(`ord-items-tbody`) 내 수량(`order_qty`), 단가(`unit_price`), 직접입력 품목명에 `onfocus="this.select()"` 및 `onclick="this.select()"` 탑재로 100% 선택 보장.
+  - `login.html` 등 전역 화면에 스크립트 연결 완료.
+
+#### 2) 중앙 모달/팝업 폼 상하여백 최소화 (15인치 100% No-Scroll Viewport)
+- **전역 모달 스타일 컴팩트화 (`admin.html`)**:
+  - `.modal-box`, `.modal-header`, `.form-group`, `.form-label`, `.form-control`, `.btn-submit`, `.data-table`의 패딩/마진/간격을 1픽셀 단위로 축소.
+- **모든 팝업 폼 적용**:
+  - 수주 등록(`#orderModal`), 작업지시 등록(`#woModal`), 거래처 관리(`#companyManageModal`), 출하 등록(`#shipmentModal`), 자재 입출고(`#materialModal`), 사용자 관리(`#userModal`), 품질 검사 기준, 품목/대치품/작업분할 모달 등 전 팝업에서 **상하 스크롤바 없이 폼 전체가 한눈에 깔끔하게 표시**되도록 완성.
+
+#### 3) 라인 대시보드 및 생산계획 불량/수율 집계 무결성 수정
+- **공정 중간 불량 상태 보존 (`ProcessController.php`)**:
+  - SPI 등 중간 공정에서 불량(`FAIL`)이 발생한 기판이 이후 공정 신호 수신 시 정상 상태로 덮어써지던 버그 수정 ➔ **`DEFECT` 상태 영구 보존**.
+- **대시보드 KPI 쿼리 및 컨베이어 파이프라인 동기화 (`DashboardController.php`)**:
+  - `getDashboard`, `getKpi`, `autoTickConveyorPipeline`에서 `barcode_history`의 불량 이력을 검증하여 `good_qty`와 `fail_qty`를 정확히 산출.
+  - `dashboard.js` 내 수율 수치에 따른 `good`/`warn`/`danger` 뱃지 동적 스타일링 연동.
+- **생산계획 수율 산출식 정정 (`WorkOrderController.php`, `admin.html`)**:
+  - 달성률(`양품/목표`)로 오계산되던 수율을 실제 생산량 기준 **`양품 / (양품 + 불량) * 100`**으로 정정.
+
+#### 4) 사급 자재 수불 '미지정 거래처' 카드 발생 원인 해결 및 3중 폴백
+- **원인 분석**:
+  - `material_inout` 레코드 등록 시 `company_id`가 NULL인 경우 `company_name = '미지정 거래처'`로 그룹화되어 별도 카드가 생성되는 현상.
+- **백엔드 자동 보정 & 3중 폴백 조인 (`ConsignedMaterialController.php`)**:
+  - 기존 누락 데이터 자동 보정(Auto-Healing) 쿼리 실행.
+  - `COALESCE(m.company_id, so.company_id, wo.company_id)` 3중 조인으로 원천 거래처 자동 결합.
+  - 반납 정산 생성(`createReturn`) 시 수주번호로부터 거래처 ID 자동 추출 및 저장.
+- **프론트엔드 그룹화 일원화 (`admin.html`)**:
+  - `order_no` 기준으로 그룹화하고 실제 거래처명을 우선 매핑하여 불필요한 '미지정 거래처' 카드 생성 방지.
+
+#### 5) 라인 대시보드 자삽/생산 완료 시 좌측 대기열 메뉴 자동 펼침 복원
+- **사이드바 유틸리티 확장 (`dashboard.html`)**:
+  - `showSidebar('left')`, `hideSidebar('left')` 전역 함수 구현.
+- **자삽/생산 완료 트리거 연동 (`dashboard.html`, `dashboard.js`)**:
+  - 자삽 실적 목표 도달, 작업지시 상태 `SMT_DONE` (자삽 완료), 생산 완료 `DONE`, 가동 중단 `stopWo` 시 숨겨져 있던 좌측 사이드바 `#woSidebar`를 자동 복원하여 **`[▶ 수삽(DIP) 시작]` 버튼 및 다음 작업지시를 즉시 확인 가능**하도록 개선.
+
+#### 6) 사급 자재 반납 정산 도메인 로직 고도화 (100% 양품 충족 & 마운터 전/후 불량 분리)
+- **양품 100% 납품 충족 기준 소요량 계산식 적용**:
+  - 불량 발생 시 목표 수량을 채우기 위한 추가 재작업/보충 생산(Re-run)을 반영하여 소요량 계산:
+    $$\text{총 부품 소요 기판 수} = \text{목표 양품 수량} + \text{실장 후 폐기 불량 수량}(\text{Mounted Fail})$$
+- **마운터 이전/이후 불량 자재 소모 분리 (`ConsignedMaterialController.php`)**:
+  - **마운터 이전 불량 (LASER, SPI)**: 부품이 실장되지 않은 상태(세척/PCB 이슈)이므로 SMD 부품 소모량에서 제외.
+  - **마운터 이후 불량 (MOUNTER, REFLOW, AOI, ICT, COATING, FCT)**: 부품이 동반 손실되므로 SMD 부품 소모량에 정상 반영.
+
+#### 7) 해인전자 MES 개발자 지원용 20년 서사 기반 자기소개서 작성
+- **산출물**: `cover_letter_plan.md` 및 `cover_letter_haein.md`
+- **핵심 서사**:
+  - 20대 구로 유통상가 부품 유통 ➔ 삼성전자서비스 부품 관리 ➔ 30대 제조사 PBA 외주 발주 20년 현장 경험.
+  - SMT MES 모니터를 보고 시작된 C언어, Access DB, JS/Node.js 독학 ➔ 퇴사 후 6개월 AI 웹서비스 풀스택 부트캠프 몰입.
+  - Next-MES 앱의 핵심 도메인 로직(피더 오삽방지 포카요케, 컨베이어 물리 슬롯 파이프라인, 사급 자재 정산, 15인치 No-Scroll UX)과 개발자 철학을 진솔하게 연결.
+
+---
+
 ## 🚀 향후 로드맵 (Next Milestones)
 1. **모바일 반응형 POP 단말기 UI 고도화**:
    - 현장 작업자용 태블릿 및 모바일 바코드 스캔 전용 경량화 POP 모듈 추가.
