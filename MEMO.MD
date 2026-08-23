@@ -746,6 +746,15 @@ SMT/DIP 전자제조 생산라인 통합 MES (Manufacturing Execution System)
   - **이형 마운터 (ODD / O-01 ~ O-40)**: `CN`, `J`(커넥터), `SW`(스위치), `VR`, `RELAY`, `TRANS`, `JACK` 등.
   - **이형 트레이 (TRAY / TR-01 ~ TR-20)**: `U`, `IC`, `BGA`, `CPU`, `MCU`, `DSP`, `FPGA`, `MODULE` 등 단어 경계(`\bIC\b`) 매칭.
 
+#### 12) 라인 대시보드 사이드바 자동 펼침 루프 해소 및 상태 전이(Edge-Triggered) 1회성 트리거 개편 (2026-08-24)
+- **원인 분석**:
+  - `dashboard.html`(2초 주기 `loadWOList`) 및 `dashboard.js`(0.8초 주기 `pollLiveStream`)에서 수삽 진행중(`DIP_IN_PROGRESS`) 또는 완료 상태(`SMT_DONE`, `DONE`)일 때 매 폴링 주기마다 무조건 `showSidebar('left')`를 반복 호출함.
+  - 이로 인해 작업 진행 중에 사용자가 사이드바를 숨겨도 0.8~2초 만에 다시 강제로 펼쳐지던 현상 발생.
+- **상태 전이(State Transition) 기반 1회성 자동 펼침 적용**:
+  - `pollLiveStream` 내부의 반복적인 `showSidebar` 호출 전면 제거.
+  - `loadWOList`에 `previousWoStatuses` 상태 이력 트래커를 도입하여, **자삽 완료(`IN_PROGRESS` ➔ `SMT_DONE`)** 또는 **생산 완료(`DIP_IN_PROGRESS` ➔ `DONE`)**로 상태가 변경되는 **단 1회의 완료 시점에만 사이드바가 자동으로 열리도록** 개선.
+  - 작업 진행 중 사용자가 사이드바를 접어두면 작업 완료 전까지 접힌 상태가 안정적으로 유지됨.
+
 ---
 
 ## 🚀 향후 로드맵 (Next Milestones)

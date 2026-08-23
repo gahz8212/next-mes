@@ -733,6 +733,8 @@
             }
         }
 
+        let previousWoStatuses = {};
+
         // 작업지시 목록 로드
         async function loadWOList() {
             try {
@@ -747,8 +749,32 @@
                     data.data.forEach(wo => {
                         let btnHtml = '';
                         let statusBadge = '';
+                        const woId = wo.wo_id;
+                        const prevStatus = previousWoStatuses[woId];
+                        let effectiveStatus = wo.status;
+
+                        if (wo.status === 'IN_PROGRESS') {
+                            const isSmtDoneByQty = (parseInt(wo.processed_qty || 0) >= parseInt(wo.target_qty || 0) && parseInt(wo.target_qty || 0) > 0);
+                            if (isSmtDoneByQty) {
+                                effectiveStatus = 'SMT_DONE';
+                            }
+                        }
+
+                        // 💡 상태 전이(Edge-Triggered) 감지: 이전 상태와 달라진 1회성 완료 시점에만 사이드바를 자동으로 펼침
+                        if (prevStatus && prevStatus !== effectiveStatus) {
+                            if (effectiveStatus === 'SMT_DONE') {
+                                if (typeof resetAllMachines === 'function') resetAllMachines('SMT');
+                                if (typeof showSidebar === 'function') showSidebar('left');
+                            } else if (effectiveStatus === 'DONE') {
+                                if (typeof resetAllMachines === 'function') resetAllMachines('ALL');
+                                if (typeof showSidebar === 'function') showSidebar('left');
+                            }
+                        }
+
+                        // 상태 기록 갱신
+                        previousWoStatuses[woId] = effectiveStatus;
                         
-                        if (wo.status === 'READY') {
+                        if (effectiveStatus === 'READY' || wo.status === 'READY') {
                             const isReady = wo.feeder_ready;
                             const total = wo.feeder_total || 0;
                             const verified = wo.feeder_verified || 0;
@@ -769,30 +795,18 @@
                                     </button>
                                 `;
                             }
-                        } else if (wo.status === 'IN_PROGRESS') {
-                            const isSmtDoneByQty = (parseInt(wo.processed_qty || 0) >= parseInt(wo.target_qty || 0) && parseInt(wo.target_qty || 0) > 0);
-                            if (isSmtDoneByQty) {
-                                if (typeof resetAllMachines === 'function') resetAllMachines('SMT');
-                                if (typeof showSidebar === 'function') showSidebar('left');
-                                statusBadge = `<span style="font-size: 10px; background: rgba(16,185,129,0.2); color: #6ee7b7; padding: 2px 6px; border-radius: 4px; font-weight: bold;">자삽 완료</span>`;
-                                btnHtml = `<button class="wo-action-btn btn-start-dip" onclick="startDip('${wo.wo_id}')">▶ 수삽(DIP) 시작</button>`;
-                            } else {
-                                statusBadge = `<span style="font-size: 10px; background: rgba(56,189,248,0.2); color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-weight: bold;">자삽 진행중</span>`;
-                                btnHtml = `
-                                    <div style="display:flex; gap:6px;">
-                                        <button class="wo-action-btn btn-running" disabled style="flex:1;">자삽 가동중</button>
-                                        <button class="wo-action-btn" style="width: auto; padding: 6px 10px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.4);" onclick="stopWo('${wo.wo_id}')" title="가동 강제 중단">중단</button>
-                                    </div>
-                                `;
-                            }
-                        } else if (wo.status === 'SMT_DONE') {
-                            if (typeof resetAllMachines === 'function') resetAllMachines('SMT');
-                            if (typeof showSidebar === 'function') showSidebar('left');
+                        } else if (wo.status === 'IN_PROGRESS' && effectiveStatus !== 'SMT_DONE') {
+                            statusBadge = `<span style="font-size: 10px; background: rgba(56,189,248,0.2); color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-weight: bold;">자삽 진행중</span>`;
+                            btnHtml = `
+                                <div style="display:flex; gap:6px;">
+                                    <button class="wo-action-btn btn-running" disabled style="flex:1;">자삽 가동중</button>
+                                    <button class="wo-action-btn" style="width: auto; padding: 6px 10px; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.4);" onclick="stopWo('${wo.wo_id}')" title="가동 강제 중단">중단</button>
+                                </div>
+                            `;
+                        } else if (effectiveStatus === 'SMT_DONE' || wo.status === 'SMT_DONE') {
                             statusBadge = `<span style="font-size: 10px; background: rgba(16,185,129,0.2); color: #6ee7b7; padding: 2px 6px; border-radius: 4px; font-weight: bold;">자삽 완료</span>`;
                             btnHtml = `<button class="wo-action-btn btn-start-dip" onclick="startDip('${wo.wo_id}')">▶ 수삽(DIP) 시작</button>`;
-                        } else if (wo.status === 'DONE') {
-                            if (typeof resetAllMachines === 'function') resetAllMachines('ALL');
-                            if (typeof showSidebar === 'function') showSidebar('left');
+                        } else if (effectiveStatus === 'DONE' || wo.status === 'DONE') {
                             statusBadge = `<span style="font-size: 10px; background: rgba(16,185,129,0.2); color: #6ee7b7; padding: 2px 6px; border-radius: 4px; font-weight: bold;">생산 완료</span>`;
                             btnHtml = `<button class="wo-action-btn" disabled style="background: rgba(16,185,129,0.1); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3);">생산 종료</button>`;
                         } else if (wo.status === 'DIP_IN_PROGRESS') {
