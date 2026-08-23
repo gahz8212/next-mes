@@ -5213,6 +5213,22 @@ const ALL_PAGE_TITLES = {
         }
     });
 
+    function filterAllEmptyColumns(rows) {
+        if (!rows || rows.length === 0) return rows;
+        const maxCols = Math.max(...rows.map(r => r.length));
+        const validColIndices = [];
+
+        for (let c = 0; c < maxCols; c++) {
+            const hasData = rows.some(r => r[c] !== undefined && (r[c] || '').trim() !== '');
+            if (hasData) {
+                validColIndices.push(c);
+            }
+        }
+
+        if (validColIndices.length === 0) return rows;
+        return rows.map(r => validColIndices.map(c => (r[c] || '').trim()));
+    }
+
     function parseExcel(isExisting = false) {
         const raw = document.getElementById('bomPaste').value.trim();
         if (!raw) {
@@ -5220,11 +5236,14 @@ const ALL_PAGE_TITLES = {
             return;
         }
 
+        let rawData = [];
         if (bomPastedHtmlData && bomPastedHtmlData.length > 0) {
-            bomParsedData = bomPastedHtmlData;
+            rawData = bomPastedHtmlData;
         } else {
-            bomParsedData = parseExcelText(raw);
+            rawData = parseExcelText(raw);
         }
+
+        bomParsedData = filterAllEmptyColumns(rawData);
         if (bomParsedData.length === 0) { alert('붙여넣은 데이터가 비어 있습니다.'); return; }
 
         const includeCb = document.getElementById('bom-include-first-row');
@@ -5245,18 +5264,28 @@ const ALL_PAGE_TITLES = {
 
     function updateBomMapSelectStyle(sel) {
         if (!sel) return;
+        const th = sel.closest('th');
         if (sel.value === 'ignore') {
             sel.style.background = 'rgba(30, 41, 59, 0.8)';
             sel.style.color = '#94a3b8';
             sel.style.borderColor = 'rgba(255, 255, 255, 0.15)';
             sel.style.textAlign = 'center';
             sel.style.fontWeight = '600';
+            sel.style.minWidth = '45px';
+            if (th) {
+                th.style.minWidth = '45px';
+                th.style.width = 'auto';
+            }
         } else {
             sel.style.background = '#1e40af';
             sel.style.color = '#ffffff';
             sel.style.borderColor = '#3b82f6';
             sel.style.textAlign = 'left';
             sel.style.fontWeight = '700';
+            sel.style.minWidth = '140px';
+            if (th) {
+                th.style.minWidth = '140px';
+            }
         }
     }
 
@@ -5272,7 +5301,7 @@ const ALL_PAGE_TITLES = {
 
         for (let i = 0; i < numCols; i++) {
             headRow.innerHTML += `
-                <th style="padding:6px;">
+                <th style="padding:6px; min-width:45px; transition:min-width 0.15s ease;">
                     <select class="bom-map-select" data-col="${i}" onchange="updateBomMapSelectStyle(this)" style="background:rgba(30,41,59,0.8); color:#94a3b8; font-size:12.5px; font-weight:600; padding:6px 8px; width:100%; border:1px solid rgba(255,255,255,0.15); border-radius:4px; text-align:center; cursor:pointer;">
                         <option value="ignore" style="background:#0f172a; color:#94a3b8;"></option>
                         <option value="part_no" style="background:#0f172a; color:#ffffff;">파트번호 *</option>
