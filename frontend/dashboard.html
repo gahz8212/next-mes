@@ -773,6 +773,7 @@
                             const isSmtDoneByQty = (parseInt(wo.processed_qty || 0) >= parseInt(wo.target_qty || 0) && parseInt(wo.target_qty || 0) > 0);
                             if (isSmtDoneByQty) {
                                 if (typeof resetAllMachines === 'function') resetAllMachines('SMT');
+                                if (typeof showSidebar === 'function') showSidebar('left');
                                 statusBadge = `<span style="font-size: 10px; background: rgba(16,185,129,0.2); color: #6ee7b7; padding: 2px 6px; border-radius: 4px; font-weight: bold;">자삽 완료</span>`;
                                 btnHtml = `<button class="wo-action-btn btn-start-dip" onclick="startDip('${wo.wo_id}')">▶ 수삽(DIP) 시작</button>`;
                             } else {
@@ -786,10 +787,12 @@
                             }
                         } else if (wo.status === 'SMT_DONE') {
                             if (typeof resetAllMachines === 'function') resetAllMachines('SMT');
+                            if (typeof showSidebar === 'function') showSidebar('left');
                             statusBadge = `<span style="font-size: 10px; background: rgba(16,185,129,0.2); color: #6ee7b7; padding: 2px 6px; border-radius: 4px; font-weight: bold;">자삽 완료</span>`;
                             btnHtml = `<button class="wo-action-btn btn-start-dip" onclick="startDip('${wo.wo_id}')">▶ 수삽(DIP) 시작</button>`;
                         } else if (wo.status === 'DONE') {
                             if (typeof resetAllMachines === 'function') resetAllMachines('ALL');
+                            if (typeof showSidebar === 'function') showSidebar('left');
                             statusBadge = `<span style="font-size: 10px; background: rgba(16,185,129,0.2); color: #6ee7b7; padding: 2px 6px; border-radius: 4px; font-weight: bold;">생산 완료</span>`;
                             btnHtml = `<button class="wo-action-btn" disabled style="background: rgba(16,185,129,0.1); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3);">생산 종료</button>`;
                         } else if (wo.status === 'DIP_IN_PROGRESS') {
@@ -1096,28 +1099,70 @@
         loadWOList();
         setInterval(loadWOList, 2000);
 
-        // 사이드바 접기/열기 함수
+        // 사이드바 접기/열기/보이기 유틸리티
         function toggleSidebar(side) {
             if (side === 'left') {
                 const sidebar = document.getElementById('woSidebar');
                 const tab = document.getElementById('floatingTabLeft');
+                if (!sidebar) return;
                 sidebar.classList.toggle('collapsed');
                 if (sidebar.classList.contains('collapsed')) {
-                    tab.classList.add('visible');
+                    if (tab) tab.classList.add('visible');
                 } else {
-                    tab.classList.remove('visible');
+                    if (tab) tab.classList.remove('visible');
                 }
             } else if (side === 'right') {
                 const sidebar = document.getElementById('eventTerminal');
                 const tab = document.getElementById('floatingTabRight');
+                if (!sidebar) return;
                 sidebar.classList.toggle('collapsed');
                 if (sidebar.classList.contains('collapsed')) {
-                    tab.classList.add('visible');
+                    if (tab) tab.classList.add('visible');
                 } else {
-                    tab.classList.remove('visible');
+                    if (tab) tab.classList.remove('visible');
                 }
             }
         }
+
+        function showSidebar(side) {
+            if (side === 'left') {
+                const sidebar = document.getElementById('woSidebar');
+                const tab = document.getElementById('floatingTabLeft');
+                if (sidebar && sidebar.classList.contains('collapsed')) {
+                    sidebar.classList.remove('collapsed');
+                    if (tab) tab.classList.remove('visible');
+                }
+            } else if (side === 'right') {
+                const sidebar = document.getElementById('eventTerminal');
+                const tab = document.getElementById('floatingTabRight');
+                if (sidebar && sidebar.classList.contains('collapsed')) {
+                    sidebar.classList.remove('collapsed');
+                    if (tab) tab.classList.remove('visible');
+                }
+            }
+        }
+
+        function hideSidebar(side) {
+            if (side === 'left') {
+                const sidebar = document.getElementById('woSidebar');
+                const tab = document.getElementById('floatingTabLeft');
+                if (sidebar && !sidebar.classList.contains('collapsed')) {
+                    sidebar.classList.add('collapsed');
+                    if (tab) tab.classList.add('visible');
+                }
+            } else if (side === 'right') {
+                const sidebar = document.getElementById('eventTerminal');
+                const tab = document.getElementById('floatingTabRight');
+                if (sidebar && !sidebar.classList.contains('collapsed')) {
+                    sidebar.classList.add('collapsed');
+                    if (tab) tab.classList.add('visible');
+                }
+            }
+        }
+
+        window.toggleSidebar = toggleSidebar;
+        window.showSidebar = showSidebar;
+        window.hideSidebar = hideSidebar;
     </script>
 
     <!-- 좌/우 사이드바가 접혔을 때 화면 가장자리 상하 가운데에 표시되는 플로팅 탭 -->

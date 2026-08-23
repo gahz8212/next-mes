@@ -1330,6 +1330,9 @@ async function pollLiveStream() {
             const dipIds = ['DIP_AOI', 'WAVE', 'ICT', 'COATING', 'FCT'];
 
             if (activeWo && (activeWo.status === 'SMT_DONE' || activeWo.status === 'DIP_IN_PROGRESS')) {
+                if (typeof showSidebar === 'function') {
+                    showSidebar('left');
+                }
                 smtIds.forEach(id => {
                     const mac = document.getElementById(`mac-${id}`);
                     if (mac && !mac.classList.contains('wait')) {
@@ -1344,6 +1347,9 @@ async function pollLiveStream() {
                     }
                 });
             } else if (activeWo && activeWo.status === 'DONE') {
+                if (typeof showSidebar === 'function') {
+                    showSidebar('left');
+                }
                 resetAllMachines('ALL');
             }
 
