@@ -1018,6 +1018,7 @@
 
         async function startWO(wo_id) {
             try {
+                if (typeof lastHistoryId !== 'undefined') lastHistoryId = 0;
                 const res = await fetch('/backend/api/start_wo.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1025,14 +1026,15 @@
                 });
                 const data = await res.json();
                 if (data.status === 'success') {
-                    resetAllMachines();
-                    initKPI();
-                    addLog('SMT_LINE', 'PASS', `작업지시 [${wo_id}] SMT 라인 인터록 해제 및 자삽 가동 시작`);
-                    loadWOList();
+                    if (typeof resetAllMachines === 'function') resetAllMachines('ALL');
+                    if (typeof initKPI === 'function') initKPI();
+                    if (typeof addLog === 'function') addLog('SMT_LINE', 'PASS', `작업지시 [${wo_id}] SMT 라인 인터록 해제 및 자삽 가동 시작`);
+                    await loadWOList();
+                    if (typeof pollLiveStream === 'function') pollLiveStream();
                 } else {
                     alert(data.message || "작업 시작 실패");
                     // 만약 인터록 미완료 에러라면 피더 모달 오픈
-                    if (data.message.includes('인터록')) {
+                    if (data.message && data.message.includes('인터록')) {
                         openFeederModal(wo_id);
                     }
                 }
@@ -1051,10 +1053,10 @@
                 });
                 const data = await res.json();
                 if (data.status === 'success') {
-                    resetAllMachines();
-                    initKPI();
-                    addLog('LINE_CTRL', 'FAIL', `작업지시 [${wo_id}] 가동 중단됨 (대기 상태로 전환)`);
-                    loadWOList();
+                    if (typeof resetAllMachines === 'function') resetAllMachines('ALL');
+                    if (typeof initKPI === 'function') initKPI();
+                    if (typeof addLog === 'function') addLog('LINE_CTRL', 'FAIL', `작업지시 [${wo_id}] 가동 중단됨 (대기 상태로 전환)`);
+                    await loadWOList();
                 } else {
                     alert(data.message || "작업 중단 실패");
                 }
@@ -1065,7 +1067,8 @@
 
         async function startDip(wo_id) {
             try {
-                const res = await fetch('../backend/api/start_dip_wo.php', {
+                if (typeof lastHistoryId !== 'undefined') lastHistoryId = 0;
+                const res = await fetch('/backend/api/start_dip_wo.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ wo_id })
@@ -1075,8 +1078,9 @@
                     if (typeof resetAllMachines === 'function') {
                         resetAllMachines('SMT');
                     }
-                    addLog('DIP_LINE', 'PASS', `작업지시 [${wo_id}] 수삽(DIP) 공정 시작`);
-                    loadWOList();
+                    if (typeof addLog === 'function') addLog('DIP_LINE', 'PASS', `작업지시 [${wo_id}] 수삽(DIP) 공정 시작`);
+                    await loadWOList();
+                    if (typeof pollLiveStream === 'function') pollLiveStream();
                     const dipPanel = document.getElementById('linePanel-DIP');
                     if (dipPanel) {
                         dipPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
