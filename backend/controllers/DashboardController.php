@@ -141,7 +141,7 @@ class DashboardController {
                 SELECT
                     COUNT(DISTINCT w.wo_id) as total_wo,
                     COALESCE(SUM(w.target_qty), 0) as total_target_qty,
-                    COALESCE(SUM(CASE WHEN b.status != 'WAIT' THEN 1 ELSE 0 END), 0) as total_processed,
+                    COALESCE(SUM(CASE WHEN b.status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING', 'DONE', 'DEFECT', 'FAIL') THEN 1 ELSE 0 END), 0) as total_processed,
                     COALESCE(SUM(CASE WHEN b.status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING') THEN 1 ELSE 0 END), 0) as total_good,
                     COALESCE(SUM(CASE WHEN b.status = 'FAIL' THEN 1 ELSE 0 END), 0) as total_fail
                 FROM work_order w

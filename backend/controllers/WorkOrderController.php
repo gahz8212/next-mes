@@ -52,7 +52,7 @@ class WorkOrderController {
                 JOIN (
                     SELECT wo_id, count(*) as proc_cnt 
                     FROM barcode_master 
-                    WHERE status != 'WAIT' 
+                    WHERE status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING', 'DONE', 'DEFECT', 'FAIL') 
                     GROUP BY wo_id
                 ) b ON w.wo_id = b.wo_id
                 SET w.status = 'SMT_DONE'
@@ -99,7 +99,7 @@ class WorkOrderController {
                 JOIN (
                     SELECT wo_id, count(*) as proc_cnt 
                     FROM barcode_master 
-                    WHERE status != 'WAIT' 
+                    WHERE status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING', 'DONE', 'DEFECT', 'FAIL') 
                     GROUP BY wo_id
                 ) b ON w.wo_id = b.wo_id
                 SET w.status = 'SMT_DONE'
@@ -134,7 +134,7 @@ class WorkOrderController {
                         w.completed_at,
                         '2000-01-01 00:00:00'
                     ) as order_created_at,
-                    COALESCE(SUM(CASE WHEN b.status != 'WAIT' THEN 1 ELSE 0 END), 0) as processed_qty,
+                    COALESCE(SUM(CASE WHEN b.status IN ('BOTTOM_DONE','TEST_PASS','SHIPPING','DONE','DEFECT','FAIL') THEN 1 ELSE 0 END), 0) as processed_qty,
                     COALESCE(SUM(CASE WHEN b.status IN ('BOTTOM_DONE','TEST_PASS','SHIPPING') THEN 1 ELSE 0 END), 0) as good_qty,
                     COALESCE(SUM(CASE WHEN b.status = 'FAIL' THEN 1 ELSE 0 END), 0) as fail_qty,
                     COALESCE(SUM(CASE WHEN b.status IN ('SHIPPING','FAIL') THEN 1 ELSE 0 END), 0) as dip_qty
