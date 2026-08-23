@@ -74,7 +74,19 @@ try {
     $addColumnDirect('bom_master', 'created_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT "생성일시"');
     $addColumnDirect('item', 'created_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT "생성일시"');
 
-    // 8. 신규 테이블 생성: consigned_return_master
+    // 8. barcode_history 및 feeder_setup, barcode_master 테이블 컬럼
+    $addColumnDirect('barcode_history', 'process_data', 'JSON DEFAULT NULL COMMENT "설비 예지보전(PdM) 텔레메트리 데이터"');
+    try {
+        $pdo->exec("ALTER TABLE `barcode_history` MODIFY COLUMN `result_status` VARCHAR(50) NOT NULL DEFAULT 'PASS'");
+        $applied[] = "Modified column `barcode_history`.`result_status` to VARCHAR(50)";
+    } catch (\Throwable $e) {
+        $skipped[] = "result_status modify: " . $e->getMessage();
+    }
+    $addColumnDirect('feeder_setup', 'points', 'DECIMAL(10,4) DEFAULT NULL');
+    $addColumnDirect('feeder_setup', 'scanned_by', 'VARCHAR(50) DEFAULT "Worker"');
+    $addColumnDirect('barcode_master', 'status', 'VARCHAR(50) DEFAULT "WAIT"');
+
+    // 9. 신규 테이블 생성: consigned_return_master
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS consigned_return_master (
             id INT AUTO_INCREMENT PRIMARY KEY,
