@@ -5282,9 +5282,11 @@ const ALL_PAGE_TITLES = {
             sel.style.borderColor = '#3b82f6';
             sel.style.textAlign = 'left';
             sel.style.fontWeight = '700';
-            sel.style.minWidth = '140px';
+            
+            const minW = (sel.value === 'points' || sel.value === 'provide_qty') ? '75px' : '125px';
+            sel.style.minWidth = minW;
             if (th) {
-                th.style.minWidth = '140px';
+                th.style.minWidth = minW;
             }
         }
     }
@@ -5306,7 +5308,7 @@ const ALL_PAGE_TITLES = {
                         <option value="ignore" style="background:#0f172a; color:#94a3b8;"></option>
                         <option value="part_no" style="background:#0f172a; color:#ffffff;">파트번호 *</option>
                         <option value="part_name" style="background:#0f172a; color:#ffffff;">파트명 / 규격</option>
-                        <option value="points" style="background:#0f172a; color:#ffffff;">포인트 *</option>
+                        <option value="points" style="background:#0f172a; color:#ffffff;">포인트</option>
                         <option value="provide_qty" style="background:#0f172a; color:#ffffff;">제공수량</option>
                         <option value="location" style="background:#0f172a; color:#ffffff;">실장 위치</option>
                     </select>
