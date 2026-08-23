@@ -232,11 +232,26 @@ class BomController {
                 $stmt->execute([$mappingJson, $company_id]);
             }
 
-            // 5. 사급 자재 자동 입고 연계 (제공수량 우선, 없으면 목표수량 x 포인트)
+            // 5. 사급 자재 자동 입고 연계 (제공수량/입고수량 우선, 없으면 목표수량 x 포인트)
             $inbound_count = 0;
             if ($auto_inbound) {
                 $matStmt = $pdo->prepare("INSERT INTO material_inout (part_no, part_name, inout_type, supply_type, qty, unit, wo_id, order_no, bom_id, company_id, note) VALUES (?, ?, 'IN', 'CONSIGNED', ?, 'EA', ?, ?, ?, ?, ?)");
                 $comp_id = !empty($company_id) ? (int)$company_id : null;
+                if (!$comp_id && $item_id) {
+                    $stmtC = $pdo->prepare("SELECT company_id FROM item WHERE id = ?");
+                    $stmtC->execute([$item_id]);
+                    $comp_id = (int)($stmtC->fetchColumn() ?: null);
+                }
+                if (!$woOrderNo && $item_id) {
+                    $stmtO = $pdo->prepare("
+                        SELECT order_no FROM sales_order_item 
+                        WHERE item_code = (SELECT item_code FROM item WHERE id = ?) 
+                           OR item_name = (SELECT item_name FROM item WHERE id = ?) 
+                        ORDER BY id DESC LIMIT 1
+                    ");
+                    $stmtO->execute([$item_id, $item_id]);
+                    $woOrderNo = $stmtO->fetchColumn() ?: null;
+                }
                 
                 foreach ($bom_data as $row) {
                     $part_no = trim($row['part_no'] ?? '');
@@ -244,12 +259,12 @@ class BomController {
                     $points = (float)($row['points'] ?? $row['req_qty'] ?? 1);
                     $provQty = !empty($row['provide_qty']) ? (float)$row['provide_qty'] : 0;
                     
-                    // 제공수량이 명시되어 있으면 제공수량으로, 없으면 발주목표수량 * 포인트로 계산
+                    // 제공/입고 수량이 명시되어 있으면 입고수량으로, 없으면 발주목표수량 * 포인트로 계산
                     $inboundQty = $provQty > 0 ? $provQty : ($points * $woTargetQty);
 
                     if (!empty($part_no) && $inboundQty > 0) {
                         $loc = !empty($row['location']) ? " [위치: {$row['location']}]" : "";
-                        $note = "BOM 등록 자동 연계 사급 입고 (WO: {$wo_id}{$loc}) [포인트: {$points}, 버전: {$version}]";
+                        $note = "BOM 등록 자동 연계 사급 입고" . ($wo_id ? " (WO: {$wo_id})" : "") . "{$loc} [포인트: {$points}, 버전: {$version}]";
                         $matStmt->execute([$part_no, $part_name, $inboundQty, $wo_id ?: null, $woOrderNo, $bom_id, $comp_id, $note]);
                         $inbound_count++;
                     }
