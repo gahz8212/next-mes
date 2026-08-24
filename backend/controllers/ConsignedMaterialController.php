@@ -250,7 +250,7 @@ class ConsignedMaterialController {
                             foreach ($bomParts as $bp) {
                                 $pNo = $bp['part_no'];
                                 $reqPerUnit = (float)$bp['req_qty'];
-                                $partReqTotal = $itQty > 0 ? ceil($reqPerUnit * $itQty) : 0;
+                                $partReqTotal = $itQty > 0 ? ceil($reqPerUnit * $itQty * 1.2) : 0;
 
                                 if (!isset($partsMap[$pNo])) {
                                     $partsMap[$pNo] = [

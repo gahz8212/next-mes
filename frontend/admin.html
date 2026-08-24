@@ -9613,8 +9613,8 @@ function renderConsignedReceiveDetail(orderInfo, parts = []) {
             <!-- 스마트 툴바 액션 버튼군 (우측 정렬) -->
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-left:auto;">
                 <!-- 1. 자동 채우기 (선명한 골드 컬러) -->
-                <button type="button" style="height:32px; padding:0 12px; font-size:12px; font-weight:800; background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.5); border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.15s ease;" onclick="fillRecommendedReceiveQuantities()" title="발주 수량에 필요한 잔여 소요량을 자동 계산하여 채웁니다.">
-                    ⚡ 소요량 자동채우기
+                <button type="button" style="height:32px; padding:0 12px; font-size:12px; font-weight:800; background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.5); border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.15s ease;" onclick="fillRecommendedReceiveQuantities()" title="발주 수량에 필요한 잔여 소요량(+20% 여유분)을 자동 계산하여 채웁니다.">
+                    ⚡ 소요량 자동채우기 (+20%)
                 </button>
 
                 <!-- 2. 부품 추가 (BOM/엑셀 모달 통합 폼 연동) -->
@@ -9639,14 +9639,14 @@ function renderConsignedReceiveDetail(orderInfo, parts = []) {
                         <th class="consigned-col-partname-standalone" style="text-align:left; padding:6px 8px;">부품명 / 규격</th>
                         <th style="width:65px; text-align:right; padding:6px 6px;">단위 소요</th>
                         <th style="width:75px; text-align:right; padding:6px 6px;">기 입고량</th>
-                        <th style="width:80px; text-align:center; padding:6px 4px; background:rgba(56,189,248,0.1);">입고 수량 *</th>
+                        <th style="width:80px; text-align:center; padding:6px 4px; background:rgba(56,189,248,0.1);">입고 수량 (+20%) *</th>
                         <th style="width:40px; text-align:center; padding:6px 2px;">삭제</th>
                     </tr>
                 </thead>
                 <tbody id="consigned-rcv-tbody">
                     ${parts.length > 0 ? parts.map((p, idx) => {
                         const reqPerUnit = parseFloat(p.req_qty || 1);
-                        const calcTotalReq = (p.calc_total_req !== undefined && p.calc_total_req !== null) ? parseFloat(p.calc_total_req) : (orderQty > 0 ? Math.ceil(reqPerUnit * orderQty) : 0);
+                        const calcTotalReq = (p.calc_total_req !== undefined && p.calc_total_req !== null) ? parseFloat(p.calc_total_req) : (orderQty > 0 ? Math.ceil(reqPerUnit * orderQty * 1.2) : 0);
                         const curRcv = parseFloat(p.current_received_qty || 0);
                         const recQty = calcTotalReq > 0 ? Math.max(0, calcTotalReq - curRcv) : '';
 
