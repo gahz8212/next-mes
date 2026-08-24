@@ -150,19 +150,30 @@ class DashboardController {
                 $targetQty = (int)$data['target_qty'];
                 $good  = (int)$data['good_qty'];
                 $fail  = (int)$data['fail_qty'];
-                $total = $good + $fail;
+                $total = min($targetQty, $good + $fail);
                 
                 // 생산 가공 실적이 있을 때만 수율 계산 (총 생산량 0건이면 0.0%)
                 if ($total > 0) {
-                    $yield = number_format(($good / $total) * 100, 1);
+                    $yield = number_format(($good / max(1, $good + $fail)) * 100, 1);
                 } else {
                     $yield = '0.0';
                 }
 
-                // 투입 및 실장 진행 수량 집계 (LASER 투입 기준)
-                $stmtIn = $pdo->prepare("SELECT count(*) FROM barcode_history WHERE barcode LIKE ? AND process_name = 'LASER' AND result_status != 'IDLE'");
+                // 투입 및 실장 진행 수량 집계 (LASER 투입 기준 고유 바코드 수량, 목표 수량 상한 제한)
+                $stmtIn = $pdo->prepare("
+                    SELECT count(DISTINCT barcode) 
+                    FROM barcode_history 
+                    WHERE barcode LIKE ? AND process_name = 'LASER' AND result_status != 'IDLE' AND barcode != '-'
+                ");
                 $stmtIn->execute([$data['wo_id'] . '-%']);
-                $inputQty = (int)$stmtIn->fetchColumn();
+                $rawInput = (int)$stmtIn->fetchColumn();
+                $inputQty = min($targetQty, $rawInput);
+
+                // 자삽 완료(SMT_DONE) 상태일 경우 자삽 실적은 목표수량 100% 도달로 정합성 보장
+                if ($data['status'] === 'SMT_DONE') {
+                    $inputQty = $targetQty;
+                    if ($total === 0) $total = $targetQty;
+                }
 
                 Response::json([
                     "status" => "success",
@@ -171,7 +182,7 @@ class DashboardController {
                         "target_qty" => $targetQty,
                         "actual_qty" => $total,
                         "input_qty"  => $inputQty,
-                        "good_qty"   => $good,
+                        "good_qty"   => min($targetQty, $good),
                         "fail_qty"   => $fail,
                         "wo_status"  => $data['status'],
                         "yield_rate" => $yield . '%'
