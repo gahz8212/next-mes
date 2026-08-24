@@ -6,7 +6,7 @@
     <title>MES 라인 관제 콘솔 - SMT/DIP 전자제조</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/dashboard.css?v=20260824_04">
+    <link rel="stylesheet" href="css/dashboard.css?v=20260824_05">
     <link rel="stylesheet" href="css/common-header.css">
     <link rel="prefetch" href="admin.html">
 </head>
@@ -656,37 +656,25 @@
                     <!-- Dynamically populated sensor telemetry cards -->
                 </div>
 
-                <!-- Bottom Row: SPC Waveform Chart (Left 56%) & AI Recommendation + Alarms (Right 44%) -->
+                <!-- Bottom Row: AI Recommendation (Left 50%) & Recent Alarm History (Right 50%) -->
                 <div class="pdm-bottom-split-row">
-                    <!-- Left: Real-Time SPC Waveform with UCL/LCL -->
-                    <div class="pdm-chart-section">
-                        <div class="pdm-chart-header">
-                            <span class="pdm-chart-title" id="pdmChartTitle">📈 실시간 파라미터 추이 & 관리한계선 (UCL / LCL)</span>
-                            <span class="pdm-sampling-rate">3초 실시간 샘플링</span>
+                    <!-- Left: AI Guide -->
+                    <div class="pdm-ai-guide" id="pdmAiGuide">
+                        <div class="guide-icon">💡</div>
+                        <div class="guide-content">
+                            <div class="guide-title">AI 예지보전 엔지니어 조치 권고</div>
+                            <div class="guide-text" id="pdmRecommendation">광학계 및 발진기 출력 상태가 기준치 내에서 매우 안정적입니다.</div>
                         </div>
-                        <canvas id="pdmModalCanvas" width="430" height="135"></canvas>
                     </div>
 
-                    <!-- Right Stack: AI Guide & Recent Alarm History -->
-                    <div class="pdm-right-stack">
-                        <!-- AI Guide -->
-                        <div class="pdm-ai-guide" id="pdmAiGuide">
-                            <div class="guide-icon">💡</div>
-                            <div class="guide-content">
-                                <div class="guide-title">AI 예지보전 엔지니어 조치 권고</div>
-                                <div class="guide-text" id="pdmRecommendation">광학계 및 발진기 출력 상태가 기준치 내에서 매우 안정적입니다.</div>
-                            </div>
+                    <!-- Right: Alarm History -->
+                    <div class="pdm-alarms-section">
+                        <div class="pdm-alarms-header">
+                            <span class="pdm-alarms-title">🚨 최근 설비 이상 / 공정 불량 알람</span>
+                            <span class="pdm-alarms-badge" id="pdmAlarmsCount">0건</span>
                         </div>
-
-                        <!-- Alarm History -->
-                        <div class="pdm-alarms-section">
-                            <div class="pdm-alarms-header">
-                                <span class="pdm-alarms-title">🚨 최근 설비 이상 / 공정 불량 알람</span>
-                                <span class="pdm-alarms-badge" id="pdmAlarmsCount">0건</span>
-                            </div>
-                            <div class="pdm-alarms-list" id="pdmAlarmsList">
-                                <div class="pdm-alarm-empty">최근 감지된 이상/알람 이력이 없습니다. (설비 정상 가동 중)</div>
-                            </div>
+                        <div class="pdm-alarms-list" id="pdmAlarmsList">
+                            <div class="pdm-alarm-empty">최근 감지된 이상/알람 이력이 없습니다. (설비 정상 가동 중)</div>
                         </div>
                     </div>
                 </div>
@@ -694,8 +682,8 @@
         </div>
     </div>
 
-    <!-- 스크립트 로드: dashboard.js를 먼저 로드하여 전역 함수 정의 (캐시 방지 v=20260824_04) -->
-    <script src="js/dashboard.js?v=20260824_04"></script>
+    <!-- 스크립트 로드: dashboard.js를 먼저 로드하여 전역 함수 정의 (캐시 방지 v=20260824_05) -->
+    <script src="js/dashboard.js?v=20260824_05"></script>
     <script>
         let currentModalWoId = null;
         let currentFeederData = null;
