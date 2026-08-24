@@ -22,6 +22,18 @@ class ProcessController {
                 Response::error("이벤트 데이터가 비어있습니다.", 400);
             }
 
+            // 기판 번호 기준 오름차순 정렬 (앞선 기판 #1부터 순차적으로 INSERT 보장)
+            usort($events, function($a, $b) {
+                $aPcb = (int)($a['process_data']['pcb_no'] ?? 0);
+                $bPcb = (int)($b['process_data']['pcb_no'] ?? 0);
+                if ($aPcb > 0 && $bPcb > 0) return $aPcb - $bPcb;
+                $aCode = $a['barcode'] ?? '';
+                $bCode = $b['barcode'] ?? '';
+                $aNum = (int)substr($aCode, strrpos($aCode, '-') + 1);
+                $bNum = (int)substr($bCode, strrpos($bCode, '-') + 1);
+                return $aNum - $bNum;
+            });
+
             $pdo->beginTransaction();
 
             $processedCount = 0;

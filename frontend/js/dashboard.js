@@ -1358,6 +1358,25 @@ async function pollLiveStream() {
             _previousActiveStatus = activeStatus;
 
             if (logs.length > 0) {
+                // 기판 번호 오름차순 정렬 (PCB #1 -> #2 -> #3 ... 순차적 진행 보장)
+                logs.sort((a, b) => {
+                    const getPcbNum = (item) => {
+                        try {
+                            if (item.process_data) {
+                                const pd = (typeof item.process_data === 'string') ? JSON.parse(item.process_data) : item.process_data;
+                                if (pd && pd.pcb_no) return parseInt(pd.pcb_no);
+                            }
+                        } catch(e) {}
+                        const bc = item.barcode || '';
+                        const num = parseInt(bc.split('-').pop());
+                        return isNaN(num) ? 0 : num;
+                    };
+                    const numA = getPcbNum(a);
+                    const numB = getPcbNum(b);
+                    if (numA !== numB) return numA - numB;
+                    return (parseInt(a.history_id) || 0) - (parseInt(b.history_id) || 0);
+                });
+
                 logs.forEach(item => {
                     let proc = item.process_name;
                     if (proc === 'MOUNTER') proc = 'MOUNTER_1';

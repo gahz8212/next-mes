@@ -559,8 +559,9 @@ class DashboardController {
                 $currentStep = $targetQty + ($outCount - max(0, $targetQty - 4)) + 1;
             }
 
-            // 4. 5개 설비 슬롯별 기판 이동 및 텔레메트리 생성 (Pipeline Shift)
-            foreach ($processList as $pIdx => $proc) {
+            // 4. 5개 설비 슬롯별 기판 이동 및 텔레메트리 생성 (Pipeline Shift: 앞선 기판 #1부터 순서대로 INSERT하여 순차 진행 보장)
+            for ($pIdx = count($processList) - 1; $pIdx >= 0; $pIdx--) {
+                $proc = $processList[$pIdx];
                 $pcbNum = $currentStep - $pIdx;
 
                 if ($pcbNum >= 1 && $pcbNum <= $targetQty) {
@@ -572,11 +573,70 @@ class DashboardController {
                     $isFail = (mt_rand(1, 100) <= 2);
                     $pdmHealth = $isFail ? 82 : mt_rand(95, 99);
 
+                    // SMT 및 DIP 10대 설비별 맞춤형 텔레메트리 생성
+                    $metricName = '공정 검사값';
+                    $metricVal = 100;
+                    $metricUnit = 'EA';
+
+                    switch ($proc) {
+                        case 'LASER':
+                            $metricName = '레이저 출력';
+                            $metricVal = round(15.2 + (mt_rand(-3, 3) / 10), 2);
+                            $metricUnit = 'W';
+                            break;
+                        case 'SPI':
+                            $metricName = '납 도포 체적율';
+                            $metricVal = round(102.5 + (mt_rand(-5, 5) / 10), 1);
+                            $metricUnit = '%';
+                            break;
+                        case 'MOUNTER':
+                        case 'MOUNTER_1':
+                            $metricName = '노즐 진공압';
+                            $metricVal = round(-84.2 + (mt_rand(-15, 15) / 10), 1);
+                            $metricUnit = 'kPa';
+                            break;
+                        case 'MOUNTER_2':
+                            $metricName = '부품 가압력';
+                            $metricVal = round(1.85 + (mt_rand(-1, 1) / 10), 2);
+                            $metricUnit = 'N';
+                            break;
+                        case 'REFLOW':
+                            $metricName = '피크 프로파일 온도';
+                            $metricVal = 245.5;
+                            $metricUnit = '℃';
+                            break;
+                        case 'DIP_AOI':
+                            $metricName = '납땜 판정 점수';
+                            $metricVal = round(99.2 - ($isFail ? 12 : 0) + (mt_rand(-5, 5) / 10), 1);
+                            $metricUnit = '점';
+                            break;
+                        case 'WAVE':
+                            $metricName = '솔더팟 용탕 온도';
+                            $metricVal = round(250.2 + (mt_rand(-2, 2) / 10), 1);
+                            $metricUnit = '℃';
+                            break;
+                        case 'ICT':
+                            $metricName = '접촉 저항';
+                            $metricVal = round(45.2 + ($isFail ? 40 : 0) + (mt_rand(-4, 4) / 10), 1);
+                            $metricUnit = 'mΩ';
+                            break;
+                        case 'COATING':
+                            $metricName = '코팅 도포 두께';
+                            $metricVal = round(75.0 + (mt_rand(-4, 4) / 10), 1);
+                            $metricUnit = 'μm';
+                            break;
+                        case 'FCT':
+                            $metricName = 'CAN 통신 지연';
+                            $metricVal = round(4.8 + ($isFail ? 8 : 0) + (mt_rand(-6, 6) / 10), 1);
+                            $metricUnit = 'ms';
+                            break;
+                    }
+
                     $pdata = [
                         'pcb_no' => $pcbNum,
-                        'metric_name' => ($proc === 'LASER' ? '레이저 출력' : ($proc === 'SPI' ? '납 도포 체적율' : ($proc === 'MOUNTER_1' ? '노즐 진공압' : ($proc === 'MOUNTER_2' ? '부품 가압력' : ($proc === 'REFLOW' ? '피크 프로파일 온도' : '공정 검사값'))))),
-                        'metric_val' => ($proc === 'LASER' ? round(15.2 + (mt_rand(-3, 3) / 10), 2) : ($proc === 'SPI' ? round(102.5 + (mt_rand(-5, 5) / 10), 1) : ($proc === 'MOUNTER_1' ? round(-84.2 + (mt_rand(-15, 15) / 10), 1) : ($proc === 'MOUNTER_2' ? round(1.85 + (mt_rand(-1, 1) / 10), 2) : 245.5)))),
-                        'metric_unit' => ($proc === 'MOUNTER_1' ? 'kPa' : ($proc === 'MOUNTER_2' ? 'N' : ($proc === 'REFLOW' ? '℃' : ($proc === 'SPI' ? '%' : 'W')))),
+                        'metric_name' => $metricName,
+                        'metric_val' => $metricVal,
+                        'metric_unit' => $metricUnit,
                         'pdm_health' => $pdmHealth,
                         'pdm_status' => $isFail ? 'WARNING' : 'NORMAL',
                         'recommendation' => $isFail ? "PCB #{$pcbNum} 공정 검사 이상 ➔ 점검 권장" : "라인 컨베이어 파이프라인 정상 가동 중 (PCB #{$pcbNum})"
@@ -592,7 +652,7 @@ class DashboardController {
                     if ($isFail) {
                         try {
                             $notiTitle = "🚨 [설비이상/불량감지] {$proc} (PCB #{$pcbNum})";
-                            $notiMsg = "바코드: {$barcode} | 설비: {$proc} | 건전도: {$pdmHealth}점 | {$pdata['metric_name']}: {$pdata['metric_val']}{$pdata['metric_unit']} | 권고: {$pdata['recommendation']}";
+                            $notiMsg = "바코드: {$barcode} | 설비: {$proc} | 건전도: {$pdmHealth}점 | {$metricName}: {$metricVal}{$metricUnit} | 권고: {$pdata['recommendation']}";
                             $pdo->prepare("
                                 INSERT INTO system_notification (type, title, message, is_read, link_url, created_at)
                                 VALUES ('DANGER', ?, ?, 0, 'machine.html', NOW())
