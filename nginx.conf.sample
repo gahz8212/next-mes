@@ -7,7 +7,7 @@ server {
     server_name mes.memyself.shop;
 
     root /var/www/next-mes;
-    index dashboard.html index.html;
+    index login.html index.html;
     charset utf-8;
 
     # SSL configuration (managed by Certbot)
@@ -37,7 +37,7 @@ server {
 
     # 4. Frontend Static Files (SPA Fallback)
     location / {
-        try_files $uri $uri/ /dashboard.html;
+        try_files $uri $uri/ /login.html;
     }
 
     # 5. Security: Deny access to hidden files (.env, .git, etc.)

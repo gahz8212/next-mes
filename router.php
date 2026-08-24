@@ -11,10 +11,10 @@ if ($uri !== '/' && file_exists($filePath) && !is_dir($filePath)) {
     return false; // let PHP built-in server serve the static file directly
 }
 
-// 2. Default document (index.html, admin.html, dashboard.html if root requested)
+// 2. Default document (login.html if root requested)
 if ($uri === '/') {
-    if (file_exists(__DIR__ . '/dashboard.html')) {
-        require __DIR__ . '/dashboard.html';
+    if (file_exists(__DIR__ . '/login.html')) {
+        require __DIR__ . '/login.html';
         exit();
     } else if (file_exists(__DIR__ . '/index.html')) {
         require __DIR__ . '/index.html';

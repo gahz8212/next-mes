@@ -1,4 +1,6 @@
 # .htaccess
+DirectoryIndex login.html index.html index.php
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
 

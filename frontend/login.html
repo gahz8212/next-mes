@@ -41,7 +41,7 @@
             border-radius: var(--radius);
             box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
             text-align: center;
-            width: 360px;
+            width: 460px;
             max-width: 90vw;
             display: flex;
             flex-direction: column;
@@ -62,119 +62,93 @@
         }
 
         .brand-icon {
-            width: 44px;
-            height: 44px;
+            width: 48px;
+            height: 48px;
             background: var(--accent);
-            border-radius: 10px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 22px;
+            font-weight: 800;
             color: white;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
         }
 
         .brand-name {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 800;
             letter-spacing: -0.02em;
             color: #fff;
         }
 
         .brand-desc {
-            font-size: 12.5px;
+            font-size: 13px;
             color: var(--text-muted);
         }
 
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            text-align: left;
-        }
-
-        .input-label {
-            font-size: 11.5px;
-            font-weight: 700;
-            color: var(--text-dim);
-            letter-spacing: 0.03em;
-            text-transform: uppercase;
-        }
-
-        .input-box {
-            width: 100%;
-            padding: 12px 14px;
-            border: 1.5px solid #cbd5e1 !important;
-            border-radius: var(--radius-sm);
-            background: #ffffff !important;
-            color: #111827 !important;
-            font-size: 14.5px;
-            font-weight: 600 !important;
-            outline: none;
-            transition: all 0.15s;
-            caret-color: #2563eb !important;
-        }
-
-        .input-box::placeholder {
-            color: #64748b !important;
-            font-weight: normal !important;
-        }
-
-        .input-box:focus {
-            background: #ffffff !important;
-            color: #000000 !important;
-            font-weight: 700 !important;
-            border-color: #2563eb !important;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25) !important;
-        }
-
-        .btn-login {
-            width: 100%;
-            padding: 12px;
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 700;
-            transition: background 0.15s;
-        }
-
-        .btn-login:hover {
-            background: var(--accent-hover);
-        }
-
+        .input-group,
+        .btn-login,
         .error-msg {
-            color: var(--danger);
+            display: none;
+        }
+
+        .role-section-label {
             font-size: 12px;
             font-weight: 600;
-            min-height: 16px;
+            color: var(--text-dim);
+            letter-spacing: 0.02em;
+            margin-top: 4px;
         }
 
         .role-helper {
             display: flex;
-            gap: 8px;
+            flex-wrap: wrap;
+            gap: 10px;
             justify-content: center;
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
-            padding-top: 16px;
+            align-items: center;
+            width: 100%;
         }
 
         .helper-btn {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            color: var(--text-dim);
-            padding: 6px 12px;
-            border-radius: var(--radius-sm);
-            font-size: 11.5px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text-primary);
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.15s;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            white-space: nowrap;
         }
 
         .helper-btn:hover {
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(59, 130, 246, 0.15);
             color: #fff;
-            border-color: rgba(255, 255, 255, 0.15);
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .helper-btn:active {
+            transform: translateY(0);
+        }
+
+        .helper-btn.btn-ceo {
+            border-color: rgba(245, 158, 11, 0.4);
+            color: #fbbf24;
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .helper-btn.btn-ceo:hover {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: #fbbf24;
+            color: #fef08a;
         }
     </style>
 </head>
@@ -186,21 +160,18 @@
             <div class="brand-desc">SMT/DIP 전자제조 통합 생산라인</div>
         </div>
 
-        <div class="input-group">
-            <label class="input-label" for="pwd">비밀번호 (Passcode)</label>
-            <input type="password" id="pwd" class="input-box" placeholder="비밀번호 입력 (admin / worker)" autofocus onkeypress="if(event.key === 'Enter') login()">
-        </div>
-
+        <!-- 비밀번호 및 로그인 버튼 숨김 (hidden) -->
+        <input type="hidden" id="pwd" value="">
         <div id="error-msg" class="error-msg"></div>
 
-        <button class="btn-login" onclick="login()">로그인</button>
+        <div class="role-section-label">접속할 역할을 선택하세요</div>
 
         <div class="role-helper">
-            <button class="helper-btn" onclick="quickFill('ceo')" style="border-color:rgba(245,158,11,0.4); color:#fbbf24;">👑 경영진 (ceo)</button>
-            <button class="helper-btn" onclick="quickFill('admin')">관리자 (admin)</button>
-            <button class="helper-btn" onclick="quickFill('supervisor')">라인 반장 (supervisor)</button>
-            <button class="helper-btn" onclick="quickFill('kitting')">자재 피킹 (kitting)</button>
-            <button class="helper-btn" onclick="quickFill('machine')">설비 HMI (machine)</button>
+            <button class="helper-btn btn-ceo" onclick="quickFill('ceo')">👑 경영진 (ceo)</button>
+            <button class="helper-btn" onclick="quickFill('admin')">⚙️ 관리자 (admin)</button>
+            <button class="helper-btn" onclick="quickFill('supervisor')">📊 라인 반장 (supervisor)</button>
+            <button class="helper-btn" onclick="quickFill('kitting')">📦 자재 피킹 (kitting)</button>
+            <button class="helper-btn" onclick="quickFill('machine')">🔧 설비 HMI (machine)</button>
         </div>
     </div>
 
@@ -211,7 +182,7 @@
         }
 
         function login() {
-            const pwd = document.getElementById('pwd').value.trim().toLowerCase();
+            const pwd = (document.getElementById('pwd')?.value || '').trim().toLowerCase();
             const errBox = document.getElementById('error-msg');
             if (pwd === 'ceo') {
                 localStorage.setItem('role', 'admin');
@@ -244,7 +215,7 @@
                 localStorage.setItem('userName', '설비 오퍼레이터');
                 window.location.href = 'machine.html';
             } else {
-                errBox.innerText = '비밀번호가 올바르지 않습니다. (ceo / admin / supervisor / kitting / machine)';
+                if (errBox) errBox.innerText = '비밀번호가 올바르지 않습니다. (ceo / admin / supervisor / kitting / machine)';
             }
         }
     </script>
