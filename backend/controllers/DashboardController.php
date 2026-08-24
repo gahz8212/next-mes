@@ -181,23 +181,53 @@ class DashboardController {
             $startDate = date('Y-m-d', strtotime("-{$days} days"));
             $endDate   = date('Y-m-d');
 
-            // 1. 종합 누적 통계
-            $stmtOverall = $pdo->query("
-                SELECT
-                    COUNT(DISTINCT w.wo_id) as total_wo,
-                    COALESCE(SUM(w.target_qty), 0) as total_target_qty,
-                    COALESCE(SUM(CASE WHEN b.status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING', 'DONE', 'DEFECT', 'FAIL') THEN 1 ELSE 0 END), 0) as total_processed,
-                    COALESCE(SUM(CASE WHEN b.status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING') THEN 1 ELSE 0 END), 0) as total_good,
-                    COALESCE(SUM(CASE WHEN b.status = 'FAIL' THEN 1 ELSE 0 END), 0) as total_fail
-                FROM work_order w
-                LEFT JOIN barcode_master b ON w.wo_id = b.wo_id
+            // 1. 종합 누적 통계 (작업지시 및 바코드 마스터 기준 분리 집계로 카티시안 곱 및 오집계 방지)
+            $stmtWoTotals = $pdo->query("
+                SELECT 
+                    COUNT(*) as total_wo,
+                    COALESCE(SUM(target_qty), 0) as total_target_qty
+                FROM work_order
             ");
-            $overall = $stmtOverall->fetch();
+            $woTotals = $stmtWoTotals->fetch();
 
-            $totalGood = (int)($overall['total_good'] ?? 0);
-            $totalFail = (int)($overall['total_fail'] ?? 0);
-            $totalProcessed = (int)($overall['total_processed'] ?? 0);
-            $overallYield = $totalProcessed > 0 ? round(($totalGood / $totalProcessed) * 100, 1) : 100.0;
+            $stmtBmTotals = $pdo->query("
+                SELECT
+                    COUNT(*) as total_processed,
+                    COALESCE(SUM(CASE 
+                        WHEN bm.status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING', 'DONE') 
+                             AND NOT EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = bm.barcode AND bh.result_status = 'FAIL')
+                        THEN 1 ELSE 0 END), 0) as first_pass_good,
+                    COALESCE(SUM(CASE 
+                        WHEN bm.status IN ('BOTTOM_DONE', 'TEST_PASS', 'SHIPPING', 'DONE') 
+                        THEN 1 ELSE 0 END), 0) as total_good,
+                    COALESCE(SUM(CASE 
+                        WHEN bm.status IN ('DEFECT', 'FAIL') 
+                             OR EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = bm.barcode AND bh.result_status = 'FAIL')
+                        THEN 1 ELSE 0 END), 0) as total_fail
+                FROM barcode_master bm
+            ");
+            $bmTotals = $stmtBmTotals->fetch();
+
+            $totalTarget = (int)($woTotals['total_target_qty'] ?? 0);
+            $totalProcessed = (int)($bmTotals['total_processed'] ?? 0);
+            $firstPassGood = (int)($bmTotals['first_pass_good'] ?? 0);
+            $totalFail = (int)($bmTotals['total_fail'] ?? 0);
+            $finalGood = max($firstPassGood, (int)($bmTotals['total_good'] ?? 0));
+            
+            // 완료된 작업지시가 있을 경우 최종 완제품 100% 양품 출하분 반영
+            $stmtDoneWo = $pdo->query("SELECT COALESCE(SUM(target_qty), 0) FROM work_order WHERE status = 'DONE'");
+            $doneTargetQty = (int)$stmtDoneWo->fetchColumn();
+            if ($doneTargetQty > 0) {
+                $finalGood = max($finalGood, $doneTargetQty);
+            }
+
+            // 1. 초품 직행률 (First Pass Yield: 수리 전 순수 통과율)
+            $fpyYield = $totalProcessed > 0 ? round(($firstPassGood / $totalProcessed) * 100, 1) : 100.0;
+            // 2. 최종 완제품 달성률 (Final Yield: 수리 완료 후 최종 출하 수율)
+            $finalYield = $totalTarget > 0 ? round(($finalGood / $totalTarget) * 100, 1) : 100.0;
+            // 3. 자재 투입 대비 수율 (Material Yield: 총 자재소모 34개 대비 양품 30개)
+            $totalMaterial = $totalProcessed + $totalFail;
+            $materialYield = $totalMaterial > 0 ? round(($finalGood / $totalMaterial) * 100, 1) : 100.0;
 
             // 2. 납기 준수율
             $stmtDelivery = $pdo->query("
@@ -212,16 +242,20 @@ class DashboardController {
             $onTimeCount    = (int)($delivery['on_time_count'] ?? 0);
             $onTimeRate     = $completedTotal > 0 ? round(($onTimeCount / $completedTotal) * 100, 1) : 100.0;
 
-            // 3. 일별 추이
+            // 3. 일별 제품 생산량 및 수율 추이 (고유 바코드 기준 집계)
             $stmtDaily = $pdo->prepare("
                 SELECT 
-                    DATE(created_at) as log_date,
-                    COALESCE(SUM(CASE WHEN result_status = 'PASS' THEN 1 ELSE 0 END), 0) as pass_count,
-                    COALESCE(SUM(CASE WHEN result_status = 'FAIL' THEN 1 ELSE 0 END), 0) as fail_count,
-                    COUNT(*) as total_count
-                FROM barcode_history
-                WHERE DATE(created_at) BETWEEN :start AND :end
-                GROUP BY DATE(created_at)
+                    DATE(bh.created_at) as log_date,
+                    COUNT(DISTINCT bh.barcode) as total_count,
+                    COUNT(DISTINCT CASE 
+                        WHEN NOT EXISTS (SELECT 1 FROM barcode_history bh2 WHERE bh2.barcode = bh.barcode AND bh2.result_status = 'FAIL')
+                        THEN bh.barcode END) as pass_count,
+                    COUNT(DISTINCT CASE 
+                        WHEN EXISTS (SELECT 1 FROM barcode_history bh2 WHERE bh2.barcode = bh.barcode AND bh2.result_status = 'FAIL')
+                        THEN bh.barcode END) as fail_count
+                FROM barcode_history bh
+                WHERE DATE(bh.created_at) BETWEEN :start AND :end
+                GROUP BY DATE(bh.created_at)
                 ORDER BY log_date ASC
             ");
             $stmtDaily->execute([':start' => $startDate, ':end' => $endDate]);
@@ -264,15 +298,21 @@ class DashboardController {
                 "status" => "success",
                 "data"   => [
                     "summary" => [
-                        "total_wo"        => (int)($overall['total_wo'] ?? 0),
-                        "total_target"    => (int)($overall['total_target_qty'] ?? 0),
-                        "total_processed" => $totalProcessed,
-                        "total_good"      => $totalGood,
-                        "total_fail"      => $totalFail,
-                        "overall_yield"   => $overallYield,
-                        "on_time_rate"    => $onTimeRate,
-                        "completed_total" => $completedTotal,
-                        "on_time_count"   => $onTimeCount
+                        "total_wo"         => (int)($woTotals['total_wo'] ?? 0),
+                        "total_target"     => $totalTarget,
+                        "total_processed"  => $totalProcessed,
+                        "final_good"       => $finalGood,
+                        "first_pass_good"  => $firstPassGood,
+                        "total_good"       => $finalGood,
+                        "total_fail"       => $totalFail,
+                        "total_material"   => $totalMaterial,
+                        "overall_yield"    => $fpyYield,
+                        "fpy_yield"        => $fpyYield,
+                        "final_yield"      => $finalYield,
+                        "material_yield"   => $materialYield,
+                        "on_time_rate"     => $onTimeRate,
+                        "completed_total"  => $completedTotal,
+                        "on_time_count"    => $onTimeCount
                     ],
                     "daily_trend"    => $dailyTrend,
                     "lines"          => $lines,
@@ -463,6 +503,23 @@ class DashboardController {
                         VALUES (?, ?, ?, ?, NOW())
                     ");
                     $stmtHist->execute([$barcode, $proc, $isFail ? 'FAIL' : 'PASS', json_encode($pdata, JSON_UNESCAPED_UNICODE)]);
+
+                    // 설비 이상 / 품질 불량 발생 시 시스템 알림 센터 및 감사 로그에 자동 영구 기록
+                    if ($isFail) {
+                        try {
+                            $notiTitle = "🚨 [설비이상/불량감지] {$proc} (PCB #{$pcbNum})";
+                            $notiMsg = "바코드: {$barcode} | 설비: {$proc} | 건전도: {$pdmHealth}점 | {$pdata['metric_name']}: {$pdata['metric_val']}{$pdata['metric_unit']} | 권고: {$pdata['recommendation']}";
+                            $pdo->prepare("
+                                INSERT INTO system_notification (type, title, message, is_read, link_url, created_at)
+                                VALUES ('DANGER', ?, ?, 0, 'machine.html', NOW())
+                            ")->execute([$notiTitle, $notiMsg]);
+
+                            $pdo->prepare("
+                                INSERT INTO system_log (username, action_type, description, created_at)
+                                VALUES ('system_pdm', 'MACHINE_ALARM', ?, NOW())
+                            ")->execute(["[{$proc}] 설비 이상 감지 및 PCB #{$pcbNum} 불량 발생 ({$barcode}) - 건전도 {$pdmHealth}점, {$pdata['recommendation']}"]);
+                        } catch (\Throwable $err) {}
+                    }
 
                     // 불량 여부 확인 (이전 공정 실패 이력 또는 현재 공정 실패)
                     $chkFail = $pdo->prepare("SELECT 1 FROM barcode_history WHERE barcode = ? AND result_status = 'FAIL' LIMIT 1");

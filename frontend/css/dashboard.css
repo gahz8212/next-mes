@@ -1684,6 +1684,105 @@ html, body {
     line-height: 1.4;
 }
 
+/* Machine Alarms in PdM Modal */
+.pdm-alarms-section {
+    background: #111c2e;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pdm-alarms-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pdm-alarms-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #fca5a5;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pdm-alarms-badge {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 7px;
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 4px;
+}
+
+.pdm-alarms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 160px;
+    overflow-y: auto;
+}
+
+.pdm-alarm-item {
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11.5px;
+}
+
+.pdm-alarm-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.pdm-alarm-time {
+    color: #94a3b8;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+}
+
+.pdm-alarm-status {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: rgba(239, 68, 68, 0.25);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+.pdm-alarm-msg {
+    color: #e2e8f0;
+    line-height: 1.4;
+}
+
+.pdm-alarm-rec {
+    color: #38bdf8;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.pdm-alarm-empty {
+    padding: 12px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 11.5px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+}
+
 .pdm-modal-footer {
     padding: 12px 20px;
     background: #131f33;

@@ -533,4 +533,64 @@ class ProcessController {
             Response::error("시스템 초기화 실패: " . $e->getMessage(), 500);
         }
     }
+
+    /**
+     * 설비별 최근 이상 감지 및 알람 이력 조회
+     */
+    public function getMachineAlarms() {
+        try {
+            $pdo = Database::getConnection();
+            $processId = $_GET['process_id'] ?? $_GET['eq'] ?? '';
+            
+            $alarms = [];
+            if (!empty($processId)) {
+                $stmt = $pdo->prepare("
+                    SELECT 
+                        bh.history_id,
+                        bh.barcode,
+                        bh.process_name,
+                        bh.result_status,
+                        bh.process_data,
+                        bh.created_at,
+                        bm.wo_id
+                    FROM barcode_history bh
+                    LEFT JOIN barcode_master bm ON bh.barcode = bm.barcode
+                    WHERE bh.process_name = ? 
+                      AND (bh.result_status IN ('FAIL', 'ALARM', 'DEFECT') OR bh.process_data LIKE '%WARNING%' OR bh.process_data LIKE '%ALARM%')
+                    ORDER BY bh.history_id DESC
+                    LIMIT 10
+                ");
+                $stmt->execute([$processId]);
+                $rows = $stmt->fetchAll();
+
+                foreach ($rows as $row) {
+                    $pdata = json_decode($row['process_data'] ?? '{}', true) ?: [];
+                    $alarms[] = [
+                        'id'             => (int)$row['history_id'],
+                        'barcode'        => $row['barcode'],
+                        'wo_id'          => $row['wo_id'] ?? '',
+                        'created_at'     => $row['created_at'],
+                        'result_status'  => $row['result_status'],
+                        'metric_name'    => $pdata['metric_name'] ?? '공정 검사값',
+                        'metric_val'     => $pdata['metric_val'] ?? '',
+                        'metric_unit'    => $pdata['metric_unit'] ?? '',
+                        'pdm_health'     => $pdata['pdm_health'] ?? 80,
+                        'pdm_status'     => $pdata['pdm_status'] ?? ($row['result_status'] === 'FAIL' ? 'WARNING' : 'NORMAL'),
+                        'recommendation' => $pdata['recommendation'] ?? ($row['result_status'] === 'FAIL' ? '공정 불량 발생 ➔ 설비 점검 필요' : '설비 상태 모니터링 요망')
+                    ];
+                }
+            }
+
+            Response::json([
+                'status' => 'success',
+                'data' => [
+                    'process_id' => $processId,
+                    'total_count' => count($alarms),
+                    'alarms' => $alarms
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            Response::json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
 }

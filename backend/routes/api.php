@@ -90,6 +90,7 @@ Router::post('/feeder-setup/reset',[FeederController::class, 'resetFeederSetup']
 // Process & Maintenance Routes
 Router::post('/process/update',    [ProcessController::class, 'updateProcess']);
 Router::get('/defects',            [ProcessController::class, 'getDefects']);
+Router::get('/machine-alarms',     [ProcessController::class, 'getMachineAlarms']);
 Router::post('/repair',            [ProcessController::class, 'repairBoard']);
 Router::post('/line/reset',        [ProcessController::class, 'resetLine']);
 Router::post('/maintenance/reset', [ProcessController::class, 'resetMaintenance']);
@@ -190,6 +191,7 @@ Router::any('/reset_feeder_setup.php',     [FeederController::class, 'resetFeede
 
 Router::any('/update_process.php',         [ProcessController::class, 'updateProcess']);
 Router::any('/get_defects.php',            [ProcessController::class, 'getDefects']);
+Router::any('/get_machine_alarms.php',     [ProcessController::class, 'getMachineAlarms']);
 Router::any('/repair_board.php',           [ProcessController::class, 'repairBoard']);
 Router::any('/reset_line.php',             [ProcessController::class, 'resetLine']);
 Router::any('/reset_maintenance.php',      [ProcessController::class, 'resetMaintenance']);

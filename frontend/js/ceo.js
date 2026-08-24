@@ -53,20 +53,23 @@ async function loadKpiAnalytics() {
 
         if (json.status === 'success' && json.data) {
             const d = json.data;
+            const s = d.summary || d;
 
-            // 종합 누적 수율
+            // 종합 누적 수율 (초품 직행률 FPY 및 최종 달성률)
             const yieldValEl = document.getElementById('kpiOverallYield');
             const yieldBarEl = document.getElementById('kpiYieldBar');
             const yieldSubEl = document.getElementById('kpiYieldSub');
-            if (yieldValEl) yieldValEl.innerText = `${d.overall_yield || 99.2}%`;
-            if (yieldBarEl) yieldBarEl.style.width = `${Math.min(100, d.overall_yield || 99.2)}%`;
-            if (yieldSubEl) yieldSubEl.innerHTML = `양품 <strong>${(d.total_good || 0).toLocaleString()}</strong> / 불량 <strong>${(d.total_fail || 0).toLocaleString()}</strong> EA`;
+            const fpy = s.fpy_yield ?? s.overall_yield ?? 100;
+            const finalY = s.final_yield ?? 100;
+            if (yieldValEl) yieldValEl.innerText = `${fpy}%`;
+            if (yieldBarEl) yieldBarEl.style.width = `${Math.min(100, fpy)}%`;
+            if (yieldSubEl) yieldSubEl.innerHTML = `완제품 <strong>${(s.final_good || s.total_good || 0).toLocaleString()}</strong> EA / 불량수리 <strong>${(s.total_fail || 0).toLocaleString()}</strong> EA (최종 ${finalY}%)`;
 
             // 납기 준수율
             const onTimeValEl = document.getElementById('kpiOnTimeRate');
             const onTimeBarEl = document.getElementById('kpiOnTimeBar');
-            if (onTimeValEl) onTimeValEl.innerText = `${d.on_time_rate || 98.4}%`;
-            if (onTimeBarEl) onTimeBarEl.style.width = `${Math.min(100, d.on_time_rate || 98.4)}%`;
+            if (onTimeValEl) onTimeValEl.innerText = `${s.on_time_rate || 100}%`;
+            if (onTimeBarEl) onTimeBarEl.style.width = `${Math.min(100, s.on_time_rate || 100)}%`;
 
             // 일별 추이 차트 렌더링
             if (d.daily_trend && Array.isArray(d.daily_trend)) {

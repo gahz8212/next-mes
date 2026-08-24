@@ -128,7 +128,7 @@
 
                     <div class="line-machines-row">
                         <!-- Machine 1: Laser Marker -->
-                        <div class="machine-card wait" id="mac-LASER" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('LASER')">
+                        <div class="machine-card wait" id="mac-LASER" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="event.stopPropagation(); openPdmModal('LASER', event)">
                             <div class="mac-header-row">
                                 <span class="mac-title">Laser Marker</span>
                                 <span class="mac-status-indicator">대기</span>
@@ -162,7 +162,7 @@
                         <div class="flow-step-arrow">▶</div>
 
                         <!-- Machine 2: SPI -->
-                        <div class="machine-card wait" id="mac-SPI" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('SPI')">
+                        <div class="machine-card wait" id="mac-SPI" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="event.stopPropagation(); openPdmModal('SPI', event)">
                             <div class="mac-header-row">
                                 <span class="mac-title">SPI 3D 검사</span>
                                 <span class="mac-status-indicator">대기</span>
@@ -196,7 +196,7 @@
                         <div class="flow-step-arrow">▶</div>
 
                         <!-- Machine 3: #1 High-Speed Chip Mounter -->
-                        <div class="machine-card wait" id="mac-MOUNTER_1" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('MOUNTER_1')">
+                        <div class="machine-card wait" id="mac-MOUNTER_1" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="event.stopPropagation(); openPdmModal('MOUNTER_1', event)">
                             <div class="mac-header-row">
                                 <span class="mac-title">#1 고속 마운터</span>
                                 <span class="mac-status-indicator">대기</span>
@@ -230,7 +230,7 @@
                         <div class="flow-step-arrow">▶</div>
 
                         <!-- Machine 4: #2 Odd-Form Flexible Mounter -->
-                        <div class="machine-card wait" id="mac-MOUNTER_2" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('MOUNTER_2')">
+                        <div class="machine-card wait" id="mac-MOUNTER_2" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="event.stopPropagation(); openPdmModal('MOUNTER_2', event)">
                             <div class="mac-header-row">
                                 <span class="mac-title">#2 이형 마운터</span>
                                 <span class="mac-status-indicator">대기</span>
@@ -264,7 +264,7 @@
                         <div class="flow-step-arrow">▶</div>
 
                         <!-- Machine 5: Reflow Oven -->
-                        <div class="machine-card wait" id="mac-REFLOW" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('REFLOW')">
+                        <div class="machine-card wait" id="mac-REFLOW" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="event.stopPropagation(); openPdmModal('REFLOW', event)">
                             <div class="mac-header-row">
                                 <span class="mac-title">Reflow Oven</span>
                                 <span class="mac-status-indicator">대기</span>
@@ -308,7 +308,7 @@
 
                     <div class="line-machines-row">
                         <!-- Machine 6: 수삽 AOI -->
-                        <div class="machine-card wait" id="mac-DIP_AOI" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('DIP_AOI')">
+                        <div class="machine-card wait" id="mac-DIP_AOI" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="event.stopPropagation(); openPdmModal('DIP_AOI', event)">
                             <div class="mac-header-row">
                                 <span class="mac-title">수삽 AOI 검사</span>
                                 <span class="mac-status-indicator">대기</span>
@@ -342,7 +342,7 @@
                         <div class="flow-step-arrow">▶</div>
 
                         <!-- Machine 7: Wave Soldering -->
-                        <div class="machine-card wait" id="mac-WAVE" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('WAVE')">
+                        <div class="machine-card wait" id="mac-WAVE" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="event.stopPropagation(); openPdmModal('WAVE', event)">
                             <div class="mac-header-row">
                                 <span class="mac-title">Wave Soldering</span>
                                 <span class="mac-status-indicator">대기</span>
@@ -376,7 +376,7 @@
                         <div class="flow-step-arrow">▶</div>
 
                         <!-- Machine 8: ICT Circuit Tester -->
-                        <div class="machine-card wait" id="mac-ICT" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('ICT')">
+                        <div class="machine-card wait" id="mac-ICT" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="event.stopPropagation(); openPdmModal('ICT', event)">
                             <div class="mac-header-row">
                                 <span class="mac-title">ICT 회로 검사</span>
                                 <span class="mac-status-indicator">대기</span>
@@ -410,7 +410,7 @@
                         <div class="flow-step-arrow">▶</div>
 
                         <!-- Machine 9: Conformal Coating & UV -->
-                        <div class="machine-card wait" id="mac-COATING" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('COATING')">
+                        <div class="machine-card wait" id="mac-COATING" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="event.stopPropagation(); openPdmModal('COATING', event)">
                             <div class="mac-header-row">
                                 <span class="mac-title">방습/절연 코팅</span>
                                 <span class="mac-status-indicator">대기</span>
@@ -444,7 +444,7 @@
                         <div class="flow-step-arrow">▶</div>
 
                         <!-- Machine 10: FCT Functional Circuit Test -->
-                        <div class="machine-card wait" id="mac-FCT" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="openPdmModal('FCT')">
+                        <div class="machine-card wait" id="mac-FCT" title="클릭 시 정밀 예지보전(PdM) 진단 콘솔 열기" onclick="event.stopPropagation(); openPdmModal('FCT', event)">
                             <div class="mac-header-row">
                                 <span class="mac-title">FCT 기능 검사</span>
                                 <span class="mac-status-indicator">대기</span>
@@ -608,8 +608,8 @@
     <!-- ═══════════════════════════════════════════════════════════════════
          설비 정밀 예지보전(PdM) 진단 & 물리량 분석 모달
          ═══════════════════════════════════════════════════════════════════ -->
-    <div class="pdm-modal-overlay" id="pdmModalOverlay" onclick="closePdmModal(event)">
-        <div class="pdm-modal-box" onclick="event.stopPropagation()">
+    <div class="pdm-modal-overlay" id="pdmModalOverlay" onmousedown="if(event.target===this) closePdmModal(event)">
+        <div class="pdm-modal-box" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()">
             <!-- Modal Header -->
             <div class="pdm-modal-header">
                 <div class="pdm-header-title-wrap">
@@ -666,6 +666,17 @@
                     <div class="guide-content">
                         <div class="guide-title">예지보전 엔지니어 조치 권고</div>
                         <div class="guide-text" id="pdmRecommendation">광학계 및 발진기 출력 상태가 기준치 내에서 매우 안정적입니다.</div>
+                    </div>
+                </div>
+
+                <!-- Recent Machine Alarms & Anomaly History Section -->
+                <div class="pdm-alarms-section">
+                    <div class="pdm-alarms-header">
+                        <span class="pdm-alarms-title">🚨 최근 감지된 설비 이상 / 공정 불량 알람 이력</span>
+                        <span class="pdm-alarms-badge" id="pdmAlarmsCount">0건</span>
+                    </div>
+                    <div class="pdm-alarms-list" id="pdmAlarmsList">
+                        <div class="pdm-alarm-empty">최근 감지된 이상/알람 이력이 없습니다. (설비 정상 가동 중)</div>
                     </div>
                 </div>
             </div>

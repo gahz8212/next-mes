@@ -350,10 +350,6 @@ function resetAllMachines(targetLine = 'ALL') {
     });
 
     initIdleHistories();
-
-    if (activeModalProcess && machineIds.includes(activeModalProcess)) {
-        closePdmModal();
-    }
 }
 
 // 5-1. 상단: 건전도 & 정비주기 듀얼 원형 게이지 (27인치/15인치/8인치 태블릿 완벽 반응형 동적 스케일링)
@@ -793,24 +789,65 @@ function updateMachine(processId, status, barcode, pDataObj) {
     }, 3500);
 }
 
-// 7. 설비 정밀 예지보전(PdM) 진단 모달 엔진 (RUL & PM 캘린더 포함)
-function openPdmModal(processId) {
+// 7. 설비 정밀 예지보전(PdM) 진단 모달 엔진 (RUL & PM 캘린더 & 최근 알람 이력 포함)
+function openPdmModal(processId, event) {
+    if (event) {
+        if (typeof event.preventDefault === 'function') event.preventDefault();
+        if (typeof event.stopPropagation === 'function') event.stopPropagation();
+    }
     activeModalProcess = processId;
     const modal = document.getElementById('pdmModalOverlay');
     if (!modal) return;
 
     modal.classList.add('open');
     renderPdmModalContent(processId);
+    loadMachineAlarmsInModal(processId);
 }
 window.openPdmModal = openPdmModal;
 
 function closePdmModal(e) {
-    if (e && e.target && e.target.closest('.pdm-modal-box')) return;
+    if (e && e.target) {
+        if (e.target.closest && e.target.closest('.pdm-modal-box')) return;
+    }
     const modal = document.getElementById('pdmModalOverlay');
     if (modal) modal.classList.remove('open');
     activeModalProcess = null;
 }
 window.closePdmModal = closePdmModal;
+
+async function loadMachineAlarmsInModal(processId) {
+    const listEl = document.getElementById('pdmAlarmsList');
+    const countEl = document.getElementById('pdmAlarmsCount');
+    if (!listEl) return;
+
+    try {
+        const res = await fetch(`../backend/api/get_machine_alarms.php?process_id=${processId}`);
+        const json = await res.json();
+        if (json.status === 'success' && json.data) {
+            const alarms = json.data.alarms || [];
+            if (countEl) countEl.innerText = `${alarms.length}건`;
+
+            if (alarms.length === 0) {
+                listEl.innerHTML = `<div class="pdm-alarm-empty">✅ 최근 감지된 이상/알람 이력이 없습니다. (설비 정상 가동 중)</div>`;
+                return;
+            }
+
+            listEl.innerHTML = alarms.map(a => `
+                <div class="pdm-alarm-item">
+                    <div class="pdm-alarm-top">
+                        <span class="pdm-alarm-time">⏰ ${a.created_at} | <code>${a.barcode || '-'}</code></span>
+                        <span class="pdm-alarm-status">${a.result_status === 'FAIL' ? '🚨 공정 불량' : '⚠️ 설비 주의'} (건전도 ${a.pdm_health}점)</span>
+                    </div>
+                    <div class="pdm-alarm-msg"><strong>${a.metric_name}:</strong> <span style="color:#f87171; font-weight:700;">${a.metric_val} ${a.metric_unit}</span></div>
+                    <div class="pdm-alarm-rec">💡 <strong>조치 권고:</strong> ${a.recommendation}</div>
+                </div>
+            `).join('');
+        }
+    } catch (e) {
+        console.warn('loadMachineAlarmsInModal error:', e);
+    }
+}
+window.loadMachineAlarmsInModal = loadMachineAlarmsInModal;
 
 function renderPdmModalContent(processId) {
     const d = latestPdmData[processId] || {};

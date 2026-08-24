@@ -678,9 +678,18 @@ class WorkOrderController {
                       (SELECT so.order_no FROM sales_order so WHERE so.wo_id = w.parent_wo_id LIMIT 1),
                       ''
                   ) as order_no,
-                  COALESCE(SUM(CASE WHEN b.status != 'WAIT' THEN 1 ELSE 0 END), 0) as processed_qty,
-                  COALESCE(SUM(CASE WHEN b.status IN ('SHIPPING') THEN 1 ELSE 0 END), 0) as good_qty,
-                  COALESCE(SUM(CASE WHEN b.status = 'FAIL' THEN 1 ELSE 0 END), 0) as fail_qty
+                  COALESCE(SUM(CASE 
+                      WHEN b.status IN ('BOTTOM_DONE','TEST_PASS','SHIPPING','DONE','DEFECT','FAIL') 
+                           OR EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = b.barcode AND bh.result_status IN ('PASS','FAIL'))
+                      THEN 1 ELSE 0 END), 0) as processed_qty,
+                  COALESCE(SUM(CASE 
+                      WHEN b.status IN ('BOTTOM_DONE','TEST_PASS','SHIPPING','DONE') 
+                           AND NOT EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = b.barcode AND bh.result_status = 'FAIL')
+                      THEN 1 ELSE 0 END), 0) as good_qty,
+                  COALESCE(SUM(CASE 
+                      WHEN b.status IN ('DEFECT', 'FAIL') 
+                           OR EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = b.barcode AND bh.result_status = 'FAIL')
+                      THEN 1 ELSE 0 END), 0) as fail_qty
                 FROM work_order w
                 LEFT JOIN company c ON w.company_id = c.id
                 LEFT JOIN barcode_master b ON w.wo_id = b.wo_id

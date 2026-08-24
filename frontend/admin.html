@@ -4611,11 +4611,11 @@ const ALL_PAGE_TITLES = {
         const totalPct = Math.min(100, Math.round((smtPct * 0.5) + (dipPct * 0.5)));
 
         const currentQty = isDone ? targetQty : (isDipProgress ? dipQty : smtQty);
-        const goodQty = parseInt(wo.good_qty || 0);
         const failQty = parseInt(wo.fail_qty || 0);
-        const actualProduced = goodQty + failQty;
-        const totalProcessed = isDone ? targetQty : (isDipProgress ? dipQty : smtQty);
-        const yieldRate = actualProduced > 0 ? ((goodQty / actualProduced) * 100).toFixed(1) : (totalProcessed > 0 ? '100.0' : '100.0');
+        // 완료(DONE) 시 목표 30개 전량 양품 완성 (불량 4개는 부품 34개 투입으로 수리/대체 완료)
+        const goodQty = isDone ? targetQty : parseInt(wo.good_qty || 0);
+        const firstPassGood = isDone ? Math.max(0, targetQty - failQty) : goodQty;
+        const yieldRate = targetQty > 0 ? ((firstPassGood / targetQty) * 100).toFixed(1) : '100.0';
 
         const ddayBadge = renderDDay(wo.dday, isDone);
 
@@ -7982,9 +7982,9 @@ async function deleteCompany(id, name) {
                         총 ${dayOrders.length}건
                     </span>
                 </div>
-                <button type="button" class="topbar-action-btn" style="padding:5px 12px; font-size:12px;" onclick="openWOModalWithDate('${dateStr}')">
-                    + 이 날짜로 새 작업지시 등록
-                </button>
+                // <button type="button" class="topbar-action-btn" style="padding:5px 12px; font-size:12px;" onclick="openWOModalWithDate('${dateStr}')">
+                //     + 이 날짜로 새 작업지시 등록
+                // </button>
             </div>
 
             <!-- Body Details Area -->
@@ -7993,7 +7993,7 @@ async function deleteCompany(id, name) {
                     <!-- Summary Strip -->
                     <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:10px 14px; font-size:12.5px;">
                         <div style="color:#94a3b8;">
-                            이 날짜에 예정된 생산 목표 / 납품 및 실적 합계:
+                            생산 목표 / 납품 및 실적 합계:
                         </div>
                         <div style="font-family:'JetBrains Mono',monospace; font-weight:700; color:#cbd5e1;">
                             목표: <strong style="color:#ffffff;">${totalTarget.toLocaleString()} EA</strong> 
@@ -8038,7 +8038,7 @@ async function deleteCompany(id, name) {
                                             ${!isDone ? `
                                                 <button type="button" class="card-btn card-btn-edit" style="padding:4px 8px; font-size:11.5px;" onclick="openEditWOModal('${o.wo_id}', ${o.target_qty}, '${o.due_date||''}', ${o.company_id || 'null'})">✏️ 수정</button>
                                             ` : ''}
-                                            <button type="button" class="card-btn" style="padding:4px 8px; font-size:11.5px; background:rgba(59,130,246,0.18); color:#93c5fd; border:1px solid rgba(59,130,246,0.35);" onclick="openConsignedReconcileModal('${escHtml(o.order_no||'')}', '${o.wo_id}')" title="사급 자재 반납 정산">📦 반납</button>
+                                            // <button type="button" class="card-btn" style="padding:4px 8px; font-size:11.5px; background:rgba(59,130,246,0.18); color:#93c5fd; border:1px solid rgba(59,130,246,0.35);" onclick="openConsignedReconcileModal('${escHtml(o.order_no||'')}', '${o.wo_id}')" title="사급 자재 반납 정산">📦 반납</button>
                                         </div>
                                     </div>
 
@@ -8254,11 +8254,11 @@ async function deleteCompany(id, name) {
         const totalPct = Math.min(100, Math.round((smtPct * 0.5) + (dipPct * 0.5)));
 
         const currentQty = isDone ? targetQty : (isDipProgress ? dipQty : smtQty);
-        const goodQty = parseInt(o.good_qty || 0);
         const failQty = parseInt(o.fail_qty || 0);
-        const actualProduced = goodQty + failQty;
-        const totalProcessed = isDone ? targetQty : (isDipProgress ? dipQty : smtQty);
-        const yieldRate = actualProduced > 0 ? ((goodQty / actualProduced) * 100).toFixed(1) : (totalProcessed > 0 ? '100.0' : '100.0');
+        // 완료(DONE) 시 목표 30개 전량 양품 완성 (불량 4개는 부품 34개 투입으로 수리/대체 완료)
+        const goodQty = isDone ? targetQty : parseInt(o.good_qty || 0);
+        const firstPassGood = isDone ? Math.max(0, targetQty - failQty) : goodQty;
+        const yieldRate = targetQty > 0 ? ((firstPassGood / targetQty) * 100).toFixed(1) : '100.0';
         const today = new Date().toISOString().slice(0, 10);
         const targetDateStr = (isDone && o.delivery_date) ? o.delivery_date : o.due_date;
         const dday = targetDateStr ? Math.round((new Date(targetDateStr) - new Date(today)) / 86400000) : null;
@@ -8298,14 +8298,14 @@ async function deleteCompany(id, name) {
                         <div style="font-size:22px; font-weight:800; color:#f8fafc; font-family:'JetBrains Mono',monospace;">${targetQty.toLocaleString()} <span style="font-size:12px; color:#94a3b8;">EA</span></div>
                     </div>
                     <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(56,189,248,0.25); border-radius:6px; padding:12px 16px;">
-                        <div style="font-size:11px; font-weight:700; color:#38bdf8; margin-bottom:4px;">✨ 양품 / 불량 실적</div>
+                        <div style="font-size:11px; font-weight:700; color:#38bdf8; margin-bottom:4px;">✨ ${isDone ? '완제품 양품 / 불량수리' : '양품 / 불량 실적'}</div>
                         <div style="font-size:22px; font-weight:800; font-family:'JetBrains Mono',monospace;">
                             <span style="color:#34d399;">${goodQty.toLocaleString()}</span> <span style="font-size:14px; color:#64748b;">/</span> <span style="color:#f87171;">${failQty.toLocaleString()}</span> <span style="font-size:12px; color:#94a3b8;">EA</span>
                         </div>
                     </div>
                     <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:12px 16px;">
-                        <div style="font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:4px;">📊 종합 수율</div>
-                        <div style="font-size:22px; font-weight:800; color:${parseFloat(yieldRate)>=95?'#34d399':parseFloat(yieldRate)>=80?'#fbbf24':'#f87171'}; font-family:'JetBrains Mono',monospace;">${yieldRate}%</div>
+                        <div style="font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:4px;">📊 최종 달성률 ${isDone ? '(초품수율 ' + yieldRate + '%)' : '종합 수율'}</div>
+                        <div style="font-size:22px; font-weight:800; color:${isDone ? '#34d399' : (parseFloat(yieldRate)>=95?'#34d399':parseFloat(yieldRate)>=80?'#fbbf24':'#f87171')}; font-family:'JetBrains Mono',monospace;">${isDone ? '100.0%' : yieldRate + '%'}</div>
                     </div>
                 </div>
 
@@ -12884,19 +12884,35 @@ async function loadKpiAnalytics() {
 
     const { summary, daily_trend, lines, process_stats } = data.data;
 
-    // KPI Cards
-    const yVal = summary.overall_yield ?? 100;
-    const yEl = document.getElementById('kpi-ana-yield');
-    yEl.textContent = yVal + '%';
-    yEl.className = 'kpi-val ' + (yVal >= 95 ? 'good' : yVal >= 85 ? 'warn' : 'danger');
-
+    // KPI Cards: 초품 직행률(FPY), 최종 납기/달성률, 완제품 양품, 불량수리(자재투입)
+    const fpyVal = summary.fpy_yield ?? summary.overall_yield ?? 100;
+    const finalVal = summary.final_yield ?? 100;
     const otVal = summary.on_time_rate ?? 100;
-    const otEl = document.getElementById('kpi-ana-ontime');
-    otEl.textContent = otVal + '%';
-    otEl.className = 'kpi-val ' + (otVal >= 90 ? 'accent' : 'warn');
+    const finalGood = summary.final_good ?? summary.total_good ?? 0;
+    const totalFail = summary.total_fail ?? 0;
+    const totalMaterial = summary.total_material ?? (finalGood + totalFail);
 
-    document.getElementById('kpi-ana-good').textContent = (summary.total_good || 0).toLocaleString() + ' EA';
-    document.getElementById('kpi-ana-fail').textContent = (summary.total_fail || 0).toLocaleString() + ' EA';
+    const yEl = document.getElementById('kpi-ana-yield');
+    if (yEl) {
+        yEl.innerHTML = `${fpyVal}% <span style="font-size:11px;font-weight:normal;color:var(--text-muted);display:block;margin-top:2px;">(최종 달성 ${finalVal}%)</span>`;
+        yEl.className = 'kpi-val ' + (fpyVal >= 95 ? 'good' : fpyVal >= 85 ? 'warn' : 'danger');
+    }
+
+    const otEl = document.getElementById('kpi-ana-ontime');
+    if (otEl) {
+        otEl.textContent = otVal + '%';
+        otEl.className = 'kpi-val ' + (otVal >= 90 ? 'accent' : 'warn');
+    }
+
+    const goodEl = document.getElementById('kpi-ana-good');
+    if (goodEl) {
+        goodEl.innerHTML = `${finalGood.toLocaleString()} <span style="font-size:12px;color:var(--text-muted);">EA</span>`;
+    }
+
+    const failEl = document.getElementById('kpi-ana-fail');
+    if (failEl) {
+        failEl.innerHTML = `${totalFail.toLocaleString()} <span style="font-size:12px;color:var(--text-muted);">EA</span> <span style="font-size:10px;color:#94a3b8;display:block;font-weight:normal;">(총 투입 ${totalMaterial.toLocaleString()} EA)</span>`;
+    }
 
     // Daily Trend
     renderKpiTrend(daily_trend || []);
@@ -12927,7 +12943,7 @@ function renderKpiTrend(dailyTrend) {
                     <div class="bar-fill ${yClass}" style="width:${pct}%;"></div>
                 </div>
                 <div class="bar-count" style="min-width:55px;">${d.total} <span style="font-size:10px;color:var(--text-muted);">EA</span></div>
-                <div class="bar-pct" style="min-width:55px;color:${d.yield>=95?'#34d399':d.yield>=85?'#fcd34d':'#f87171'};font-weight:700;">${d.yield}%</div>
+                <div class="bar-pct" style="min-width:70px;color:${d.yield>=95?'#34d399':d.yield>=85?'#fcd34d':'#f87171'};font-weight:700;">${d.yield}% <span style="font-size:9.5px;color:#94a3b8;font-weight:normal;">FPY</span></div>
             </div>
         `;
     }).join('');
