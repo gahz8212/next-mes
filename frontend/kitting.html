@@ -668,12 +668,10 @@
         }
 
         function releaseAndGoToDashboard() {
-            const role = localStorage.getItem('userRole') || '';
-            if (role === 'admin' || role === 'line_lead') {
-                alert("피더 셋업 검증이 100% 완료되었습니다. SMT 라인 가동 콘솔로 이동합니다.");
-                window.location.href = 'dashboard.html';
+            if (currentWoId) {
+                window.location.href = `dashboard.html?wo_id=${encodeURIComponent(currentWoId)}`;
             } else {
-                alert("피더 셋업 검증이 100% 완료되어 SMT 인터록이 정상 해제되었습니다.\n라인 반장이 라인을 가동할 수 있습니다.");
+                window.location.href = 'dashboard.html';
             }
         }
 

@@ -828,9 +828,12 @@
                         }
 
                         const companyName = wo.company_name ? wo.company_name : '일반';
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const targetWoId = urlParams.get('wo_id');
+                        const isHighlight = (targetWoId && wo.wo_id === targetWoId);
 
                         listDiv.innerHTML += `
-                            <div class="wo-item-card">
+                            <div class="wo-item-card ${isHighlight ? 'target-wo-highlight' : ''}" id="wo-card-${escHtml(wo.wo_id)}" style="${isHighlight ? 'border-color:#38bdf8; box-shadow:0 0 10px rgba(56,189,248,0.3);' : ''}">
                                 <div class="wo-item-top">
                                     <div style="flex:1; min-width:0;">
                                         <div class="wo-item-company">[${companyName}]</div>
@@ -845,6 +848,18 @@
                                 ${btnHtml}
                             </div>
                         `;
+                    });
+
+                    // 특정 작업지시로 진입한 경우 해당 카드로 부드럽게 스크롤 및 사이드바 오픈 보장
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const targetWoId = urlParams.get('wo_id');
+                    if (targetWoId) {
+                        if (typeof showSidebar === 'function') showSidebar('left');
+                        setTimeout(() => {
+                            const targetEl = document.getElementById(`wo-card-${targetWoId}`);
+                            if (targetEl) targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 100);
+                    }
                 } else {
                     if (countBadge) countBadge.innerText = `0건`;
                     for (const [oldWoId, oldStat] of Object.entries(previousWoStatuses)) {
