@@ -245,9 +245,14 @@ async function initKPI() {
             if (elGood)   elGood.innerText   = goodCount;
             if (elFail)   elFail.innerText   = failCount;
             if (elYield) {
-                elYield.innerText  = d.yield_rate || '100.0%';
-                const yNum = parseFloat(d.yield_rate || '100');
-                elYield.className = 'kpi-val ' + (yNum >= 95 ? 'good' : (yNum >= 80 ? 'warn' : 'danger'));
+                const yRate = (totalCount > 0) ? (d.yield_rate || '0.0%') : '0.0%';
+                elYield.innerText = yRate;
+                const yNum = parseFloat(yRate);
+                if (totalCount === 0) {
+                    elYield.className = 'kpi-val';
+                } else {
+                    elYield.className = 'kpi-val ' + (yNum >= 95 ? 'good' : (yNum >= 80 ? 'warn' : 'danger'));
+                }
             }
         }
     } catch(e) {

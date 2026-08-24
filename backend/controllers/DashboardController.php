@@ -132,7 +132,13 @@ class DashboardController {
                 $good  = $isDone ? $targetQty : (int)$data['good_qty'];
                 $fail  = (int)$data['fail_qty'];
                 $total = $isDone ? $targetQty : ($good + $fail);
-                $yield = $targetQty > 0 ? number_format(($good / $targetQty) * 100, 1) : '100.0';
+                
+                // 생산 가공 실적이 있을 때만 수율 계산 (총 생산량 0건이면 0.0%)
+                if ($total > 0) {
+                    $yield = number_format(($good / $total) * 100, 1);
+                } else {
+                    $yield = '0.0';
+                }
 
                 // 투입 및 실장 진행 수량 집계 (LASER 투입 기준)
                 $stmtIn = $pdo->prepare("SELECT count(*) FROM barcode_history WHERE barcode LIKE ? AND process_name = 'LASER' AND result_status != 'IDLE'");
@@ -163,7 +169,7 @@ class DashboardController {
                         "good_qty"   => 0,
                         "fail_qty"   => 0,
                         "wo_status"  => 'READY',
-                        "yield_rate" => "100.0%"
+                        "yield_rate" => "0.0%"
                     ]
                 ]);
             }
