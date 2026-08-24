@@ -55,15 +55,17 @@ async function loadKpiAnalytics() {
             const d = json.data;
             const s = d.summary || d;
 
-            // 종합 누적 수율 (초품 직행률 FPY 및 최종 달성률)
+            // 종합 누적 수율 (초품 직행률 FPY 또는 최종 완제품 수율)
             const yieldValEl = document.getElementById('kpiOverallYield');
             const yieldBarEl = document.getElementById('kpiYieldBar');
             const yieldSubEl = document.getElementById('kpiYieldSub');
-            const fpy = (s.total_processed > 0) ? (s.fpy_yield ?? s.overall_yield ?? 0) : 0;
-            const finalY = (s.total_target > 0) ? (s.final_yield ?? 0) : 0;
-            if (yieldValEl) yieldValEl.innerText = `${fpy}%`;
-            if (yieldBarEl) yieldBarEl.style.width = `${Math.min(100, fpy)}%`;
-            if (yieldSubEl) yieldSubEl.innerHTML = `완제품 <strong>${(s.final_good || s.total_good || 0).toLocaleString()}</strong> EA / 불량수리 <strong>${(s.total_fail || 0).toLocaleString()}</strong> EA (최종 ${finalY}%)`;
+            const finalGood = s.final_good || s.total_good || 0;
+            const finalFail = s.total_fail || 0;
+            const yieldRate = (s.total_target > 0) ? (s.final_yield ?? (s.total_processed > 0 ? s.fpy_yield : 0)) : (s.total_processed > 0 ? (s.fpy_yield ?? 0) : 0);
+
+            if (yieldValEl) yieldValEl.innerText = `${yieldRate}%`;
+            if (yieldBarEl) yieldBarEl.style.width = `${Math.min(100, yieldRate)}%`;
+            if (yieldSubEl) yieldSubEl.innerHTML = `양품 <strong>${finalGood.toLocaleString()}</strong> / 불량 <strong>${finalFail.toLocaleString()}</strong> EA`;
 
             // 납기 준수율
             const onTimeRate = (s.completed_total > 0) ? (s.on_time_rate || 0) : 0;
