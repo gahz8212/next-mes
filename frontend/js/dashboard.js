@@ -799,6 +799,7 @@ function openPdmModal(processId, event) {
     const modal = document.getElementById('pdmModalOverlay');
     if (!modal) return;
 
+    modal.style.display = 'flex';
     modal.classList.add('open');
     renderPdmModalContent(processId);
     loadMachineAlarmsInModal(processId);
@@ -807,10 +808,15 @@ window.openPdmModal = openPdmModal;
 
 function closePdmModal(e) {
     if (e && e.target) {
-        if (e.target.closest && e.target.closest('.pdm-modal-box')) return;
+        if (e.target.closest && e.target.closest('.pdm-modal-box') && !e.target.closest('.btn-close-pdm') && !e.target.closest('.btn-pdm-confirm')) {
+            return;
+        }
     }
     const modal = document.getElementById('pdmModalOverlay');
-    if (modal) modal.classList.remove('open');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('open');
+    }
     activeModalProcess = null;
 }
 window.closePdmModal = closePdmModal;
