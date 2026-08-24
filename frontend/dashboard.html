@@ -766,13 +766,6 @@
                         const prevStatus = previousWoStatuses[woId];
                         let effectiveStatus = wo.status;
 
-                        if (wo.status === 'IN_PROGRESS') {
-                            const isSmtDoneByQty = (parseInt(wo.processed_qty || 0) >= parseInt(wo.target_qty || 0) && parseInt(wo.target_qty || 0) > 0);
-                            if (isSmtDoneByQty) {
-                                effectiveStatus = 'SMT_DONE';
-                            }
-                        }
-
                         // 💡 상태 전이(Edge-Triggered) 감지: 이전 상태와 달라진 1회성 완료 시점에만 사이드바를 자동으로 펼침
                         if (prevStatus && prevStatus !== effectiveStatus) {
                             if (effectiveStatus === 'SMT_DONE') {

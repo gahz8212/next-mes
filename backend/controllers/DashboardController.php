@@ -525,25 +525,25 @@ class DashboardController {
             $firstProc = $processList[0];
             $lastProc  = $processList[4];
 
-            // 1. 투입된 최대 PCB 번호 및 최종 배출된 최대 PCB 번호 조회 (1~target_qty 순차 보장)
-            $stmtMaxIn = $pdo->prepare("
-                SELECT COALESCE(MAX(CAST(SUBSTRING_INDEX(h.barcode, '-', -1) AS UNSIGNED)), 0)
-                FROM barcode_history h
-                WHERE h.barcode LIKE ? AND h.process_name = ? AND h.result_status != 'IDLE'
+            // 1. 첫 공정에 실제 투입된 기판 수(inCount) 및 최종 공정을 통과한 완제품 수(outCount) 집계
+            $stmtInCnt = $pdo->prepare("
+                SELECT count(DISTINCT barcode) 
+                FROM barcode_history 
+                WHERE barcode LIKE ? AND process_name = ? AND result_status != 'IDLE' AND barcode != '-'
             ");
-            $stmtMaxIn->execute([$woId . '-%', $firstProc]);
-            $maxInPcb = (int)$stmtMaxIn->fetchColumn();
+            $stmtInCnt->execute([$woId . '-%', $firstProc]);
+            $inCount = (int)$stmtInCnt->fetchColumn();
 
-            $stmtMaxOut = $pdo->prepare("
-                SELECT COALESCE(MAX(CAST(SUBSTRING_INDEX(h.barcode, '-', -1) AS UNSIGNED)), 0)
-                FROM barcode_history h
-                WHERE h.barcode LIKE ? AND h.process_name = ? AND h.result_status != 'IDLE'
+            $stmtOutCnt = $pdo->prepare("
+                SELECT count(DISTINCT barcode) 
+                FROM barcode_history 
+                WHERE barcode LIKE ? AND process_name = ? AND result_status != 'IDLE' AND barcode != '-'
             ");
-            $stmtMaxOut->execute([$woId . '-%', $lastProc]);
-            $maxOutPcb = (int)$stmtMaxOut->fetchColumn();
+            $stmtOutCnt->execute([$woId . '-%', $lastProc]);
+            $outCount = (int)$stmtOutCnt->fetchColumn();
 
-            // 2. 전체 목표 수량이 공정 파이프라인을 완전히 빠져나왔는지 확인
-            if ($maxOutPcb >= $targetQty && $targetQty > 0) {
+            // 2. 목표 수량의 모든 기판이 마지막 공정까지 완전히 빠져나왔을 때만 완료 전환!
+            if ($outCount >= $targetQty && $targetQty > 0) {
                 if ($mode === 'SMT') {
                     $pdo->prepare("UPDATE work_order SET status = 'SMT_DONE' WHERE wo_id = ? AND status = 'IN_PROGRESS'")->execute([$woId]);
                 } else {
@@ -553,10 +553,10 @@ class DashboardController {
             }
 
             // 3. 현재 컨베이어 슬롯 전진 스텝(currentStep) 계산 (1부터 시작하여 1씩 정확히 전진)
-            if ($maxInPcb < $targetQty) {
-                $currentStep = $maxInPcb + 1;
+            if ($inCount < $targetQty) {
+                $currentStep = $inCount + 1;
             } else {
-                $currentStep = $targetQty + ($maxOutPcb - max(0, $targetQty - 4)) + 1;
+                $currentStep = $targetQty + ($outCount - max(0, $targetQty - 4)) + 1;
             }
 
             // 4. 5개 설비 슬롯별 기판 이동 및 텔레메트리 생성 (Pipeline Shift)
