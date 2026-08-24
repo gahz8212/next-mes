@@ -363,10 +363,13 @@ class DashboardController {
             $activeWo = $stmtWo->fetch();
 
             $activeStatus = $activeWo['status'] ?? 'READY';
+
+            // DONE/SMT_DONE 상태에서는 컨베이어 틱을 실행하지 않음 (이미 완료된 작업에 IDLE 이벤트 생성 방지)
             if ($activeWo && ($activeStatus === 'IN_PROGRESS' || $activeStatus === 'DIP_IN_PROGRESS')) {
                 self::autoTickConveyorPipeline($pdo, $activeWo);
             }
 
+            // 가동 중인 공정에 해당하는 설비 이벤트만 필터링
             $processFilterSql = "";
             if ($activeStatus === 'DIP_IN_PROGRESS') {
                 $processFilterSql = " AND h.process_name IN ('DIP_AOI', 'WAVE', 'ICT', 'COATING', 'FCT') ";
@@ -374,7 +377,23 @@ class DashboardController {
                 $processFilterSql = " AND h.process_name IN ('LASER', 'SPI', 'MOUNTER', 'MOUNTER_1', 'MOUNTER_2', 'REFLOW') ";
             }
 
+            // DONE/SMT_DONE/READY 상태일 때는 빈 로그를 반환하여 설비 카드 깜박임 방지
+            if ($activeStatus === 'DONE' || $activeStatus === 'SMT_DONE' || $activeStatus === 'READY') {
+                $stmtMax = $pdo->query("SELECT COALESCE(MAX(history_id), 0) FROM barcode_history");
+                $currentMax = (int)$stmtMax->fetchColumn();
+                Response::json([
+                    "status" => "success",
+                    "data" => [
+                        "logs"      => [],
+                        "max_id"    => $last_id > 0 ? $last_id : $currentMax,
+                        "active_wo" => $activeWo
+                    ]
+                ]);
+                return;
+            }
+
             if ($last_id > 0) {
+                // 증분 폴링: 지난 ID 이후 실제 생산 이벤트만(IDLE·'-' 제외) 가져옴
                 $stmt = $pdo->prepare("
                     SELECT h.history_id, h.barcode, h.process_name, h.result_status, h.process_data, h.created_at, 
                            COALESCE(b.status, 'ING') AS barcode_status, 
@@ -384,6 +403,8 @@ class DashboardController {
                     FROM barcode_history h
                     LEFT JOIN barcode_master b ON h.barcode = b.barcode
                     WHERE h.history_id > :last_id
+                      AND h.result_status != 'IDLE'
+                      AND h.barcode != '-'
                     {$processFilterSql}
                     ORDER BY h.history_id ASC
                     LIMIT 100
@@ -395,29 +416,50 @@ class DashboardController {
                     ':wo_status'    => $activeStatus
                 ]);
                 $logs = $stmt->fetchAll();
-                $max_id = !empty($logs) ? (int)end($logs)['history_id'] : $last_id;
+
+                // max_id는 실제 DB의 최신 ID로 추적해 IDLE 레코드도 건너뜀
+                $stmtMax = $pdo->query("SELECT COALESCE(MAX(history_id), 0) FROM barcode_history");
+                $max_id = (int)$stmtMax->fetchColumn();
+                if ($max_id < $last_id) $max_id = $last_id;
             } else {
                 $stmtMax = $pdo->query("SELECT COALESCE(MAX(history_id), 0) FROM barcode_history");
                 $currentMax = (int)$stmtMax->fetchColumn();
 
                 if ($activeWo && ($activeStatus === 'IN_PROGRESS' || $activeStatus === 'DIP_IN_PROGRESS')) {
-                    $stmt = $pdo->prepare("
-                        SELECT h.history_id, h.barcode, h.process_name, h.result_status, h.process_data, h.created_at, 
-                               COALESCE(b.status, 'ING') AS barcode_status, b.wo_id, 
-                               :target_qty AS target_qty, :wo_status AS wo_status
-                        FROM barcode_history h
-                        LEFT JOIN barcode_master b ON h.barcode = b.barcode
-                        WHERE b.wo_id = :wo_id
-                        {$processFilterSql}
-                        ORDER BY h.history_id DESC
-                        LIMIT 5
-                    ");
-                    $stmt->execute([
-                        ':wo_id'      => $activeWo['wo_id'],
-                        ':target_qty' => $activeWo['target_qty'] ?? 0,
-                        ':wo_status'  => $activeStatus
-                    ]);
-                    $logs = array_reverse($stmt->fetchAll());
+                    // 초기 로드: 설비별 최신 실제 이벤트 각 1건씩 가져와 history_id ASC 정렬 (바코드 순서 보장)
+                    $processList = ($activeStatus === 'DIP_IN_PROGRESS')
+                        ? ['DIP_AOI', 'WAVE', 'ICT', 'COATING', 'FCT']
+                        : ['LASER', 'SPI', 'MOUNTER_1', 'MOUNTER_2', 'REFLOW'];
+
+                    $initialLogs = [];
+                    foreach ($processList as $proc) {
+                        $procAlias = ($proc === 'MOUNTER_1') ? 'MOUNTER' : $proc;
+                        $stmtInit = $pdo->prepare("
+                            SELECT h.history_id, h.barcode, h.process_name, h.result_status, h.process_data, h.created_at, 
+                                   COALESCE(b.status, 'ING') AS barcode_status, b.wo_id, 
+                                   :target_qty AS target_qty, :wo_status AS wo_status
+                            FROM barcode_history h
+                            LEFT JOIN barcode_master b ON h.barcode = b.barcode
+                            WHERE h.process_name IN (:proc, :proc_alias)
+                              AND h.result_status != 'IDLE'
+                              AND h.barcode != '-'
+                              AND b.wo_id = :wo_id
+                            ORDER BY h.history_id DESC
+                            LIMIT 1
+                        ");
+                        $stmtInit->execute([
+                            ':proc'       => $proc,
+                            ':proc_alias' => $procAlias,
+                            ':wo_id'      => $activeWo['wo_id'],
+                            ':target_qty' => $activeWo['target_qty'] ?? 0,
+                            ':wo_status'  => $activeStatus
+                        ]);
+                        $row = $stmtInit->fetch();
+                        if ($row) $initialLogs[] = $row;
+                    }
+                    // history_id ASC 순서 정렬로 공정 순서대로 바코드 표시
+                    usort($initialLogs, fn($a, $b) => (int)$a['history_id'] - (int)$b['history_id']);
+                    $logs = $initialLogs;
                 } else {
                     $logs = [];
                 }

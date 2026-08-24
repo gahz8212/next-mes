@@ -670,8 +670,8 @@
         </div>
     </div>
 
-    <!-- 스크립트 로드: dashboard.js를 먼저 로드하여 전역 함수 정의 (캐시 방지 v=20260824_05) -->
-    <script src="js/dashboard.js?v=20260824_05"></script>
+    <!-- 스크립트 로드: dashboard.js를 먼저 로드하여 전역 함수 정의 (캐시 방지 v=20260825_01) -->
+    <script src="js/dashboard.js?v=20260825_01"></script>
     <script>
         let currentModalWoId = null;
         let currentFeederData = null;
@@ -738,6 +738,17 @@
                 
                 if (data.status === 'success' && data.data && data.data.length > 0) {
                     if (countBadge) countBadge.innerText = `${data.data.length}건`;
+
+                    const currentWoIds = new Set(data.data.map(w => w.wo_id));
+                    // 💡 목록에서 사라진 이전 진행 작업(IN_PROGRESS / DIP_IN_PROGRESS) 완료 감지
+                    for (const [oldWoId, oldStat] of Object.entries(previousWoStatuses)) {
+                        if (!currentWoIds.has(oldWoId) && (oldStat === 'IN_PROGRESS' || oldStat === 'DIP_IN_PROGRESS')) {
+                            if (typeof resetAllMachines === 'function') resetAllMachines('ALL');
+                            if (typeof showSidebar === 'function') showSidebar('left');
+                            delete previousWoStatuses[oldWoId];
+                        }
+                    }
+
                     data.data.forEach(wo => {
                         let btnHtml = '';
                         let statusBadge = '';
@@ -755,11 +766,16 @@
                         // 💡 상태 전이(Edge-Triggered) 감지: 이전 상태와 달라진 1회성 완료 시점에만 사이드바를 자동으로 펼침
                         if (prevStatus && prevStatus !== effectiveStatus) {
                             if (effectiveStatus === 'SMT_DONE') {
+                                // 자삽 완료: SMT 설비 리셋 + 대기열 복귀
                                 if (typeof resetAllMachines === 'function') resetAllMachines('SMT');
                                 if (typeof showSidebar === 'function') showSidebar('left');
                             } else if (effectiveStatus === 'DONE') {
+                                // 수삽 완료(DIP_IN_PROGRESS → DONE) 또는 전체 완료: 모든 설비 리셋 + 대기열 복귀
                                 if (typeof resetAllMachines === 'function') resetAllMachines('ALL');
                                 if (typeof showSidebar === 'function') showSidebar('left');
+                            } else if (effectiveStatus === 'DIP_IN_PROGRESS') {
+                                // 수삽 시작(SMT_DONE → DIP_IN_PROGRESS): SMT 설비 리셋
+                                if (typeof resetAllMachines === 'function') resetAllMachines('SMT');
                             }
                         }
 
@@ -829,9 +845,15 @@
                                 ${btnHtml}
                             </div>
                         `;
-                    });
                 } else {
                     if (countBadge) countBadge.innerText = `0건`;
+                    for (const [oldWoId, oldStat] of Object.entries(previousWoStatuses)) {
+                        if (oldStat === 'IN_PROGRESS' || oldStat === 'DIP_IN_PROGRESS') {
+                            if (typeof resetAllMachines === 'function') resetAllMachines('ALL');
+                            if (typeof showSidebar === 'function') showSidebar('left');
+                        }
+                    }
+                    previousWoStatuses = {};
                     listDiv.innerHTML = '<div style="color: #64748b; text-align: center; padding: 30px 10px; font-size: 12px;">대기/진행 중인 작업이 없습니다.</div>';
                 }
             } catch (err) {

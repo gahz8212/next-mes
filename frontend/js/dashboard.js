@@ -1279,6 +1279,8 @@ function renderPdmModalContent(processId) {
 }
 
 // 8. 실시간 고속 폴링 루프 (0.8초 주기)
+let _previousActiveStatus = null; // 이전 폴링 시 작업지시 상태 추적 (깜박임 방지용)
+
 async function pollLiveStream() {
     if (isPollingActive) return;
     isPollingActive = true;
@@ -1291,28 +1293,58 @@ async function pollLiveStream() {
         if (json.status === 'success' && json.data) {
             const logs = json.data.logs || [];
             const activeWo = json.data.active_wo || null;
+            const activeStatus = activeWo ? activeWo.status : 'READY';
 
             // 라인 상태 분리: SMT_DONE 또는 DIP_IN_PROGRESS 상태일 때 SMT 라인 설비는 항상 대기(READY/IDLE) 보장
             const smtIds = ['LASER', 'SPI', 'MOUNTER_1', 'MOUNTER_2', 'REFLOW'];
             const dipIds = ['DIP_AOI', 'WAVE', 'ICT', 'COATING', 'FCT'];
 
-            if (activeWo && (activeWo.status === 'SMT_DONE' || activeWo.status === 'DIP_IN_PROGRESS')) {
-                smtIds.forEach(id => {
-                    const mac = document.getElementById(`mac-${id}`);
-                    if (mac && !mac.classList.contains('wait')) {
-                        updateMachine(id, 'IDLE', '-', null);
+            // 상태 전이 감지: 이전 상태와 달라진 경우에만 처리 (중복 호출 방지)
+            const statusChanged = (_previousActiveStatus !== activeStatus);
+
+            if (activeStatus === 'DONE' || activeStatus === 'SMT_DONE' || activeStatus === 'READY') {
+                // 완료/대기 상태에서는 상태가 바뀐 순간 한 번만 전체 리셋
+                if (statusChanged) {
+                    if (activeStatus === 'DONE') {
+                        resetAllMachines('ALL');
+                        if (typeof showSidebar === 'function') showSidebar('left');
+                    } else if (activeStatus === 'SMT_DONE') {
+                        resetAllMachines('SMT');
+                        if (typeof showSidebar === 'function') showSidebar('left');
+                    } else {
+                        resetAllMachines('ALL');
                     }
-                });
-            } else if (activeWo && activeWo.status === 'IN_PROGRESS') {
-                dipIds.forEach(id => {
-                    const mac = document.getElementById(`mac-${id}`);
-                    if (mac && !mac.classList.contains('wait')) {
-                        updateMachine(id, 'IDLE', '-', null);
-                    }
-                });
-            } else if (activeWo && activeWo.status === 'DONE') {
-                resetAllMachines('ALL');
+                }
+                _previousActiveStatus = activeStatus;
+                // max_id도 서버에서 받은 값으로 갱신 (IDLE 레코드 건너뜀)
+                if (json.data.max_id && json.data.max_id > lastHistoryId) {
+                    lastHistoryId = json.data.max_id;
+                }
+                await syncKPI();
+                return;
             }
+
+            if (activeWo && (activeWo.status === 'SMT_DONE' || activeWo.status === 'DIP_IN_PROGRESS')) {
+                if (statusChanged) {
+                    smtIds.forEach(id => {
+                        const mac = document.getElementById(`mac-${id}`);
+                        if (mac && !mac.classList.contains('wait')) {
+                            updateMachine(id, 'IDLE', '-', null);
+                        }
+                    });
+                }
+            } else if (activeWo && activeWo.status === 'IN_PROGRESS') {
+                if (statusChanged) {
+                    dipIds.forEach(id => {
+                        const mac = document.getElementById(`mac-${id}`);
+                        if (mac && !mac.classList.contains('wait')) {
+                            updateMachine(id, 'IDLE', '-', null);
+                        }
+                    });
+                }
+            }
+
+            _previousActiveStatus = activeStatus;
 
             if (logs.length > 0) {
                 logs.forEach(item => {
@@ -1339,6 +1371,7 @@ async function pollLiveStream() {
                         return;
                     }
 
+                    // 백엔드에서 이미 IDLE/'-' 필터링하지만 혹시 남은 경우 방어
                     if (isPass === 'IDLE' || isPass === 'WAIT' || !barcode || barcode === '-') {
                         updateMachine(proc, 'IDLE', '-', null);
                     } else {
@@ -1353,6 +1386,9 @@ async function pollLiveStream() {
                     }
                 });
 
+                lastHistoryId = json.data.max_id;
+            } else if (json.data.max_id && json.data.max_id > lastHistoryId) {
+                // 로그가 없어도 max_id 갱신 (IDLE 레코드 건너뜀)
                 lastHistoryId = json.data.max_id;
             }
         }
