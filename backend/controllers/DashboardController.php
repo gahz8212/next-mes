@@ -116,19 +116,23 @@ class DashboardController {
                             THEN 1 ELSE 0 END), 0) as fail_qty
                     FROM work_order wo
                     LEFT JOIN barcode_master bm ON wo.wo_id = bm.wo_id
-                    WHERE wo.status IN ('IN_PROGRESS', 'SMT_DONE', 'DIP_IN_PROGRESS')
                     GROUP BY wo.wo_id, wo.target_qty, wo.status
-                    ORDER BY wo.due_date ASC
+                    ORDER BY CASE 
+                        WHEN wo.status IN ('IN_PROGRESS', 'DIP_IN_PROGRESS', 'SMT_DONE') THEN 1 
+                        WHEN wo.status = 'DONE' THEN 2 
+                        ELSE 3 END ASC, wo.id DESC
                     LIMIT 1
                 ");
             }
             $data = $stmt->fetch();
 
             if ($data) {
-                $good  = (int)$data['good_qty'];
+                $isDone = ($data['status'] === 'DONE');
+                $targetQty = (int)$data['target_qty'];
+                $good  = $isDone ? $targetQty : (int)$data['good_qty'];
                 $fail  = (int)$data['fail_qty'];
-                $total = $good + $fail;
-                $yield = $total > 0 ? number_format(($good / $total) * 100, 1) : '100.0';
+                $total = $isDone ? $targetQty : ($good + $fail);
+                $yield = $targetQty > 0 ? number_format(($good / $targetQty) * 100, 1) : '100.0';
 
                 // 투입 및 실장 진행 수량 집계 (LASER 투입 기준)
                 $stmtIn = $pdo->prepare("SELECT count(*) FROM barcode_history WHERE barcode LIKE ? AND process_name = 'LASER' AND result_status != 'IDLE'");
@@ -139,7 +143,7 @@ class DashboardController {
                     "status" => "success",
                     "data" => [
                         "wo_id"      => $data['wo_id'],
-                        "target_qty" => (int)$data['target_qty'],
+                        "target_qty" => $targetQty,
                         "actual_qty" => $total,
                         "input_qty"  => $inputQty,
                         "good_qty"   => $good,
@@ -205,6 +209,7 @@ class DashboardController {
                              OR EXISTS (SELECT 1 FROM barcode_history bh WHERE bh.barcode = bm.barcode AND bh.result_status = 'FAIL')
                         THEN 1 ELSE 0 END), 0) as total_fail
                 FROM barcode_master bm
+                WHERE bm.barcode != '-' AND bm.barcode != ''
             ");
             $bmTotals = $stmtBmTotals->fetch();
 
@@ -242,19 +247,22 @@ class DashboardController {
             $onTimeCount    = (int)($delivery['on_time_count'] ?? 0);
             $onTimeRate     = $completedTotal > 0 ? round(($onTimeCount / $completedTotal) * 100, 1) : 100.0;
 
-            // 3. 일별 제품 생산량 및 수율 추이 (고유 바코드 기준 집계)
+            // 3. 일별 제품 생산량 및 수율 추이 (실제 제품 바코드 기준 집계, '-' 대기 더미 바코드 제외)
             $stmtDaily = $pdo->prepare("
                 SELECT 
                     DATE(bh.created_at) as log_date,
-                    COUNT(DISTINCT bh.barcode) as total_count,
+                    COUNT(DISTINCT CASE WHEN bh.barcode != '-' AND bh.barcode != '' AND bh.result_status != 'IDLE' THEN bh.barcode END) as total_count,
                     COUNT(DISTINCT CASE 
-                        WHEN NOT EXISTS (SELECT 1 FROM barcode_history bh2 WHERE bh2.barcode = bh.barcode AND bh2.result_status = 'FAIL')
+                        WHEN bh.barcode != '-' AND bh.barcode != '' AND bh.result_status != 'IDLE'
+                             AND NOT EXISTS (SELECT 1 FROM barcode_history bh2 WHERE bh2.barcode = bh.barcode AND bh2.result_status = 'FAIL')
                         THEN bh.barcode END) as pass_count,
                     COUNT(DISTINCT CASE 
-                        WHEN EXISTS (SELECT 1 FROM barcode_history bh2 WHERE bh2.barcode = bh.barcode AND bh2.result_status = 'FAIL')
+                        WHEN bh.barcode != '-' AND bh.barcode != ''
+                             AND (bh.result_status = 'FAIL' OR EXISTS (SELECT 1 FROM barcode_history bh2 WHERE bh2.barcode = bh.barcode AND bh2.result_status = 'FAIL'))
                         THEN bh.barcode END) as fail_count
                 FROM barcode_history bh
                 WHERE DATE(bh.created_at) BETWEEN :start AND :end
+                  AND bh.barcode != '-' AND bh.barcode != '' AND bh.result_status != 'IDLE'
                 GROUP BY DATE(bh.created_at)
                 ORDER BY log_date ASC
             ");
@@ -280,7 +288,7 @@ class DashboardController {
             $stmtLine = $pdo->query("SELECT * FROM line_status ORDER BY line_id ASC");
             $lines = $stmtLine->fetchAll();
 
-            // 5. 공정 통계
+            // 5. 공정 통계 (대기 IDLE 더미 제외)
             $stmtProcess = $pdo->prepare("
                 SELECT 
                     process_name,
@@ -288,6 +296,7 @@ class DashboardController {
                     COALESCE(SUM(CASE WHEN result_status = 'FAIL' THEN 1 ELSE 0 END), 0) as fail_count
                 FROM barcode_history
                 WHERE DATE(created_at) BETWEEN :start AND :end
+                  AND barcode != '-' AND barcode != '' AND result_status != 'IDLE'
                 GROUP BY process_name
                 ORDER BY count DESC
             ");

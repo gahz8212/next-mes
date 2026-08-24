@@ -90,8 +90,9 @@ async function loadDailyTargetKpi() {
 
         if (json.status === 'success' && json.data) {
             const d = json.data;
-            const target = d.target_qty || 2000;
-            const actual = d.actual_qty || 0;
+            const isDone = (d.wo_status === 'DONE');
+            const target = d.target_qty !== undefined ? d.target_qty : 0;
+            const actual = isDone ? target : (d.actual_qty || 0);
             const rate = target > 0 ? Math.min(100, Math.round((actual / target) * 100)) : 0;
 
             const targetRateEl = document.getElementById('kpiDailyTargetRate');
@@ -100,12 +101,18 @@ async function loadDailyTargetKpi() {
 
             if (targetRateEl) targetRateEl.innerText = `${rate}%`;
             if (targetBarEl) targetBarEl.style.width = `${rate}%`;
-            if (targetSubEl) targetSubEl.innerHTML = `생산 실적 <strong>${actual.toLocaleString()}</strong> / 목표 <strong>${target.toLocaleString()}</strong> EA`;
+            if (targetSubEl) {
+                if (isDone) {
+                    targetSubEl.innerHTML = `생산 실적 <strong>${actual.toLocaleString()}</strong> / 목표 <strong>${target.toLocaleString()}</strong> EA <span style="color:#34d399; font-weight:700;">(완료)</span>`;
+                } else {
+                    targetSubEl.innerHTML = `생산 실적 <strong>${actual.toLocaleString()}</strong> / 목표 <strong>${target.toLocaleString()}</strong> EA`;
+                }
+            }
 
             // SMT 라인 가동 카드 업데이트
             const smtModelEl = document.getElementById('smtCurrentModel');
             const smtQtyEl = document.getElementById('smtOutputQty');
-            if (smtModelEl) smtModelEl.innerText = d.item_name || 'Main Board A타입 (SMT)';
+            if (smtModelEl) smtModelEl.innerText = isDone ? 'Main Board A타입 (금일 생산 완료)' : (d.item_name || 'Main Board A타입 (SMT)');
             if (smtQtyEl) smtQtyEl.innerText = `${actual.toLocaleString()} EA`;
         }
     } catch(e) {
@@ -293,7 +300,7 @@ function drawDailyTrendChart(trendData) {
     const plotW = w - padL - padR;
     const plotH = h - padT - padB;
 
-    const maxQty = Math.max(50, ...trendData.map(d => d.total_count || (d.pass_count + d.fail_count) || 0));
+    const maxQty = Math.max(30, ...trendData.map(d => d.total !== undefined ? d.total : (d.total_count || (d.pass_count + d.fail_count) || 0)));
     const stepX = plotW / trendData.length;
     const barW = Math.max(8, Math.min(26, stepX * 0.45));
 
@@ -318,8 +325,8 @@ function drawDailyTrendChart(trendData) {
     // 2. 바 차트 (일별 생산 수량)
     trendData.forEach((d, idx) => {
         const cx = padL + idx * stepX + stepX / 2;
-        const total = d.total_count || (d.pass_count + d.fail_count) || 0;
-        const barH = (total / maxQty) * plotH;
+        const total = d.total !== undefined ? d.total : (d.total_count || (d.pass_count + d.fail_count) || 0);
+        const barH = maxQty > 0 ? (total / maxQty) * plotH : 0;
         const barY = padT + plotH - barH;
 
         // 바 그라데이션
@@ -332,8 +339,16 @@ function drawDailyTrendChart(trendData) {
         ctx.roundRect(cx - barW / 2, barY, barW, barH, [4, 4, 0, 0]);
         ctx.fill();
 
+        // 바 상단 생산량 라벨 (수량이 0보다 큰 경우)
+        if (total > 0) {
+            ctx.fillStyle = '#bae6fd';
+            ctx.font = 'bold 10px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${total}개`, cx, barY - 4);
+        }
+
         // X축 날짜 (MM/DD)
-        const dateStr = d.log_date ? d.log_date.substring(5) : `${idx + 1}일`;
+        const dateStr = d.date ? d.date.substring(5) : (d.log_date ? d.log_date.substring(5) : `${idx + 1}일`);
         ctx.fillStyle = '#94a3b8';
         ctx.font = '10px sans-serif';
         ctx.textAlign = 'center';
@@ -344,9 +359,9 @@ function drawDailyTrendChart(trendData) {
     ctx.beginPath();
     trendData.forEach((d, idx) => {
         const cx = padL + idx * stepX + stepX / 2;
-        const yieldVal = d.yield_rate !== undefined ? d.yield_rate : 100;
-        // 90% ~ 100%를 Y축 0 ~ plotH로 맵핑
-        const normYield = Math.max(0, Math.min(1, (yieldVal - 90) / 10));
+        const yieldVal = d.yield !== undefined ? d.yield : (d.yield_rate !== undefined ? d.yield_rate : 100);
+        // 80% ~ 100% 범위를 캔버스 높이에 맵핑
+        const normYield = Math.max(0, Math.min(1, (yieldVal - 80) / 20));
         const lineY = padT + plotH - normYield * plotH;
 
         if (idx === 0) ctx.moveTo(cx, lineY);
@@ -359,8 +374,8 @@ function drawDailyTrendChart(trendData) {
     // 수율 포인트 원 & 텍스트
     trendData.forEach((d, idx) => {
         const cx = padL + idx * stepX + stepX / 2;
-        const yieldVal = d.yield_rate !== undefined ? d.yield_rate : 100;
-        const normYield = Math.max(0, Math.min(1, (yieldVal - 90) / 10));
+        const yieldVal = d.yield !== undefined ? d.yield : (d.yield_rate !== undefined ? d.yield_rate : 100);
+        const normYield = Math.max(0, Math.min(1, (yieldVal - 80) / 20));
         const lineY = padT + plotH - normYield * plotH;
 
         ctx.beginPath();
@@ -370,6 +385,12 @@ function drawDailyTrendChart(trendData) {
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 1.5;
         ctx.stroke();
+
+        // 수율 수치 표시 (86.7% 등)
+        ctx.fillStyle = '#34d399';
+        ctx.font = 'bold 9.5px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${yieldVal}%`, cx, lineY - 6);
     });
 }
 
