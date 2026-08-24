@@ -321,7 +321,7 @@ class DashboardController {
                         "total_good"       => $finalGood,
                         "total_fail"       => $totalFail,
                         "total_material"   => $totalMaterial,
-                        "overall_yield"    => $fpyYield,
+                        "overall_yield"    => ($fpyYield > 0 ? $fpyYield : $finalYield),
                         "fpy_yield"        => $fpyYield,
                         "final_yield"      => $finalYield,
                         "material_yield"   => $materialYield,
