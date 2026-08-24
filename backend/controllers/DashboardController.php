@@ -233,12 +233,12 @@ class DashboardController {
             }
 
             // 1. 초품 직행률 (First Pass Yield: 수리 전 순수 통과율)
-            $fpyYield = $totalProcessed > 0 ? round(($firstPassGood / $totalProcessed) * 100, 1) : 100.0;
+            $fpyYield = $totalProcessed > 0 ? round(($firstPassGood / $totalProcessed) * 100, 1) : 0.0;
             // 2. 최종 완제품 달성률 (Final Yield: 수리 완료 후 최종 출하 수율)
-            $finalYield = $totalTarget > 0 ? round(($finalGood / $totalTarget) * 100, 1) : 100.0;
-            // 3. 자재 투입 대비 수율 (Material Yield: 총 자재소모 34개 대비 양품 30개)
+            $finalYield = $totalTarget > 0 ? round(($finalGood / $totalTarget) * 100, 1) : 0.0;
+            // 3. 자재 투입 대비 수율 (Material Yield: 총 자재소모 대비 양품 수량)
             $totalMaterial = $totalProcessed + $totalFail;
-            $materialYield = $totalMaterial > 0 ? round(($finalGood / $totalMaterial) * 100, 1) : 100.0;
+            $materialYield = $totalMaterial > 0 ? round(($finalGood / $totalMaterial) * 100, 1) : 0.0;
 
             // 2. 납기 준수율
             $stmtDelivery = $pdo->query("
@@ -251,7 +251,7 @@ class DashboardController {
             $delivery = $stmtDelivery->fetch();
             $completedTotal = (int)($delivery['completed_total'] ?? 0);
             $onTimeCount    = (int)($delivery['on_time_count'] ?? 0);
-            $onTimeRate     = $completedTotal > 0 ? round(($onTimeCount / $completedTotal) * 100, 1) : 100.0;
+            $onTimeRate     = $completedTotal > 0 ? round(($onTimeCount / $completedTotal) * 100, 1) : 0.0;
 
             // 3. 일별 제품 생산량 및 수율 추이 (실제 제품 바코드 기준 집계, '-' 대기 더미 바코드 제외)
             $stmtDaily = $pdo->prepare("

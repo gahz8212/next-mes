@@ -59,17 +59,18 @@ async function loadKpiAnalytics() {
             const yieldValEl = document.getElementById('kpiOverallYield');
             const yieldBarEl = document.getElementById('kpiYieldBar');
             const yieldSubEl = document.getElementById('kpiYieldSub');
-            const fpy = s.fpy_yield ?? s.overall_yield ?? 100;
-            const finalY = s.final_yield ?? 100;
+            const fpy = (s.total_processed > 0) ? (s.fpy_yield ?? s.overall_yield ?? 0) : 0;
+            const finalY = (s.total_target > 0) ? (s.final_yield ?? 0) : 0;
             if (yieldValEl) yieldValEl.innerText = `${fpy}%`;
             if (yieldBarEl) yieldBarEl.style.width = `${Math.min(100, fpy)}%`;
             if (yieldSubEl) yieldSubEl.innerHTML = `완제품 <strong>${(s.final_good || s.total_good || 0).toLocaleString()}</strong> EA / 불량수리 <strong>${(s.total_fail || 0).toLocaleString()}</strong> EA (최종 ${finalY}%)`;
 
             // 납기 준수율
+            const onTimeRate = (s.completed_total > 0) ? (s.on_time_rate || 0) : 0;
             const onTimeValEl = document.getElementById('kpiOnTimeRate');
             const onTimeBarEl = document.getElementById('kpiOnTimeBar');
-            if (onTimeValEl) onTimeValEl.innerText = `${s.on_time_rate || 100}%`;
-            if (onTimeBarEl) onTimeBarEl.style.width = `${Math.min(100, s.on_time_rate || 100)}%`;
+            if (onTimeValEl) onTimeValEl.innerText = `${onTimeRate}%`;
+            if (onTimeBarEl) onTimeBarEl.style.width = `${Math.min(100, onTimeRate)}%`;
 
             // 일별 추이 차트 렌더링
             if (d.daily_trend && Array.isArray(d.daily_trend)) {
