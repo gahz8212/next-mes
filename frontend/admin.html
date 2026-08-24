@@ -6893,14 +6893,14 @@ async function deleteCompany(id, name) {
         // 3. Update preview badge
         const badgeEl = document.getElementById('fsp-selected-badge');
         const slotStr = getFspFormattedSlotString();
-        if (badgeEl) {
-            if (slotStr) {
-                const color = fspState.machineType === 'TRAY' ? '#c084fc' : (fspState.machineType === 'ODD' ? '#fbbf24' : '#38bdf8');
-                badgeEl.innerHTML = `선택 슬롯: <span style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.25); padding:4px 12px; border-radius:6px; color:${color}; font-family:'JetBrains Mono',monospace; font-size:15px;">${escHtml(slotStr)}</span>`;
-            } else {
-                badgeEl.innerHTML = `<span style="color:#64748b; font-size:13px; font-weight:normal;">(선택된 슬롯 없음)</span>`;
-            }
-        }
+        // if (badgeEl) {
+        //     if (slotStr) {
+        //         const color = fspState.machineType === 'TRAY' ? '#c084fc' : (fspState.machineType === 'ODD' ? '#fbbf24' : '#38bdf8');
+        //         badgeEl.innerHTML = `선택 슬롯: <span style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.25); padding:4px 12px; border-radius:6px; color:${color}; font-family:'JetBrains Mono',monospace; font-size:15px;">${escHtml(slotStr)}</span>`;
+        //     } else {
+        //         badgeEl.innerHTML = `<span style="color:#64748b; font-size:13px; font-weight:normal;">(선택된 슬롯 없음)</span>`;
+        //     }
+        // }
     }
 
     async function resetAllBomFeederSlots(bomId, itemName = '') {
