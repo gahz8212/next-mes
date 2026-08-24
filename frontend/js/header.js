@@ -1,5 +1,5 @@
 /**
- * MES PRO 공통 헤더 네비게이션 & 세션 관리자
+ * NEXT MES 공통 헤더 네비게이션 & 세션 관리자
  */
 
 const SCREEN_INFO = {
