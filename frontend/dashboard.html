@@ -615,76 +615,81 @@
                 <div class="pdm-header-title-wrap">
                     <div class="pdm-machine-badge" id="pdmModalBadge">LASER</div>
                     <div>
-                        <div class="pdm-modal-title" id="pdmModalTitle">Laser Marker #1 예지보전 진단</div>
-                        <div class="pdm-modal-sub" id="pdmModalSub">실시간 물리 파라미터 & 건전도 분석 (Predictive Maintenance)</div>
+                        <div class="pdm-modal-title" id="pdmModalTitle">Laser Marker</div>
+                     
                     </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <a id="btnOpenDedicatedHmi" href="machine.html?eq=LASER" class="btn-nav-admin" style="background: rgba(59,130,246,0.2); color:#93c5fd; border-color: rgba(59,130,246,0.4); padding: 5px 10px; font-size: 11px; text-decoration:none;" title="해당 설비 전용 HMI 스테이션 전체화면으로 열기">
+                    <a id="btnOpenDedicatedHmi" href="machine.html?eq=LASER" class="btn-nav-admin" style="background: rgba(59,130,246,0.2); color:#93c5fd; border-color: rgba(59,130,246,0.4); padding: 5px 12px; font-size: 11.5px; text-decoration:none;" title="해당 설비 전용 HMI 스테이션 전체화면으로 열기">
                         전용 HMI 열기 ↗
                     </a>
-                    <button class="btn-close-pdm" onclick="closePdmModal()">✕</button>
+                    <button class="btn-close-pdm" onclick="closePdmModal()" title="닫기">✕</button>
                 </div>
             </div>
 
-            <!-- Modal Body -->
+            <!-- Modal Body (No-Scroll Balanced 2-Row Layout) -->
             <div class="pdm-modal-body">
-                <!-- Health Score Strip -->
-                <div class="pdm-health-card">
-                    <div class="health-info">
-                        <span class="health-label">설비 종합 건전도 (HEALTH INDEX)</span>
-                        <div class="health-score-val" id="pdmHealthScore">98 <span class="score-unit">/ 100</span></div>
+                <!-- Top Row: Health Card (Left) & RUL D-Day Card (Right) -->
+                <div class="pdm-top-metrics-row">
+                    <!-- 1. Health Score Card -->
+                    <div class="pdm-health-card">
+                        <div class="health-header-line">
+                            <span class="health-label">🩺 설비 종합 건전도 (HEALTH INDEX)</span>
+                            <span class="health-status-tag tag-normal" id="pdmStatusTag">정상 안정</span>
+                        </div>
+                        <div class="health-val-line">
+                            <div class="health-score-val" id="pdmHealthScore">98 <span class="score-unit">/ 100 PTS</span></div>
+                        </div>
+                        <div class="health-bar-bg">
+                            <div class="health-bar-fill" id="pdmHealthBar" style="width: 98%;"></div>
+                        </div>
                     </div>
-                    <div class="health-status-tag tag-normal" id="pdmStatusTag">정상 안정</div>
-                    <div class="health-bar-bg">
-                        <div class="health-bar-fill" id="pdmHealthBar" style="width: 98%;"></div>
+
+                    <!-- 2. RUL & PM D-Day Card -->
+                    <div class="pdm-rul-section" id="pdmRulSection">
+                        <!-- Dynamically populated RUL & PM Calendar -->
                     </div>
                 </div>
 
-                <!-- 4-Grid Sensor Gauges -->
+                <!-- Middle Row: 4-Grid Sensor Gauges -->
                 <div class="pdm-sensors-grid" id="pdmSensorsGrid">
                     <!-- Dynamically populated sensor telemetry cards -->
                 </div>
 
-                <!-- 소모품 잔여 수명 (RUL) & 예방정비 D-Day 스트립 -->
-                <div class="pdm-rul-section" id="pdmRulSection">
-                    <!-- Dynamically populated RUL & PM Calendar -->
-                </div>
-
-                <!-- Expanded Real-Time Trend Waveform Chart -->
-                <div class="pdm-chart-section">
-                    <div class="pdm-chart-header">
-                        <span class="pdm-chart-title" id="pdmChartTitle">실시간 파라미터 추이 & 관리한계선 (UCL / LCL)</span>
-                        <span class="pdm-sampling-rate">3초 실시간 샘플링</span>
+                <!-- Bottom Row: SPC Waveform Chart (Left 56%) & AI Recommendation + Alarms (Right 44%) -->
+                <div class="pdm-bottom-split-row">
+                    <!-- Left: Real-Time SPC Waveform with UCL/LCL -->
+                    <div class="pdm-chart-section">
+                        <div class="pdm-chart-header">
+                            <span class="pdm-chart-title" id="pdmChartTitle">📈 실시간 파라미터 추이 & 관리한계선 (UCL / LCL)</span>
+                            <span class="pdm-sampling-rate">3초 실시간 샘플링</span>
+                        </div>
+                        <canvas id="pdmModalCanvas" width="430" height="135"></canvas>
                     </div>
-                    <canvas id="pdmModalCanvas" width="560" height="130"></canvas>
-                </div>
 
-                <!-- AI Maintenance Recommendation Guide -->
-                <div class="pdm-ai-guide" id="pdmAiGuide">
-                    <div class="guide-icon">💡</div>
-                    <div class="guide-content">
-                        <div class="guide-title">예지보전 엔지니어 조치 권고</div>
-                        <div class="guide-text" id="pdmRecommendation">광학계 및 발진기 출력 상태가 기준치 내에서 매우 안정적입니다.</div>
+                    <!-- Right Stack: AI Guide & Recent Alarm History -->
+                    <div class="pdm-right-stack">
+                        <!-- AI Guide -->
+                        <div class="pdm-ai-guide" id="pdmAiGuide">
+                            <div class="guide-icon">💡</div>
+                            <div class="guide-content">
+                                <div class="guide-title">AI 예지보전 엔지니어 조치 권고</div>
+                                <div class="guide-text" id="pdmRecommendation">광학계 및 발진기 출력 상태가 기준치 내에서 매우 안정적입니다.</div>
+                            </div>
+                        </div>
+
+                        <!-- Alarm History -->
+                        <div class="pdm-alarms-section">
+                            <div class="pdm-alarms-header">
+                                <span class="pdm-alarms-title">🚨 최근 설비 이상 / 공정 불량 알람</span>
+                                <span class="pdm-alarms-badge" id="pdmAlarmsCount">0건</span>
+                            </div>
+                            <div class="pdm-alarms-list" id="pdmAlarmsList">
+                                <div class="pdm-alarm-empty">최근 감지된 이상/알람 이력이 없습니다. (설비 정상 가동 중)</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                <!-- Recent Machine Alarms & Anomaly History Section -->
-                <div class="pdm-alarms-section">
-                    <div class="pdm-alarms-header">
-                        <span class="pdm-alarms-title">🚨 최근 감지된 설비 이상 / 공정 불량 알람 이력</span>
-                        <span class="pdm-alarms-badge" id="pdmAlarmsCount">0건</span>
-                    </div>
-                    <div class="pdm-alarms-list" id="pdmAlarmsList">
-                        <div class="pdm-alarm-empty">최근 감지된 이상/알람 이력이 없습니다. (설비 정상 가동 중)</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal Footer -->
-            <div class="pdm-modal-footer">
-                <span class="pdm-footer-note">* 설비 이상 징후 발생 시 임계치(UCL/LCL) 이탈 감지 알림이 자동 발생합니다.</span>
-                <button class="btn-pdm-confirm" onclick="closePdmModal()">확인 완료</button>
             </div>
         </div>
     </div>

@@ -1436,24 +1436,24 @@ html, body {
 
 .pdm-modal-box {
     background: #0f172a;
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 35px rgba(59, 130, 246, 0.2);
     border-radius: 14px;
-    width: 620px;
-    max-width: 95vw;
-    max-height: 92vh;
+    width: 820px;
+    max-width: 96vw;
     display: flex;
     flex-direction: column;
     overflow: hidden;
 }
 
 .pdm-modal-header {
-    padding: 16px 20px;
+    padding: 13px 18px;
     background: #131f33;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-shrink: 0;
 }
 
 .pdm-header-title-wrap {
@@ -1463,25 +1463,25 @@ html, body {
 }
 
 .pdm-machine-badge {
-    padding: 5px 10px;
+    padding: 4px 10px;
     background: rgba(59, 130, 246, 0.2);
     border: 1px solid rgba(59, 130, 246, 0.4);
     color: #60a5fa;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 800;
     font-family: 'JetBrains Mono', monospace;
 }
 
 .pdm-modal-title {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
     color: #f8fafc;
     letter-spacing: -0.01em;
 }
 
 .pdm-modal-sub {
-    font-size: 11.5px;
+    font-size: 11px;
     color: var(--text-muted);
     margin-top: 1px;
 }
@@ -1506,56 +1506,65 @@ html, body {
 }
 
 .pdm-modal-body {
-    padding: 18px 20px;
+    padding: 14px 18px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    overflow-y: auto;
+    gap: 11px;
+    overflow: hidden; /* 상하 스크롤 없는 원스크린 뷰 */
 }
 
-/* Health Card */
+/* 1. 상단 메트릭스 (건전도 & RUL) 50:50 배치 */
+.pdm-top-metrics-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
 .pdm-health-card {
     background: #172338;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 10px;
-    padding: 14px 16px;
-    position: relative;
-    overflow: hidden;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
-.health-info {
+.health-header-line {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: center;
 }
 
 .health-label {
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 700;
-    color: var(--text-muted);
-    letter-spacing: 0.04em;
+    color: var(--text-dim);
+}
+
+.health-val-line {
+    margin-top: 3px;
 }
 
 .health-score-val {
-    font-size: 26px;
+    font-size: 22px;
     font-weight: 800;
     color: #34d399;
     font-family: 'JetBrains Mono', monospace;
+    line-height: 1.1;
 }
 
 .score-unit {
-    font-size: 13px;
+    font-size: 11px;
     color: var(--text-muted);
     font-weight: 600;
 }
 
 .health-status-tag {
-    display: inline-block;
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 700;
-    padding: 2px 8px;
+    padding: 2px 7px;
     border-radius: 4px;
-    margin-top: 4px;
 }
 .health-status-tag.tag-normal  { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); }
 .health-status-tag.tag-caution { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4); }
@@ -1563,10 +1572,10 @@ html, body {
 
 .health-bar-bg {
     width: 100%;
-    height: 6px;
+    height: 5px;
     background: rgba(0, 0, 0, 0.4);
     border-radius: 3px;
-    margin-top: 10px;
+    margin-top: 6px;
     overflow: hidden;
 }
 
@@ -1577,54 +1586,118 @@ html, body {
     transition: width 0.4s ease;
 }
 
-/* 4-Grid Sensors */
+.pdm-rul-card {
+    background: #172338;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+}
+
+.rul-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.rul-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+}
+
+.rul-days-badge {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 7px;
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    border-radius: 4px;
+}
+
+.rul-bar-wrap {
+    width: 100%;
+    height: 5px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 3px;
+    margin: 6px 0;
+    overflow: hidden;
+}
+
+.rul-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+.rul-bar-fill.warn { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+
+.rul-sub-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+/* 2. 중간 4-Grid 센서 텔레메트리 (1열 4개 가로 배치) */
 .pdm-sensors-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
 }
 
 .pdm-sensor-card {
     background: #111c2e;
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 8px;
-    padding: 10px 12px;
+    padding: 8px 10px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
 }
 
 .sensor-header {
     display: flex;
     justify-content: space-between;
-    font-size: 10.5px;
+    font-size: 10px;
     color: var(--text-dim);
     font-weight: 600;
 }
 
 .sensor-limit {
-    font-size: 9.5px;
+    font-size: 9px;
     color: var(--text-muted);
     font-family: 'JetBrains Mono', monospace;
 }
 
 .sensor-val {
-    font-size: 17px;
+    font-size: 15.5px;
     font-weight: 800;
     color: #f1f5f9;
     font-family: 'JetBrains Mono', monospace;
+    margin-top: 1px;
 }
 
 .sensor-val.good { color: #34d399; }
 .sensor-val.warn { color: #fbbf24; }
 .sensor-val.crit { color: #f87171; }
 
-/* Chart Section */
+/* 3. 하단 분할: 파형 차트 (좌측 56%) & AI 권고/알람 (우측 44%) */
+.pdm-bottom-split-row {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 12px;
+}
+
 .pdm-chart-section {
     background: #111c2e;
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 8px;
-    padding: 12px 14px;
+    padding: 10px 12px;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -1637,179 +1710,28 @@ html, body {
 }
 
 .pdm-chart-title {
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 700;
     color: #cbd5e1;
 }
 
 .pdm-sampling-rate {
-    font-size: 10px;
+    font-size: 9.5px;
     color: var(--text-muted);
 }
 
 #pdmModalCanvas {
     width: 100%;
-    height: 120px;
+    height: 135px;
     display: block;
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.35);
     border-radius: 6px;
 }
 
-/* AI Recommendation */
-.pdm-ai-guide {
-    background: rgba(59, 130, 246, 0.1);
-    border: 1px solid rgba(59, 130, 246, 0.25);
-    border-radius: 8px;
-    padding: 10px 14px;
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-}
-
-.guide-icon {
-    font-size: 16px;
-    line-height: 1.2;
-}
-
-.guide-title {
-    font-size: 11.5px;
-    font-weight: 700;
-    color: #93c5fd;
-}
-
-.guide-text {
-    font-size: 11.5px;
-    color: #e2e8f0;
-    margin-top: 2px;
-    line-height: 1.4;
-}
-
-/* Machine Alarms in PdM Modal */
-.pdm-alarms-section {
-    background: #111c2e;
-    border: 1px solid rgba(239, 68, 68, 0.25);
-    border-radius: 10px;
-    padding: 12px 14px;
+.pdm-right-stack {
     display: flex;
     flex-direction: column;
     gap: 8px;
-}
-
-.pdm-alarms-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.pdm-alarms-title {
-    font-size: 12px;
-    font-weight: 700;
-    color: #fca5a5;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.pdm-alarms-badge {
-    font-size: 10px;
-    font-weight: 800;
-    padding: 2px 7px;
-    background: rgba(239, 68, 68, 0.2);
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.4);
-    border-radius: 4px;
-}
-
-.pdm-alarms-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-height: 160px;
-    overflow-y: auto;
-}
-
-.pdm-alarm-item {
-    background: rgba(15, 23, 42, 0.7);
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    border-radius: 6px;
-    padding: 8px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    font-size: 11.5px;
-}
-
-.pdm-alarm-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 4px;
-}
-
-.pdm-alarm-time {
-    color: #94a3b8;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px;
-}
-
-.pdm-alarm-status {
-    font-size: 10px;
-    font-weight: 800;
-    padding: 1px 6px;
-    border-radius: 3px;
-    background: rgba(239, 68, 68, 0.25);
-    color: #fca5a5;
-    border: 1px solid rgba(239, 68, 68, 0.5);
-}
-
-.pdm-alarm-msg {
-    color: #e2e8f0;
-    line-height: 1.4;
-}
-
-.pdm-alarm-rec {
-    color: #38bdf8;
-    font-size: 11px;
-    line-height: 1.4;
-}
-
-.pdm-alarm-empty {
-    padding: 12px;
-    text-align: center;
-    color: #94a3b8;
-    font-size: 11.5px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 6px;
-}
-
-.pdm-modal-footer {
-    padding: 12px 20px;
-    background: #131f33;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.pdm-footer-note {
-    font-size: 10.5px;
-    color: var(--text-muted);
-}
-
-.btn-pdm-confirm {
-    padding: 7px 18px;
-    background: var(--accent);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-.btn-pdm-confirm:hover {
-    background: var(--accent-hover);
 }
 
 /* ═══════════════════════════════════════════════════════════════════

@@ -1260,70 +1260,132 @@ function renderPdmModalContent(processId) {
 }
 
 // 8. 모달 대형 실시간 파라미터 관리도(SPC/UCL/LCL) 차트 드로잉
+const MACHINE_SPC_MODELS = {
+    LASER: { name: '레이저 발진 출력', ucl: 16.0, cl: 15.2, lcl: 14.5, unit: 'W', decimals: 1, base: 15.2, span: 0.35 },
+    SPI: { name: '솔더 도포 체적율', ucl: 115.0, cl: 102.5, lcl: 90.0, unit: '%', decimals: 1, base: 102.5, span: 2.5 },
+    MOUNTER_1: { name: '노즐 진공 흡착압', ucl: -78.0, cl: -84.5, lcl: -92.0, unit: 'kPa', decimals: 1, base: -84.5, span: 1.5 },
+    MOUNTER_2: { name: '비전 회전 정렬오차', ucl: 0.40, cl: 0.12, lcl: -0.40, unit: '°', decimals: 2, base: 0.12, span: 0.06 },
+    REFLOW: { name: '최고 피크 솔더링 온도', ucl: 250.0, cl: 245.5, lcl: 240.0, unit: '℃', decimals: 1, base: 245.5, span: 0.8 },
+    DIP_AOI: { name: '리드 핀 품질 점수', ucl: 100.0, cl: 98.5, lcl: 90.0, unit: 'pts', decimals: 1, base: 98.5, span: 0.6 },
+    WAVE: { name: '솔더팟 용탕 온도', ucl: 258.0, cl: 250.2, lcl: 244.0, unit: '℃', decimals: 1, base: 250.2, span: 0.9 },
+    ICT: { name: '테스트 핀 접촉 저항', ucl: 75.0, cl: 45.2, lcl: 20.0, unit: 'mΩ', decimals: 1, base: 45.2, span: 3.0 },
+    COATING: { name: '도포 피막 두께', ucl: 90.0, cl: 75.0, lcl: 60.0, unit: 'μm', decimals: 1, base: 75.0, span: 2.2 },
+    FCT: { name: 'MCU 총 소비 전류', ucl: 170.0, cl: 142.5, lcl: 120.0, unit: 'mA', decimals: 1, base: 142.5, span: 3.5 }
+};
+
 function drawExpandedModalChart(processId) {
     const canvas = document.getElementById('pdmModalCanvas');
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
-    const w = canvas.width;
-    const h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
-
-    const history = pdmHistory[processId] || [];
-    if (history.length < 2) {
-        ctx.fillStyle = '#64748b';
-        ctx.font = '12px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('공정 가동 중 실시간 텔레메트리 수집 대기 중...', w / 2, h / 2);
-        return;
+    const model = MACHINE_SPC_MODELS[processId] || { name: '주요 물리 파라미터', ucl: 100, cl: 80, lcl: 60, unit: '', decimals: 1, base: 80, span: 2 };
+    
+    // 차트 헤더 타이틀 업데이트
+    const titleEl = document.getElementById('pdmChartTitle');
+    if (titleEl) {
+        titleEl.innerHTML = `📈 <strong>${model.name}</strong> SPC 관리한계선 (UCL: ${model.ucl} / LCL: ${model.lcl} ${model.unit})`;
     }
 
-    const min = Math.min(...history);
-    const max = Math.max(...history);
-    const range = (max - min) === 0 ? 2 : (max - min) * 1.3;
-    const padding = 20;
+    // 히스토리 버퍼 검증 및 초기화 (16개 샘플링 데이터 보장)
+    if (!pdmHistory[processId] || pdmHistory[processId].length < 10) {
+        pdmHistory[processId] = [];
+        let curr = model.base;
+        for (let i = 0; i < 16; i++) {
+            const jitter = (Math.random() - 0.48) * model.span;
+            curr = parseFloat((curr + jitter).toFixed(model.decimals));
+            pdmHistory[processId].push(curr);
+        }
+    }
 
-    const yCenter = h / 2;
-    const yUcl = padding;
-    const yLcl = h - padding;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width || 430;
+    const h = rect.height || 135;
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+    }
+
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    const history = pdmHistory[processId];
+    const padL = 40;
+    const padR = 48;
+    const padT = 18;
+    const padB = 20;
+    const plotW = w - padL - padR;
+    const plotH = h - padT - padB;
+
+    // Y축 스케일 범위 계산 (UCL과 LCL 포함)
+    const minVal = Math.min(model.lcl - (model.cl - model.lcl) * 0.25, ...history);
+    const maxVal = Math.max(model.ucl + (model.ucl - model.cl) * 0.25, ...history);
+    const valRange = (maxVal - minVal) || 1;
+
+    const getY = (val) => padT + plotH - ((val - minVal) / valRange) * plotH;
+
+    const yUcl = getY(model.ucl);
+    const yCl  = getY(model.cl);
+    const yLcl = getY(model.lcl);
+
+    // 1. UCL 상한선 (Red Dash)
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.65)';
     ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
-
-    // UCL
+    ctx.setLineDash([4, 3]);
     ctx.beginPath();
-    ctx.moveTo(padding, yUcl);
-    ctx.lineTo(w - padding, yUcl);
+    ctx.moveTo(padL, yUcl);
+    ctx.lineTo(w - padR, yUcl);
     ctx.stroke();
 
-    // Center
+    ctx.fillStyle = '#f87171';
+    ctx.font = 'bold 8.5px JetBrains Mono, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`UCL ${model.ucl}`, w - padR + 5, yUcl + 3);
+
+    // 2. CL 중심선 (White Dash)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
     ctx.beginPath();
-    ctx.moveTo(padding, yCenter);
-    ctx.lineTo(w - padding, yCenter);
+    ctx.moveTo(padL, yCl);
+    ctx.lineTo(w - padR, yCl);
     ctx.stroke();
 
-    // LCL
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(`CL ${model.cl}`, w - padR + 5, yCl + 3);
+
+    // 3. LCL 하한선 (Red Dash)
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.65)';
     ctx.beginPath();
-    ctx.moveTo(padding, yLcl);
-    ctx.lineTo(w - padding, yLcl);
+    ctx.moveTo(padL, yLcl);
+    ctx.lineTo(w - padR, yLcl);
     ctx.stroke();
+
+    ctx.fillStyle = '#f87171';
+    ctx.fillText(`LCL ${model.lcl}`, w - padR + 5, yLcl + 3);
 
     ctx.setLineDash([]);
 
-    ctx.fillStyle = '#64748b';
-    ctx.font = '9px JetBrains Mono, monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText('UCL', w - 4, yUcl + 3);
-    ctx.fillText('CL', w - 4, yCenter + 3);
-    ctx.fillText('LCL', w - 4, yLcl + 3);
-
+    // 4. 파형 곡선 포인트 계산
     const points = history.map((val, idx) => {
-        const x = padding + (idx / (history.length - 1)) * (w - padding * 2 - 20);
-        const y = h - padding - ((val - min) / range) * (h - padding * 2);
+        const x = padL + (idx / (history.length - 1)) * plotW;
+        const y = getY(val);
         return { x, y, val };
     });
 
+    // 5. 파형 아래 은은한 그라데이션 채우기
+    const grad = ctx.createLinearGradient(0, padT, 0, padT + plotH);
+    grad.addColorStop(0, 'rgba(56, 189, 248, 0.22)');
+    grad.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, padT + plotH);
+    points.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(points[points.length - 1].x, padT + plotH);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // 6. 스플라인 곡선 렌더링
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
     for (let i = 1; i < points.length; i++) {
@@ -1336,22 +1398,23 @@ function drawExpandedModalChart(processId) {
     ctx.lineWidth = 2.2;
     ctx.stroke();
 
+    // 7. 실시간 샘플링 포인트 & 최신값 태그
     points.forEach((p, idx) => {
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
-        ctx.fillStyle = '#0f172a';
+        ctx.arc(p.x, p.y, idx === points.length - 1 ? 4 : 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = idx === points.length - 1 ? '#38bdf8' : '#0f172a';
         ctx.fill();
         ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1.5;
         ctx.stroke();
-
-        if (idx >= points.length - 3) {
-            ctx.fillStyle = '#f1f5f9';
-            ctx.font = '10px JetBrains Mono, monospace';
-            ctx.textAlign = 'center';
-            ctx.fillText(p.val, p.x, p.y - 8);
-        }
     });
+
+    // 최신값 텍스트 배지
+    const lastP = points[points.length - 1];
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 9.5px JetBrains Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`현재: ${lastP.val} ${model.unit}`, padL + plotW, padT - 4);
 }
 
 // 9. 실시간 고속 폴링 루프 (0.8초 주기)
