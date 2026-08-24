@@ -1686,50 +1686,7 @@ html, body {
 .sensor-val.warn { color: #fbbf24; }
 .sensor-val.crit { color: #f87171; }
 
-/* 3. 하단 50:50 분할: AI 권고 (좌측) & 최근 알람 이력 (우측) */
-.pdm-bottom-split-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-}
-
-/* AI Recommendation */
-.pdm-ai-guide {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(16, 185, 129, 0.12));
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    border-radius: 8px;
-    padding: 10px 14px;
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-}
-
-.guide-icon {
-    font-size: 18px;
-    line-height: 1.2;
-    flex-shrink: 0;
-    margin-top: 1px;
-}
-
-.guide-content {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.guide-title {
-    font-size: 11px;
-    font-weight: 700;
-    color: #60a5fa;
-}
-
-.guide-text {
-    font-size: 11.5px;
-    color: #e2e8f0;
-    line-height: 1.4;
-}
-
-/* Machine Alarms in PdM Modal */
+/* 3. 하단: 최근 설비 이상 / 공정 불량 알람 이력 (전체 너비) */
 .pdm-alarms-section {
     background: #111c2e;
     border: 1px solid rgba(239, 68, 68, 0.25);
@@ -1738,6 +1695,7 @@ html, body {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    width: 100%;
 }
 
 .pdm-alarms-header {

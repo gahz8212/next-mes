@@ -656,26 +656,14 @@
                     <!-- Dynamically populated sensor telemetry cards -->
                 </div>
 
-                <!-- Bottom Row: AI Recommendation (Left 50%) & Recent Alarm History (Right 50%) -->
-                <div class="pdm-bottom-split-row">
-                    <!-- Left: AI Guide -->
-                    <div class="pdm-ai-guide" id="pdmAiGuide">
-                        <div class="guide-icon">💡</div>
-                        <div class="guide-content">
-                            <div class="guide-title">AI 예지보전 엔지니어 조치 권고</div>
-                            <div class="guide-text" id="pdmRecommendation">광학계 및 발진기 출력 상태가 기준치 내에서 매우 안정적입니다.</div>
-                        </div>
+                <!-- Bottom Row: Recent Alarm History (Full Width) -->
+                <div class="pdm-alarms-section">
+                    <div class="pdm-alarms-header">
+                        <span class="pdm-alarms-title">🚨 최근 설비 이상 / 공정 불량 알람</span>
+                        <span class="pdm-alarms-badge" id="pdmAlarmsCount">0건</span>
                     </div>
-
-                    <!-- Right: Alarm History -->
-                    <div class="pdm-alarms-section">
-                        <div class="pdm-alarms-header">
-                            <span class="pdm-alarms-title">🚨 최근 설비 이상 / 공정 불량 알람</span>
-                            <span class="pdm-alarms-badge" id="pdmAlarmsCount">0건</span>
-                        </div>
-                        <div class="pdm-alarms-list" id="pdmAlarmsList">
-                            <div class="pdm-alarm-empty">최근 감지된 이상/알람 이력이 없습니다. (설비 정상 가동 중)</div>
-                        </div>
+                    <div class="pdm-alarms-list" id="pdmAlarmsList">
+                        <div class="pdm-alarm-empty">최근 감지된 이상/알람 이력이 없습니다. (설비 정상 가동 중)</div>
                     </div>
                 </div>
             </div>

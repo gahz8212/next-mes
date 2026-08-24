@@ -864,7 +864,6 @@ function renderPdmModalContent(processId) {
     const statusTagEl = document.getElementById('pdmStatusTag');
     const sensorsGrid = document.getElementById('pdmSensorsGrid');
     const rulSection = document.getElementById('pdmRulSection');
-    const recommendationEl = document.getElementById('pdmRecommendation');
 
     const names = {
         LASER: 'Laser Marker',
@@ -1251,10 +1250,6 @@ function renderPdmModalContent(processId) {
 
     if (sensorsGrid) sensorsGrid.innerHTML = sensorsHtml;
     if (rulSection) rulSection.innerHTML = rulHtml;
-
-    if (recommendationEl) {
-        recommendationEl.innerText = d.recommendation || '설비 센서 및 구동 모터 파라미터가 정상 기준치 내에서 양호하게 유지되고 있습니다.';
-    }
 }
 
 // 8. 실시간 고속 폴링 루프 (0.8초 주기)
