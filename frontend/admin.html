@@ -7982,9 +7982,7 @@ async function deleteCompany(id, name) {
                         총 ${dayOrders.length}건
                     </span>
                 </div>
-                // <button type="button" class="topbar-action-btn" style="padding:5px 12px; font-size:12px;" onclick="openWOModalWithDate('${dateStr}')">
-                //     + 이 날짜로 새 작업지시 등록
-                // </button>
+           
             </div>
 
             <!-- Body Details Area -->
@@ -8038,7 +8036,7 @@ async function deleteCompany(id, name) {
                                             ${!isDone ? `
                                                 <button type="button" class="card-btn card-btn-edit" style="padding:4px 8px; font-size:11.5px;" onclick="openEditWOModal('${o.wo_id}', ${o.target_qty}, '${o.due_date||''}', ${o.company_id || 'null'})">✏️ 수정</button>
                                             ` : ''}
-                                            // <button type="button" class="card-btn" style="padding:4px 8px; font-size:11.5px; background:rgba(59,130,246,0.18); color:#93c5fd; border:1px solid rgba(59,130,246,0.35);" onclick="openConsignedReconcileModal('${escHtml(o.order_no||'')}', '${o.wo_id}')" title="사급 자재 반납 정산">📦 반납</button>
+                                            
                                         </div>
                                     </div>
 
