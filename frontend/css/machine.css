@@ -601,7 +601,7 @@ html, body {
 /* 상단 AI 예지보전 진단 알람 배너 (Fixed Floating Top Alert) */
 .ai-pdm-top-banner {
     position: fixed;
-    top: 114px;
+    top: 114px !important;
     left: 50%;
     transform: translateX(-50%);
     width: 90%;
