@@ -9645,7 +9645,7 @@ function renderConsignedReceiveDetail(orderInfo, parts = []) {
                 </thead>
                 <tbody id="consigned-rcv-tbody">
                     ${parts.length > 0 ? parts.map((p, idx) => {
-                        const reqPerUnit = parseFloat(p.req_qty || 1);
+                        const reqPerUnit = parseFloat(p.points !== undefined && p.points !== null ? p.points : (p.req_qty || 1));
                         const calcTotalReq = (p.calc_total_req !== undefined && p.calc_total_req !== null) ? parseFloat(p.calc_total_req) : (orderQty > 0 ? Math.ceil(reqPerUnit * orderQty * 1.2) : 0);
                         const curRcv = parseFloat(p.current_received_qty || 0);
                         const recQty = calcTotalReq > 0 ? Math.max(0, calcTotalReq - curRcv) : '';

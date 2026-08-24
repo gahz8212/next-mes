@@ -558,7 +558,7 @@ class OrderController {
 
             // 2. feeder_setup 생성 (BOM 있을 때)
             if ($bom_id) {
-                $stmtDetails = $pdo->prepare("SELECT part_no, req_qty, location, feeder_slot FROM bom_detail WHERE bom_id = ?");
+                $stmtDetails = $pdo->prepare("SELECT part_no, COALESCE(points, req_qty, 1) as req_qty, location, feeder_slot FROM bom_detail WHERE bom_id = ?");
                 $stmtDetails->execute([$bom_id]);
                 $details = $stmtDetails->fetchAll();
 
@@ -706,7 +706,7 @@ class OrderController {
                 $stmtWo->execute([$wo_id, $company_id, $target_qty, $due_date, $bom_id]);
 
                 if ($bom_id) {
-                    $stmtDetails = $pdo->prepare("SELECT part_no, req_qty, location, feeder_slot FROM bom_detail WHERE bom_id = ?");
+                    $stmtDetails = $pdo->prepare("SELECT part_no, COALESCE(points, req_qty, 1) as req_qty, location, feeder_slot FROM bom_detail WHERE bom_id = ?");
                     $stmtDetails->execute([$bom_id]);
                     $details = $stmtDetails->fetchAll();
 

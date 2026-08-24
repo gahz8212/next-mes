@@ -58,7 +58,7 @@ class ConsignedMaterialController {
         try {
             $pdo = Database::getConnection();
 
-            // Auto-heal existing material_inout records where company_id is NULL
+            // Auto-heal existing material_inout records where company_id is NULL & sync bom_detail points/req_qty
             try {
                 $pdo->query("
                     UPDATE material_inout m
@@ -71,6 +71,11 @@ class ConsignedMaterialController {
                     JOIN work_order wo ON m.wo_id = wo.wo_id
                     SET m.company_id = wo.company_id
                     WHERE m.company_id IS NULL AND m.wo_id IS NOT NULL AND m.wo_id != ''
+                ");
+                $pdo->query("
+                    UPDATE bom_detail
+                    SET req_qty = points
+                    WHERE points IS NOT NULL AND points > 0 AND req_qty != points
                 ");
             } catch (\Throwable $e) {}
 
@@ -234,7 +239,10 @@ class ConsignedMaterialController {
                         if ($itBomId > 0) {
                             $stmtParts = $pdo->prepare("
                                 SELECT
-                                    bd.detail_id, bd.part_no, bd.part_name, bd.req_qty, bd.location,
+                                    bd.detail_id, bd.part_no, bd.part_name,
+                                    COALESCE(bd.points, bd.req_qty, 1) as req_qty,
+                                    COALESCE(bd.points, bd.req_qty, 1) as points,
+                                    bd.location,
                                     (SELECT COALESCE(SUM(CASE WHEN inout_type='IN' THEN qty ELSE -qty END), 0)
                                      FROM material_inout m
                                      WHERE m.part_no = bd.part_no AND m.supply_type = 'CONSIGNED'
@@ -249,7 +257,7 @@ class ConsignedMaterialController {
 
                             foreach ($bomParts as $bp) {
                                 $pNo = $bp['part_no'];
-                                $reqPerUnit = (float)$bp['req_qty'];
+                                $reqPerUnit = (float)($bp['points'] ?? $bp['req_qty'] ?? 1);
                                 $partReqTotal = $itQty > 0 ? ceil($reqPerUnit * $itQty * 1.2) : 0;
 
                                 if (!isset($partsMap[$pNo])) {
@@ -258,6 +266,7 @@ class ConsignedMaterialController {
                                         'part_no'              => $pNo,
                                         'part_name'            => $bp['part_name'] ?: $pNo,
                                         'req_qty'              => $reqPerUnit,
+                                        'points'               => $reqPerUnit,
                                         'calc_total_req'       => $partReqTotal,
                                         'location'             => $bp['location'] ?: '',
                                         'current_received_qty' => (float)$bp['current_received_qty'],
@@ -266,6 +275,7 @@ class ConsignedMaterialController {
                                 } else {
                                     $partsMap[$pNo]['calc_total_req'] += $partReqTotal;
                                     $partsMap[$pNo]['req_qty'] += $reqPerUnit;
+                                    $partsMap[$pNo]['points'] = $partsMap[$pNo]['req_qty'];
                                     if (!in_array($itName, $partsMap[$pNo]['items'])) {
                                         $partsMap[$pNo]['items'][] = $itName;
                                     }
@@ -289,7 +299,10 @@ class ConsignedMaterialController {
                 if ($bomId > 0) {
                     $stmtParts = $pdo->prepare("
                         SELECT
-                            bd.detail_id, bd.part_no, bd.part_name, bd.req_qty, bd.location,
+                            bd.detail_id, bd.part_no, bd.part_name,
+                            COALESCE(bd.points, bd.req_qty, 1) as req_qty,
+                            COALESCE(bd.points, bd.req_qty, 1) as points,
+                            bd.location,
                             (SELECT COALESCE(SUM(CASE WHEN inout_type='IN' THEN qty ELSE -qty END), 0)
                              FROM material_inout m
                              WHERE m.part_no = bd.part_no AND m.supply_type = 'CONSIGNED'
@@ -519,7 +532,10 @@ class ConsignedMaterialController {
 
                         if ($itBomId > 0) {
                             $stmtBom = $pdo->prepare("
-                                SELECT bd.part_no, bd.part_name, bd.req_qty, bd.location
+                                SELECT bd.part_no, bd.part_name, 
+                                       COALESCE(bd.points, bd.req_qty, 1) as req_qty, 
+                                       COALESCE(bd.points, bd.req_qty, 1) as points,
+                                       bd.location
                                 FROM bom_detail bd
                                 WHERE bd.bom_id = ?
                                 ORDER BY bd.detail_id ASC
@@ -529,7 +545,7 @@ class ConsignedMaterialController {
 
                             foreach ($bomParts as $bp) {
                                 $pNo = $bp['part_no'];
-                                $reqPerUnit = (float)$bp['req_qty'];
+                                $reqPerUnit = (float)($bp['points'] ?? $bp['req_qty'] ?? 1);
                                 $usedQty = $reqPerUnit * $itConsumedBoards;
 
                                 if (!isset($partsMap[$pNo])) {

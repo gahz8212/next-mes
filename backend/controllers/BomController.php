@@ -938,16 +938,16 @@ class BomController {
 
             if ($action === 'add') {
                 if (!$bom_id) Response::error("BOM ID가 필요합니다.");
-                $stmt = $pdo->prepare("INSERT INTO bom_detail (bom_id, part_no, part_name, req_qty, location, feeder_slot) VALUES (?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$bom_id, $part_no, $part_name, $req_qty, $location, $feeder_slot]);
+                $stmt = $pdo->prepare("INSERT INTO bom_detail (bom_id, part_no, part_name, req_qty, points, location, feeder_slot) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$bom_id, $part_no, $part_name, $req_qty, $req_qty, $location, $feeder_slot]);
                 Response::success(["detail_id" => (int)$pdo->lastInsertId()], "부품이 추가되었습니다.");
                 return;
             }
 
             // update existing
             if (!$detail_id) Response::error("수정할 부품 ID가 필요합니다.");
-            $stmt = $pdo->prepare("UPDATE bom_detail SET part_no = ?, part_name = ?, req_qty = ?, location = ?, feeder_slot = ? WHERE detail_id = ?");
-            $stmt->execute([$part_no, $part_name, $req_qty, $location, $feeder_slot, $detail_id]);
+            $stmt = $pdo->prepare("UPDATE bom_detail SET part_no = ?, part_name = ?, req_qty = ?, points = ?, location = ?, feeder_slot = ? WHERE detail_id = ?");
+            $stmt->execute([$part_no, $part_name, $req_qty, $req_qty, $location, $feeder_slot, $detail_id]);
             Response::success([], "부품 정보가 수정되었습니다.");
         } catch (Exception $e) {
             Response::error("부품 처리 오류: " . $e->getMessage());
