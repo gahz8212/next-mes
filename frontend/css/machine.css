@@ -1007,27 +1007,34 @@ html, body {
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     overflow: hidden;
+    min-height: 175px;
+    display: flex;
+    flex-direction: column;
 }
 
 .hmi-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 11px;
+    font-size: 13px;
 }
 
 .hmi-table th {
-    background: rgba(0, 0, 0, 0.3);
-    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 10px 12px;
     text-align: left;
     color: var(--text-muted);
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 12px;
     border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
 }
 
 .hmi-table td {
-    padding: 5px 8px;
+    padding: 9px 12px;
     border-bottom: 1px solid var(--border-subtle);
     color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1.4;
 }
 
 .hmi-table tr:last-child td {
@@ -1035,11 +1042,11 @@ html, body {
 }
 
 .hmi-table tr:hover td {
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 0.04);
 }
 
-.tag-pass { color: var(--emerald-green); font-weight: 700; }
-.tag-fail { color: var(--rose-danger); font-weight: 700; }
+.tag-pass { color: var(--emerald-green); font-weight: 800; font-size: 13px; }
+.tag-fail { color: var(--rose-danger); font-weight: 800; font-size: 13px; }
 
 /* 토스트 알림 */
 .hmi-toast {
