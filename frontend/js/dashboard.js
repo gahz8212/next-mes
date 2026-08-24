@@ -834,18 +834,39 @@ async function loadMachineAlarmsInModal(processId) {
             if (countEl) countEl.innerText = `${alarms.length}건`;
 
             if (alarms.length === 0) {
-                listEl.innerHTML = `<div class="pdm-alarm-empty">✅ 최근 감지된 이상/알람 이력이 없습니다. (설비 정상 가동 중)</div>`;
+                listEl.innerHTML = `
+                    <div class="pdm-alarm-empty">
+                        <div style="font-size: 24px; margin-bottom: 4px;">✅</div>
+                        <div style="font-size: 13px; font-weight: 700; color: #cbd5e1;">최근 감지된 설비 이상 또는 공정 불량 이력이 없습니다.</div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">현재 모든 물리 센서 파라미터 및 공정 검사 기준이 정상 범위 내에서 안정적으로 가동 중입니다.</div>
+                    </div>`;
                 return;
             }
 
             listEl.innerHTML = alarms.map(a => `
-                <div class="pdm-alarm-item">
+                <div class="pdm-alarm-item ${a.result_status === 'FAIL' ? 'status-fail' : 'status-warn'}">
                     <div class="pdm-alarm-top">
-                        <span class="pdm-alarm-time">⏰ ${a.created_at} | <code>${a.barcode || '-'}</code></span>
-                        <span class="pdm-alarm-status">${a.result_status === 'FAIL' ? '🚨 공정 불량' : '⚠️ 설비 주의'} (건전도 ${a.pdm_health}점)</span>
+                        <div class="pdm-alarm-tags">
+                            <span class="pdm-alarm-badge-status ${a.result_status === 'FAIL' ? 'badge-fail' : 'badge-warn'}">
+                                ${a.result_status === 'FAIL' ? '🚨 공정 불량 (FAIL)' : '⚠️ 설비 주의'}
+                            </span>
+                            <span class="pdm-alarm-barcode">바코드: <strong>${a.barcode || '-'}</strong></span>
+                            ${a.wo_id ? `<span class="pdm-alarm-wo">지시: ${a.wo_id}</span>` : ''}
+                        </div>
+                        <span class="pdm-alarm-time">🕒 ${a.created_at}</span>
                     </div>
-                    <div class="pdm-alarm-msg"><strong>${a.metric_name}:</strong> <span style="color:#f87171; font-weight:700;">${a.metric_val} ${a.metric_unit}</span></div>
-                    <div class="pdm-alarm-rec">💡 <strong>조치 권고:</strong> ${a.recommendation}</div>
+                    <div class="pdm-alarm-detail">
+                        <div class="pdm-alarm-msg">
+                            <span class="detail-label">이상 항목:</span>
+                            <span class="detail-name">${a.metric_name}</span>
+                            ${a.metric_val ? `<span class="detail-val">(${a.metric_val} ${a.metric_unit})</span>` : ''}
+                        </div>
+                        ${a.recommendation ? `
+                        <div class="pdm-alarm-rec">
+                            <span class="rec-icon">💡</span>
+                            <span class="rec-text"><strong>조치 가이드:</strong> ${a.recommendation}</span>
+                        </div>` : ''}
+                    </div>
                 </div>
             `).join('');
         }

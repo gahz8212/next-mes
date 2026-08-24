@@ -1437,17 +1437,19 @@ html, body {
 .pdm-modal-box {
     background: #0f172a;
     border: 1px solid rgba(59, 130, 246, 0.35);
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 35px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(59, 130, 246, 0.2);
     border-radius: 14px;
-    width: 820px;
+    width: 860px;
     max-width: 96vw;
+    height: 86vh;
+    max-height: 840px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
 }
 
 .pdm-modal-header {
-    padding: 13px 18px;
+    padding: 14px 20px;
     background: #131f33;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
@@ -1506,11 +1508,12 @@ html, body {
 }
 
 .pdm-modal-body {
-    padding: 14px 18px;
+    padding: 14px 20px 18px;
     display: flex;
     flex-direction: column;
-    gap: 11px;
-    overflow: hidden; /* 상하 스크롤 없는 원스크린 뷰 */
+    gap: 12px;
+    flex: 1;
+    overflow: hidden;
 }
 
 /* 1. 상단 메트릭스 (건전도 & RUL) 50:50 배치 */
@@ -1518,6 +1521,7 @@ html, body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
+    flex-shrink: 0;
 }
 
 .pdm-health-card {
@@ -1686,60 +1690,70 @@ html, body {
 .sensor-val.warn { color: #fbbf24; }
 .sensor-val.crit { color: #f87171; }
 
-/* 3. 하단: 최근 설비 이상 / 공정 불량 알람 이력 (전체 너비) */
+/* 3. 하단: 최근 설비 이상 / 공정 불량 알람 이력 (전체 너비 & 세로 확장) */
 .pdm-alarms-section {
     background: #111c2e;
     border: 1px solid rgba(239, 68, 68, 0.25);
-    border-radius: 8px;
-    padding: 10px 14px;
+    border-radius: 10px;
+    padding: 12px 16px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 10px;
     width: 100%;
+    flex: 1;
+    min-height: 240px;
+    overflow: hidden;
 }
 
 .pdm-alarms-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .pdm-alarms-title {
-    font-size: 11.5px;
+    font-size: 12.5px;
     font-weight: 700;
     color: #fca5a5;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
 }
 
 .pdm-alarms-badge {
-    font-size: 9.5px;
+    font-size: 10px;
     font-weight: 800;
-    padding: 1px 6px;
+    padding: 2px 8px;
     background: rgba(239, 68, 68, 0.2);
     color: #f87171;
     border: 1px solid rgba(239, 68, 68, 0.4);
-    border-radius: 3px;
+    border-radius: 4px;
 }
 
 .pdm-alarms-list {
     display: flex;
     flex-direction: column;
-    gap: 5px;
-    max-height: 95px;
+    gap: 8px;
+    flex: 1;
     overflow-y: auto;
+    padding-right: 4px;
 }
 
 .pdm-alarm-item {
-    background: rgba(15, 23, 42, 0.7);
+    background: rgba(15, 23, 42, 0.85);
     border: 1px solid rgba(239, 68, 68, 0.3);
-    border-radius: 4px;
-    padding: 5px 8px;
+    border-left: 4px solid #ef4444;
+    border-radius: 6px;
+    padding: 10px 14px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    font-size: 10.5px;
+    gap: 6px;
+    font-size: 11.5px;
+}
+.pdm-alarm-item.status-warn {
+    border-left-color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.3);
 }
 
 .pdm-alarm-top {
@@ -1747,42 +1761,108 @@ html, body {
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 3px;
+    gap: 6px;
+}
+
+.pdm-alarm-tags {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.pdm-alarm-badge-status {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+.pdm-alarm-badge-status.badge-fail {
+    background: rgba(239, 68, 68, 0.25);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+}
+.pdm-alarm-badge-status.badge-warn {
+    background: rgba(245, 158, 11, 0.25);
+    color: #fde68a;
+    border: 1px solid rgba(245, 158, 11, 0.5);
+}
+
+.pdm-alarm-barcode {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #cbd5e1;
+}
+
+.pdm-alarm-wo {
+    font-size: 10.5px;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 1px 6px;
+    border-radius: 3px;
 }
 
 .pdm-alarm-time {
     color: #94a3b8;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 9.5px;
+    font-size: 10.5px;
 }
 
-.pdm-alarm-status {
-    font-size: 9px;
-    font-weight: 800;
-    padding: 1px 5px;
-    border-radius: 3px;
-    background: rgba(239, 68, 68, 0.25);
-    color: #fca5a5;
+.pdm-alarm-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .pdm-alarm-msg {
+    color: #f1f5f9;
+    font-size: 11.5px;
+    line-height: 1.4;
+}
+
+.pdm-alarm-msg .detail-label {
+    color: #94a3b8;
+    font-weight: 600;
+    margin-right: 4px;
+}
+.pdm-alarm-msg .detail-name {
+    font-weight: 700;
     color: #e2e8f0;
-    line-height: 1.3;
+}
+.pdm-alarm-msg .detail-val {
+    color: #f87171;
+    font-weight: 700;
+    margin-left: 4px;
+    font-family: 'JetBrains Mono', monospace;
 }
 
 .pdm-alarm-rec {
     color: #38bdf8;
-    font-size: 10px;
-    line-height: 1.3;
+    font-size: 11px;
+    line-height: 1.4;
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin-top: 2px;
 }
 
 .pdm-alarm-empty {
-    padding: 10px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
     text-align: center;
     color: #94a3b8;
-    font-size: 11px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    gap: 4px;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
