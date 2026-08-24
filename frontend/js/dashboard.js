@@ -867,20 +867,20 @@ function renderPdmModalContent(processId) {
     const recommendationEl = document.getElementById('pdmRecommendation');
 
     const names = {
-        LASER: 'Laser Marker #1',
-        SPI: 'SPI 3D 납 도포 검사기 #1',
-        MOUNTER_1: 'High-Speed Surface Mounter #1 (고속 마운터)',
-        MOUNTER_2: 'Odd-Form Surface Mounter #2 (이형 마운터)',
-        REFLOW: 'Reflow Soldering 10-Zone Oven',
-        DIP_AOI: 'Through-Hole DIP AOI System',
-        WAVE: 'Wave Soldering Bath #1',
-        ICT: 'In-Circuit Tester #1 (ICT 회로 검사기)',
-        COATING: 'Conformal Coating & UV Curing #1 (방습 코팅기)',
-        FCT: 'Functional Circuit Tester #1 (FCT 기능 검사기)'
+        LASER: 'Laser Marker',
+        SPI: 'SPI 3D 검사',
+        MOUNTER_1: '#1 고속 마운터',
+        MOUNTER_2: '#2 이형 마운터',
+        REFLOW: 'Reflow Oven',
+        DIP_AOI: '수삽 AOI 검사',
+        WAVE: 'Wave Soldering',
+        ICT: 'ICT 회로 검사',
+        COATING: '방습/절연 코팅',
+        FCT: 'FCT 기능 검사'
     };
 
     if (badge) badge.innerText = processId;
-    if (title) title.innerText = `${names[processId] || processId}`;
+    if (title) title.innerText = names[processId] || processId;
 
     const openHmiBtn = document.getElementById('btnOpenDedicatedHmi');
     if (openHmiBtn) openHmiBtn.href = `machine.html?eq=${processId}`;
