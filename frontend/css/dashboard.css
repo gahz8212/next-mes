@@ -1624,26 +1624,28 @@ html, body {
     height: 100%;
 }
 
-.rul-top-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
 .rul-title {
     font-size: 13.5px;
     font-weight: 700;
-    color: #cbd5e1;
+    color: #f8fafc;
+    margin-bottom: 2px;
+}
+
+.rul-val-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
 }
 
 .rul-days-badge {
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 800;
     padding: 3px 10px;
     background: rgba(59, 130, 246, 0.25);
     color: #93c5fd;
     border: 1px solid rgba(59, 130, 246, 0.45);
     border-radius: 5px;
+    font-family: 'JetBrains Mono', monospace;
 }
 
 .rul-bar-wrap {
@@ -1651,7 +1653,7 @@ html, body {
     height: 7px;
     background: rgba(0, 0, 0, 0.4);
     border-radius: 4px;
-    margin: 8px 0;
+    margin-bottom: 6px;
     overflow: hidden;
 }
 

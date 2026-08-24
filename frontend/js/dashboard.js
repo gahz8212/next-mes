@@ -948,9 +948,9 @@ function renderPdmModalContent(processId) {
         `;
         rulHtml = `
             <div class="pdm-rul-card">
-                <div class="rul-top-row">
-                    <span class="rul-title">집진기 흄(Fume) 필터 잔여 수명 (RUL)</span>
-                    <span class="rul-days-badge">잔여 D-14</span>
+                <div class="rul-title">집진기 흄(Fume) 필터 잔여 수명 (RUL)</div>
+                <div class="rul-val-row">
+                    <span class="rul-days-badge">잔여 D-14 (82%)</span>
                 </div>
                 <div class="rul-bar-wrap">
                     <div class="rul-bar-fill" style="width: ${d.filter_life_pct || 82}%;"></div>
@@ -982,8 +982,8 @@ function renderPdmModalContent(processId) {
         `;
         rulHtml = `
             <div class="pdm-rul-card">
-                <div class="rul-top-row">
-                    <span class="rul-title">메탈마스크 초음파 세척 주기 관리</span>
+                <div class="rul-title">메탈마스크 초음파 세척 주기 관리</div>
+                <div class="rul-val-row">
                     <span class="rul-days-badge">잔여 ${100 - (d.mask_wash_count || 84)}타</span>
                 </div>
                 <div class="rul-bar-wrap">
@@ -1016,8 +1016,8 @@ function renderPdmModalContent(processId) {
         `;
         rulHtml = `
             <div class="pdm-rul-card">
-                <div class="rul-top-row">
-                    <span class="rul-title">고속 마운터 노즐 팁 마모도 및 교체 주기 (RUL)</span>
+                <div class="rul-title">고속 마운터 노즐 팁 마모도 및 교체 주기 (RUL)</div>
+                <div class="rul-val-row">
                     <span class="rul-days-badge">잔여 D-4 (84%)</span>
                 </div>
                 <div class="rul-bar-wrap">
@@ -1050,8 +1050,8 @@ function renderPdmModalContent(processId) {
         `;
         rulHtml = `
             <div class="pdm-rul-card">
-                <div class="rul-top-row">
-                    <span class="rul-title">이형 마운터 비전 카메라 조명 & 얼라인먼트 교정</span>
+                <div class="rul-title">이형 마운터 비전 카메라 조명 & 얼라인먼트 교정</div>
+                <div class="rul-val-row">
                     <span class="rul-days-badge">잔여 D-7 (78%)</span>
                 </div>
                 <div class="rul-bar-wrap">
@@ -1084,8 +1084,8 @@ function renderPdmModalContent(processId) {
         `;
         rulHtml = `
             <div class="pdm-rul-card">
-                <div class="rul-top-row">
-                    <span class="rul-title">플럭스 회수 트랩 포화도 & 클리닝 주기</span>
+                <div class="rul-title">플럭스 회수 트랩 포화도 & 클리닝 주기</div>
+                <div class="rul-val-row">
                     <span class="rul-days-badge">잔여 D-8</span>
                 </div>
                 <div class="rul-bar-wrap">
@@ -1112,14 +1112,14 @@ function renderPdmModalContent(processId) {
                 <div class="sensor-val good">${d.lift_height_um || 18.0} μm</div>
             </div>
             <div class="pdm-sensor-card">
-                <div class="sensor-header"><span>부품 기울어짐 각도</span><span class="sensor-limit">상한 2.0°</span></div>
+                <div class="sensor-header"><span>부품 들뜸 각도</span><span class="sensor-limit">상한 2.0°</span></div>
                 <div class="sensor-val good">${d.comp_tilt_deg || 0.4}°</div>
             </div>
         `;
         rulHtml = `
             <div class="pdm-rul-card">
-                <div class="rul-top-row">
-                    <span class="rul-title">비전 광학계 조명 조도 & 카메라 캘리브레이션</span>
+                <div class="rul-title">비전 광학계 조명 조도 & 카메라 캘리브레이션</div>
+                <div class="rul-val-row">
                     <span class="rul-days-badge">잔여 D-20</span>
                 </div>
                 <div class="rul-bar-wrap">
@@ -1152,8 +1152,8 @@ function renderPdmModalContent(processId) {
         `;
         rulHtml = `
             <div class="pdm-rul-card">
-                <div class="rul-top-row">
-                    <span class="rul-title">솔더팟 드로스(산화 슬러지) 누적율 & 드로스 청소 주기</span>
+                <div class="rul-title">솔더팟 드로스(산화 슬러지) 누적율 & 드로스 청소 주기</div>
+                <div class="rul-val-row">
                     <span class="rul-days-badge">잔여 D-5</span>
                 </div>
                 <div class="rul-bar-wrap">
@@ -1186,8 +1186,8 @@ function renderPdmModalContent(processId) {
         `;
         rulHtml = `
             <div class="pdm-rul-card">
-                <div class="rul-top-row">
-                    <span class="rul-title">테스트 핀 접촉 건전도 및 핀베드 교체 주기</span>
+                <div class="rul-title">테스트 핀 접촉 건전도 및 핀베드 교체 주기</div>
+                <div class="rul-val-row">
                     <span class="rul-days-badge">잔여 D-20 (92%)</span>
                 </div>
                 <div class="rul-bar-wrap">
@@ -1220,8 +1220,8 @@ function renderPdmModalContent(processId) {
         `;
         rulHtml = `
             <div class="pdm-rul-card">
-                <div class="rul-top-row">
-                    <span class="rul-title">디스펜서 분사 노즐 초음파 세척 주기</span>
+                <div class="rul-title">디스펜서 분사 노즐 초음파 세척 주기</div>
+                <div class="rul-val-row">
                     <span class="rul-days-badge">잔여 D-12 (84%)</span>
                 </div>
                 <div class="rul-bar-wrap">
@@ -1254,8 +1254,8 @@ function renderPdmModalContent(processId) {
         `;
         rulHtml = `
             <div class="pdm-rul-card">
-                <div class="rul-top-row">
-                    <span class="rul-title">FCT 테스트 지그 전원 릴레이 및 커넥터 교정</span>
+                <div class="rul-title">FCT 테스트 지그 전원 릴레이 및 커넥터 교정</div>
+                <div class="rul-val-row">
                     <span class="rul-days-badge">잔여 D-30 (95%)</span>
                 </div>
                 <div class="rul-bar-wrap">

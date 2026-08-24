@@ -502,42 +502,43 @@ html, body {
     justify-content: center;
 }
 
-.tpm-metric-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 8px;
+.tpm-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #f8fafc;
+    margin-bottom: 2px;
 }
 
-.tpm-name {
-    font-size: 13px;
-    font-weight: 700;
-    color: #fff;
+.tpm-val-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
 }
 
 .tpm-days-badge {
     font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 13px;
+    font-weight: 800;
     color: #38bdf8;
-    background: rgba(56, 189, 248, 0.15);
-    padding: 2px 7px;
-    border-radius: 4px;
+    background: rgba(56, 189, 248, 0.18);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    padding: 3px 9px;
+    border-radius: 5px;
 }
 
 .tpm-bar-track {
     width: 100%;
-    height: 9px;
+    height: 8px;
     background: rgba(255, 255, 255, 0.08);
-    border-radius: 5px;
+    border-radius: 4px;
     overflow: hidden;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .tpm-bar-fill {
     height: 100%;
     background: linear-gradient(90deg, #10b981, #06b6d4);
-    border-radius: 5px;
+    border-radius: 4px;
     transition: width 0.4s ease;
 }
 
@@ -548,7 +549,7 @@ html, body {
 .tpm-detail-row {
     display: flex;
     justify-content: space-between;
-    font-size: 11.5px;
+    font-size: 12px;
     color: var(--text-dim);
 }
 
