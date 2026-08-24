@@ -780,9 +780,19 @@
                                 if (typeof resetAllMachines === 'function') resetAllMachines('SMT');
                                 if (typeof showSidebar === 'function') showSidebar('left');
                             } else if (effectiveStatus === 'DONE') {
-                                // 수삽 완료(DIP_IN_PROGRESS → DONE) 또는 전체 완료: 모든 설비 리셋 + 대기열 복귀
+                                // 수삽 완료(DIP_IN_PROGRESS → DONE) 또는 전체 완료: 모든 설비 리셋 + KPI 0 초기화 + 대기열 복귀
                                 if (typeof resetAllMachines === 'function') resetAllMachines('ALL');
                                 if (typeof showSidebar === 'function') showSidebar('left');
+                                const elT = document.getElementById('val-target');
+                                const elA = document.getElementById('val-actual');
+                                const elG = document.getElementById('val-good');
+                                const elF = document.getElementById('val-fail');
+                                const elY = document.getElementById('val-yield');
+                                if (elT) elT.innerText = '0';
+                                if (elA) elA.innerText = '0';
+                                if (elG) elG.innerText = '0';
+                                if (elF) elF.innerText = '0';
+                                if (elY) { elY.innerText = '0.0%'; elY.className = 'kpi-val'; }
                             } else if (effectiveStatus === 'DIP_IN_PROGRESS') {
                                 // 수삽 시작(SMT_DONE → DIP_IN_PROGRESS): SMT 설비 리셋
                                 if (typeof resetAllMachines === 'function') resetAllMachines('SMT');

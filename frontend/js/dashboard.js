@@ -1307,6 +1307,17 @@ async function pollLiveStream() {
                 if (statusChanged) {
                     if (activeStatus === 'DONE') {
                         resetAllMachines('ALL');
+                        currentTarget = 0;
+                        const elT = document.getElementById('val-target');
+                        const elA = document.getElementById('val-actual');
+                        const elG = document.getElementById('val-good');
+                        const elF = document.getElementById('val-fail');
+                        const elY = document.getElementById('val-yield');
+                        if (elT) elT.innerText = '0';
+                        if (elA) elA.innerText = '0';
+                        if (elG) elG.innerText = '0';
+                        if (elF) elF.innerText = '0';
+                        if (elY) { elY.innerText = '0.0%'; elY.className = 'kpi-val'; }
                         if (typeof showSidebar === 'function') showSidebar('left');
                     } else if (activeStatus === 'SMT_DONE') {
                         resetAllMachines('SMT');

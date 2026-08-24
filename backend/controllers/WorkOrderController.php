@@ -505,6 +505,7 @@ class WorkOrderController {
 
             $pdo->prepare("UPDATE work_order SET status = 'DIP_IN_PROGRESS' WHERE wo_id = ?")->execute([$wo_id]);
             $pdo->prepare("UPDATE barcode_master SET status = 'BOTTOM_DONE' WHERE wo_id = ? AND status != 'FAIL'")->execute([$wo_id]);
+            $pdo->prepare("DELETE FROM barcode_history WHERE barcode LIKE ? AND process_name IN ('DIP_AOI', 'WAVE', 'ICT', 'COATING', 'FCT')")->execute([$wo_id . '-%']);
 
             $pdo->commit();
 
