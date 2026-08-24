@@ -120,7 +120,7 @@ class DashboardController {
                     ORDER BY CASE 
                         WHEN wo.status IN ('IN_PROGRESS', 'DIP_IN_PROGRESS', 'SMT_DONE') THEN 1 
                         WHEN wo.status = 'DONE' THEN 2 
-                        ELSE 3 END ASC, wo.id DESC
+                        ELSE 3 END ASC, wo.wo_id DESC
                     LIMIT 1
                 ");
             }
