@@ -673,6 +673,16 @@
     <!-- 스크립트 로드: dashboard.js를 먼저 로드하여 전역 함수 정의 (캐시 방지 v=20260825_01) -->
     <script src="js/dashboard.js?v=20260825_01"></script>
     <script>
+        function escHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         let currentModalWoId = null;
         let currentFeederData = null;
 
