@@ -9612,17 +9612,12 @@ function renderConsignedReceiveDetail(orderInfo, parts = []) {
         <div style="padding:10px 16px; background:rgba(15,23,42,0.85); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:8px; flex-shrink:0;">
             <!-- 스마트 툴바 액션 버튼군 (우측 정렬) -->
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-left:auto;">
-                <!-- 1. 자동 채우기 (선명한 골드 컬러) -->
-                <button type="button" style="height:32px; padding:0 12px; font-size:12px; font-weight:800; background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.5); border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.15s ease;" onclick="fillRecommendedReceiveQuantities()" title="발주 수량에 필요한 잔여 소요량(+20% 여유분)을 자동 계산하여 채웁니다.">
-                    ⚡ 소요량 자동채우기 (+20%)
-                </button>
-
-                <!-- 2. 부품 추가 (BOM/엑셀 모달 통합 폼 연동) -->
+                <!-- 1. 부품 추가 (BOM/엑셀 모달 통합 폼 연동) -->
                 <button type="button" style="height:32px; padding:0 12px; font-size:12px; font-weight:800; background:rgba(56,189,248,0.15); color:#7dd3fc; border:1px solid rgba(56,189,248,0.4); border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:all 0.15s ease;" onclick="openConsignedExcelModal()" title="BOM/엑셀 입력 폼을 통해 사급 자재를 일괄 또는 단건으로 추가합니다.">
                     ➕ 부품 추가
                 </button>
 
-                <!-- 3. 일괄 저장 (고대비 녹색 확정 버튼) -->
+                <!-- 2. 일괄 저장 (고대비 녹색 확정 버튼) -->
                 <button type="button" style="height:32px; padding:0 14px; font-size:12.5px; font-weight:800; background:#059669; color:#ffffff; border:1px solid #10b981; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; box-shadow:0 2px 6px rgba(5,150,105,0.4); transition:all 0.15s ease;" onclick="submitConsignedReceive()">
                     💾 사급 입고 저장
                 </button>
@@ -9742,15 +9737,6 @@ function handleConsignedRcvKeyNav(e) {
             nextEl.select();
         }
     }
-}
-
-function fillRecommendedReceiveQuantities() {
-    document.querySelectorAll('.consigned-rcv-row').forEach(row => {
-        const placeholder = row.querySelector('.rcv-qty')?.getAttribute('placeholder');
-        if (placeholder && !isNaN(parseInt(placeholder))) {
-            row.querySelector('.rcv-qty').value = placeholder;
-        }
-    });
 }
 
 // ── BOM 방식 사급 엑셀 입력 모달 로직 ──
