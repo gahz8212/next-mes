@@ -170,7 +170,11 @@ class ShipmentController {
             $shipDate = !empty($input['ship_date']) ? trim($input['ship_date']) : null;
 
             if ($status === 'SHIPPED') {
-                $actualShipDate = $shipDate ?: date('Y-m-d');
+                $today = date('Y-m-d');
+                $actualShipDate = $shipDate ?: $today;
+                if ($actualShipDate > $today) {
+                    $actualShipDate = $today;
+                }
                 $stmtShip = $pdo->prepare("UPDATE shipment SET status = ?, ship_date = ? WHERE id = ?");
                 $stmtShip->execute([$status, $actualShipDate, $shipId]);
 

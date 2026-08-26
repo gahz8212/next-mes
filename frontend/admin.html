@@ -11227,11 +11227,13 @@ function renderShipmentDetail() {
             ? `<span class="status-badge" style="background:rgba(251,191,36,0.25); color:#fbbf24; font-weight:800; font-size:12.5px; padding:4px 10px;">⏳ 출하 대기 중</span>`
             : `<span class="status-badge" style="background:rgba(248,113,113,0.25); color:#f87171; font-weight:800; font-size:12.5px; padding:4px 10px;">🚫 출하 취소</span>`);
 
+    const dateLabel = r.status === 'SHIPPED' ? '출하완료일' : (r.status === 'PENDING' ? '출하예정일' : '출하일자');
+
     detailPanel.innerHTML = `
-        <!-- Top Detail Header Strip (출하완료일 표기) -->
+        <!-- Top Detail Header Strip (출하 상태별 날짜 표기) -->
         <div style="padding:10px 16px; background:rgba(15,23,42,0.85); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <div style="display:flex; align-items:center; gap:8px;">
-                <span style="font-size:13px; font-weight:800; color:#38bdf8;">📅 출하완료일:</span>
+                <span style="font-size:13px; font-weight:800; color:#38bdf8;">📅 ${dateLabel}:</span>
                 <strong style="font-size:13.5px; color:#ffffff; font-family:'JetBrains Mono',monospace;">${r.ship_date || '—'}</strong>
             </div>
             ${r.status === 'PENDING' ? `
@@ -11258,7 +11260,7 @@ function renderShipmentDetail() {
                     </div>
                     <div style="text-align:right; font-size:12px; color:#334155;">
                         <div>발행번호: <strong style="font-family:monospace; color:#0f172a;">${escHtml(r.invoice_no || `INV-${r.ship_date.replace(/-/g,'')}-${r.id}`)}</strong></div>
-                        <div>출하일자: <strong style="color:#0f172a;">${r.ship_date}</strong></div>
+                        <div>${dateLabel}: <strong style="color:#0f172a;">${r.ship_date}</strong></div>
                     </div>
                 </div>
 
