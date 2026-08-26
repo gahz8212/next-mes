@@ -598,6 +598,25 @@ class WorkOrderController {
                     $restoredCount = $restoreStmt->rowCount();
                 }
 
+                // ── 연결된 sales_order_item 상태를 COMPLETED로 업데이트 ──
+                $pdo->prepare("UPDATE sales_order_item SET status = 'COMPLETED' WHERE wo_id = ?")->execute([$wo_id]);
+
+                // ── 해당 수주의 모든 품목이 COMPLETED인 경우 sales_order도 COMPLETED로 업데이트 ──
+                $orderIdStmt = $pdo->prepare("SELECT DISTINCT order_id FROM sales_order_item WHERE wo_id = ?");
+                $orderIdStmt->execute([$wo_id]);
+                $orderIds = $orderIdStmt->fetchAll(PDO::FETCH_COLUMN);
+                foreach ($orderIds as $orderId) {
+                    $checkStmt = $pdo->prepare("
+                        SELECT COUNT(*) as not_done FROM sales_order_item
+                        WHERE order_id = ? AND status != 'COMPLETED'
+                    ");
+                    $checkStmt->execute([$orderId]);
+                    $notDone = (int)$checkStmt->fetchColumn();
+                    if ($notDone === 0) {
+                        $pdo->prepare("UPDATE sales_order SET status = 'COMPLETED' WHERE id = ?")->execute([$orderId]);
+                    }
+                }
+
                 $msg = "납품 처리되었습니다.";
                 if ($restoredCount > 0) {
                     $msg .= "\n(임시 NC 처리되었던 부품 {$restoredCount}건이 다음 생산을 위해 정상 실장 상태로 자동 복원되었습니다.)";
