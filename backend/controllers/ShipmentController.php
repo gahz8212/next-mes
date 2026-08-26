@@ -40,6 +40,23 @@ class ShipmentController {
                 WHERE status = 'SHIPPED' AND ship_date > CURDATE()
             ");
 
+            // 4. 출하완료(SHIPPED)된 shipment 건과 연결된 sales_order_item 및 sales_order 상태를 COMPLETED로 CEO 대시보드 실시간 연동 동기화
+            $pdo->query("
+                UPDATE sales_order_item soi
+                JOIN shipment s ON s.wo_id = soi.wo_id
+                SET soi.status = 'COMPLETED'
+                WHERE s.status = 'SHIPPED' AND soi.status != 'COMPLETED'
+            ");
+            $pdo->query("
+                UPDATE sales_order so
+                SET so.status = 'COMPLETED'
+                WHERE so.status != 'COMPLETED'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM sales_order_item soi 
+                      WHERE soi.order_id = so.id AND soi.status != 'COMPLETED'
+                  )
+            ");
+
             $startDate = Request::query('start_date', date('Y-m-d', strtotime('-30 days')));
             $endDate   = Request::query('end_date', date('Y-m-d', strtotime('+30 days')));
             $status    = trim(Request::query('status', ''));
