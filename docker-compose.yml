@@ -32,7 +32,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - nodered_data:/data
-      - ./flows.json:/data/flows.json
+      # - ./flows.json:/data/flows.json
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:1880/flows"]
       interval: 15s
