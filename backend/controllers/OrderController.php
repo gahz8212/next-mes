@@ -49,9 +49,11 @@ class OrderController {
             $sql = "
                 SELECT 
                     o.id, o.order_no, o.company_id, o.order_date, o.due_date, o.status, o.memo, o.created_at,
+                    o.item_name,
                     c.name as company_name, c.code as company_code,
                     COALESCE((SELECT COUNT(*) FROM sales_order_item soi WHERE soi.order_id = o.id), 0) as item_count,
                     COALESCE((SELECT SUM(soi.order_qty) FROM sales_order_item soi WHERE soi.order_id = o.id), o.order_qty, 0) as total_qty,
+                    COALESCE((SELECT SUM(soi.order_qty) FROM sales_order_item soi WHERE soi.order_id = o.id), o.order_qty, 0) as order_qty,
                     COALESCE((SELECT SUM(soi.total_price) FROM sales_order_item soi WHERE soi.order_id = o.id), o.total_price, 0) as total_price
                 FROM sales_order o
                 LEFT JOIN company c ON o.company_id = c.id
@@ -87,6 +89,10 @@ class OrderController {
             }
 
             foreach ($orders as &$ord) {
+                $ord['item_count'] = (int)($ord['item_count'] ?? 0);
+                $ord['total_qty'] = (int)($ord['total_qty'] ?? 0);
+                $ord['order_qty'] = (int)($ord['order_qty'] ?? 0);
+                $ord['total_price'] = (float)($ord['total_price'] ?? 0.0);
                 $ord['items'] = $itemsByOrder[$ord['id']] ?? [];
                 // 만약 sales_order_item에 품목이 없으면 레거시 sales_order 단일 품목을 가상 품목으로 포팅
                 if (empty($ord['items']) && !empty($ord['item_name'])) {
@@ -116,7 +122,10 @@ class OrderController {
                     COUNT(DISTINCT soi.id) as total_items,
                     SUM(CASE WHEN o.status = 'RECEIVED' THEN 1 ELSE 0 END) as received_count,
                     SUM(CASE WHEN o.status = 'IN_PRODUCTION' THEN 1 ELSE 0 END) as in_prod_count,
-                    SUM(CASE WHEN o.status = 'COMPLETED' THEN 1 ELSE 0 END) as completed_count
+                    SUM(CASE WHEN o.status = 'COMPLETED' THEN 1 ELSE 0 END) as completed_count,
+                    COALESCE(SUM(soi.total_price), 0) as total_revenue,
+                    COALESCE(SUM(CASE WHEN o.status = 'COMPLETED' THEN soi.total_price ELSE 0 END), 0) as completed_revenue,
+                    COALESCE(SUM(CASE WHEN o.status IN ('RECEIVED', 'IN_PRODUCTION') THEN soi.total_price ELSE 0 END), 0) as in_prod_revenue
                 FROM sales_order o
                 LEFT JOIN sales_order_item soi ON o.id = soi.order_id
             ");
@@ -133,6 +142,9 @@ class OrderController {
                         "received_count"  => (int)($kpi['received_count'] ?? 0),
                         "in_prod_count"   => (int)($kpi['in_prod_count'] ?? 0),
                         "completed_count" => (int)($kpi['completed_count'] ?? 0),
+                        "total_revenue"   => (float)($kpi['total_revenue'] ?? 0),
+                        "completed_revenue" => (float)($kpi['completed_revenue'] ?? 0),
+                        "in_prod_revenue" => (float)($kpi['in_prod_revenue'] ?? 0),
                     ],
                     "orders" => $orders
                 ]
