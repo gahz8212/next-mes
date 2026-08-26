@@ -181,23 +181,22 @@ class ShipmentController {
                 $stmt->execute([$status, $shipId]);
             }
 
-                // ── 연결된 sales_order_item 상태를 COMPLETED로 업데이트 ──
-                $woIdStmt = $pdo->prepare("SELECT wo_id FROM shipment WHERE id = ?");
-                $woIdStmt->execute([$shipId]);
-                $woId = $woIdStmt->fetchColumn();
-                if ($woId) {
-                    $pdo->prepare("UPDATE sales_order_item SET status = 'COMPLETED' WHERE wo_id = ?")->execute([$woId]);
+            // ── 연결된 sales_order_item 상태를 COMPLETED로 업데이트 ──
+            $woIdStmt = $pdo->prepare("SELECT wo_id FROM shipment WHERE id = ?");
+            $woIdStmt->execute([$shipId]);
+            $woId = $woIdStmt->fetchColumn();
+            if ($woId) {
+                $pdo->prepare("UPDATE sales_order_item SET status = 'COMPLETED' WHERE wo_id = ?")->execute([$woId]);
 
-                    // 해당 수주의 모든 품목이 COMPLETED면 sales_order도 COMPLETED
-                    $orderIdStmt = $pdo->prepare("SELECT DISTINCT order_id FROM sales_order_item WHERE wo_id = ?");
-                    $orderIdStmt->execute([$woId]);
-                    $orderIds = $orderIdStmt->fetchAll(PDO::FETCH_COLUMN);
-                    foreach ($orderIds as $orderId) {
-                        $notDoneStmt = $pdo->prepare("SELECT COUNT(*) FROM sales_order_item WHERE order_id = ? AND status != 'COMPLETED'");
-                        $notDoneStmt->execute([$orderId]);
-                        if ((int)$notDoneStmt->fetchColumn() === 0) {
-                            $pdo->prepare("UPDATE sales_order SET status = 'COMPLETED' WHERE id = ?")->execute([$orderId]);
-                        }
+                // 해당 수주의 모든 품목이 COMPLETED면 sales_order도 COMPLETED
+                $orderIdStmt = $pdo->prepare("SELECT DISTINCT order_id FROM sales_order_item WHERE wo_id = ?");
+                $orderIdStmt->execute([$woId]);
+                $orderIds = $orderIdStmt->fetchAll(PDO::FETCH_COLUMN);
+                foreach ($orderIds as $orderId) {
+                    $notDoneStmt = $pdo->prepare("SELECT COUNT(*) FROM sales_order_item WHERE order_id = ? AND status != 'COMPLETED'");
+                    $notDoneStmt->execute([$orderId]);
+                    if ((int)$notDoneStmt->fetchColumn() === 0) {
+                        $pdo->prepare("UPDATE sales_order SET status = 'COMPLETED' WHERE id = ?")->execute([$orderId]);
                     }
                 }
             }
