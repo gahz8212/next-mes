@@ -136,11 +136,11 @@ class OrderController {
                     COALESCE(SUM(soi.total_price), 0) as total_amount,
                     COUNT(DISTINCT soi.id) as total_items,
                     SUM(CASE WHEN o.status = 'RECEIVED' THEN 1 ELSE 0 END) as received_count,
-                    SUM(CASE WHEN o.status = 'IN_PRODUCTION' THEN 1 ELSE 0 END) as in_prod_count,
+                    SUM(CASE WHEN o.status = 'IN_PRODUCTION' AND o.status != 'COMPLETED' THEN 1 ELSE 0 END) as in_prod_count,
                     SUM(CASE WHEN o.status = 'COMPLETED' THEN 1 ELSE 0 END) as completed_count,
                     COALESCE(SUM(soi.total_price), 0) as total_revenue,
-                    COALESCE(SUM(CASE WHEN o.status = 'COMPLETED' THEN soi.total_price ELSE 0 END), 0) as completed_revenue,
-                    COALESCE(SUM(CASE WHEN o.status IN ('RECEIVED', 'IN_PRODUCTION') THEN soi.total_price ELSE 0 END), 0) as in_prod_revenue
+                    COALESCE(SUM(CASE WHEN o.status = 'COMPLETED' OR soi.status = 'COMPLETED' THEN soi.total_price ELSE 0 END), 0) as completed_revenue,
+                    COALESCE(SUM(CASE WHEN o.status != 'COMPLETED' AND (soi.status IS NULL OR soi.status != 'COMPLETED') THEN soi.total_price ELSE 0 END), 0) as in_prod_revenue
                 FROM sales_order o
                 LEFT JOIN sales_order_item soi ON o.id = soi.order_id
             ");
