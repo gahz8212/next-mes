@@ -94,6 +94,15 @@ try {
         $skipped[] = "Fix shipment ship_date: " . $e->getMessage();
     }
 
+    // 수주와 무관한 중복/테스트성 작업지시(ATE-20260824-98E) 완전 삭제
+    try {
+        $pdo->exec("DELETE FROM shipment WHERE wo_id = 'ATE-20260824-98E'");
+        $pdo->exec("DELETE FROM work_order WHERE wo_id = 'ATE-20260824-98E'");
+        $applied[] = "Removed orphan test work order ATE-20260824-98E and its shipments";
+    } catch (\Throwable $e) {
+        $skipped[] = "Clean orphan WO: " . $e->getMessage();
+    }
+
     // 9. 신규 테이블 생성: consigned_return_master
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS consigned_return_master (
