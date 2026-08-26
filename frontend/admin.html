@@ -11236,16 +11236,19 @@ function renderShipmentDetail() {
                 <span style="font-size:13px; font-weight:800; color:#38bdf8;">📅 ${dateLabel}:</span>
                 <strong style="font-size:13.5px; color:#ffffff; font-family:'JetBrains Mono',monospace;">${r.ship_date || '—'}</strong>
             </div>
-            ${r.status === 'PENDING' ? `
-                <div style="display:flex; gap:8px; align-items:center;">
+            <div style="display:flex; gap:8px; align-items:center;">
+                ${r.status === 'PENDING' ? `
                     <button type="button" class="btn-submit" style="background:#059669; border:1px solid #10b981; padding:6px 14px; font-size:12.5px; font-weight:800; margin:0;" onclick="updateShipStatus(${r.id},'SHIPPED')">
                         출하 완료
                     </button>
                     <button type="button" class="btn-cancel" style="background:rgba(220,38,38,0.2); color:#fca5a5; border:1px solid #ef4444; padding:6px 12px; font-size:12.5px; font-weight:700; margin:0;" onclick="updateShipStatus(${r.id},'CANCELLED')">
                         취소
                     </button>
-                </div>
-            ` : ''}
+                ` : ''}
+                <button type="button" class="btn-cancel" style="background:rgba(220,38,38,0.25); color:#fca5a5; border:1px solid #ef4444; padding:6px 12px; font-size:12.5px; font-weight:700; margin:0;" onclick="deleteShipmentRecord(${r.id})">
+                    🗑️ 출하 삭제
+                </button>
+            </div>
         </div>
 
         <!-- Detail Body Area (거래명세서 단독 표시) -->
@@ -11530,6 +11533,20 @@ async function updateShipStatus(id, status) {
     const data = await res.json();
     if (data.status === 'success') loadShipments();
     else alert(data.message);
+}
+
+async function deleteShipmentRecord(id) {
+    if (!confirm('해당 출하 내역을 완전히 삭제하시겠습니까?')) return;
+    const res = await fetch('../backend/api/delete_shipment.php', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+        selectedShipmentId = null;
+        loadShipments();
+    } else {
+        alert(data.message || '삭제 실패');
+    }
 }
 
 // ════════════════════════════════════════════════

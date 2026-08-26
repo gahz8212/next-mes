@@ -213,6 +213,7 @@ Router::any('/get_consigned_return_detail.php', [ConsignedMaterialController::cl
 Router::any('/get_shipments.php',          [ShipmentController::class, 'getShipments']);
 Router::any('/create_shipment.php',        [ShipmentController::class, 'createShipment']);
 Router::any('/update_shipment_status.php', [ShipmentController::class, 'updateShipmentStatus']);
+Router::any('/delete_shipment.php',        [ShipmentController::class, 'deleteShipment']);
 
 Router::any('/get_users.php',              [UserController::class, 'getUsers']);
 Router::any('/create_user.php',            [UserController::class, 'createUser']);

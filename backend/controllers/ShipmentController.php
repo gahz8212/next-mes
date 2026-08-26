@@ -237,4 +237,26 @@ class ShipmentController {
             Response::error($e->getMessage());
         }
     }
+
+    /**
+     * 4. 출하 레코드 삭제
+     */
+    public static function deleteShipment(?string $id = null): void {
+        try {
+            $pdo = Database::getConnection();
+            $input = Request::getBody();
+            $shipId = $id ?? ($input['id'] ?? Request::query('id', null));
+
+            if (empty($shipId)) {
+                Response::error("삭제할 출하 ID(id)가 필요합니다.");
+            }
+
+            $stmt = $pdo->prepare("DELETE FROM shipment WHERE id = ?");
+            $stmt->execute([$shipId]);
+
+            Response::json(["status" => "success", "message" => "출하 건이 삭제되었습니다."]);
+        } catch (Exception $e) {
+            Response::error($e->getMessage());
+        }
+    }
 }
