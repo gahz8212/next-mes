@@ -167,12 +167,19 @@ class ShipmentController {
 
             $pdo->beginTransaction();
 
-            $stmt = $pdo->prepare("UPDATE shipment SET status = ? WHERE id = ?");
-            $stmt->execute([$status, $shipId]);
+            $shipDate = !empty($input['ship_date']) ? trim($input['ship_date']) : null;
 
             if ($status === 'SHIPPED') {
+                $actualShipDate = $shipDate ?: date('Y-m-d');
+                $stmtShip = $pdo->prepare("UPDATE shipment SET status = ?, ship_date = ? WHERE id = ?");
+                $stmtShip->execute([$status, $actualShipDate, $shipId]);
+
                 $stmtWo = $pdo->prepare("UPDATE work_order SET shipped = 1, shipped_at = NOW() WHERE wo_id = (SELECT wo_id FROM shipment WHERE id = ?)");
                 $stmtWo->execute([$shipId]);
+            } else {
+                $stmt = $pdo->prepare("UPDATE shipment SET status = ? WHERE id = ?");
+                $stmt->execute([$status, $shipId]);
+            }
 
                 // ── 연결된 sales_order_item 상태를 COMPLETED로 업데이트 ──
                 $woIdStmt = $pdo->prepare("SELECT wo_id FROM shipment WHERE id = ?");
