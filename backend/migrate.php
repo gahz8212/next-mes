@@ -86,6 +86,14 @@ try {
     $addColumnDirect('feeder_setup', 'scanned_by', 'VARCHAR(50) DEFAULT "Worker"');
     $addColumnDirect('barcode_master', 'status', 'VARCHAR(50) DEFAULT "WAIT"');
 
+    // 출하 완료(SHIPPED) 상태 데이터 중 출하완료일이 미래 날짜로 기록된 기존 DB 데이터 자동 보정
+    try {
+        $pdo->exec("UPDATE shipment SET ship_date = CURDATE() WHERE status = 'SHIPPED' AND ship_date > CURDATE()");
+        $applied[] = "Corrected future ship_date for SHIPPED records to CURDATE()";
+    } catch (\Throwable $e) {
+        $skipped[] = "Fix shipment ship_date: " . $e->getMessage();
+    }
+
     // 9. 신규 테이블 생성: consigned_return_master
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS consigned_return_master (

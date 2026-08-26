@@ -33,6 +33,13 @@ class ShipmentController {
                   AND (s.ship_date != w.delivery_date OR s.ship_date IS NULL)
             ");
 
+            // 3. 기존 DB 데이터 중 출하완료(SHIPPED) 상태인데 ship_date가 미래 날짜인 경우 오늘 날짜(CURDATE)로 자동 보정
+            $pdo->query("
+                UPDATE shipment 
+                SET ship_date = CURDATE() 
+                WHERE status = 'SHIPPED' AND ship_date > CURDATE()
+            ");
+
             $startDate = Request::query('start_date', date('Y-m-d', strtotime('-30 days')));
             $endDate   = Request::query('end_date', date('Y-m-d', strtotime('+30 days')));
             $status    = trim(Request::query('status', ''));
